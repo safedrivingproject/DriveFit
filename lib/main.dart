@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'face_detector_view.dart';
+import 'notifications.dart';
 
 List<CameraDescription> cameras = [];
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -44,15 +48,26 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   final String title;
   const Home({super.key, required this.title});
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  @override
+  void initState() {
+    super.initState();
+    Noti.initialize(flutterLocalNotificationsPlugin);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(widget.title),
         centerTitle: true,
         elevation: 0,
       ),
@@ -102,6 +117,10 @@ class Home extends StatelessWidget {
                         minimumSize: const Size.fromHeight(70),
                       ),
                       onPressed: () {
+                        Noti.showBigTextNotification(
+                            title: "Remember to drive safely!!!",
+                            body: "Keep your eyes on the road",
+                            fln: flutterLocalNotificationsPlugin);
                         Navigator.push(
                             context,
                             MaterialPageRoute(
