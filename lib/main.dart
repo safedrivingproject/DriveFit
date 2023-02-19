@@ -1,28 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'face_detector_view.dart';
-import 'notifications.dart';
 
 List<CameraDescription> cameras = [];
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  AwesomeNotifications().initialize(
+      // set the icon to null if you want to use the default app icon
+      'resource://drawable/res_leaf',
+      [
+        NotificationChannel(
+            channelGroupKey: 'basic_channel_group',
+            channelKey: 'basic_channel',
+            channelName: 'Driving Reminders',
+            channelDescription: 'Notification channel for driving reminders',
+            playSound: true,
+            groupAlertBehavior: GroupAlertBehavior.Children,
+            importance: NotificationImportance.Max,
+            defaultPrivacy: NotificationPrivacy.Public,
+            defaultColor: Colors.redAccent,
+            ledColor: Colors.white)
+      ],
+      debug: true);
 
   cameras = await availableCameras();
 
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    const appName = 'Face Detection from Google ML Kit';
+    const appName = 'Driving Face Detection';
     return MaterialApp(
+      navigatorKey: MyApp.navigatorKey,
       title: appName,
+      debugShowCheckedModeBanner: false,
+      home: const Home(title: appName),
       theme: ThemeData(
         brightness: Brightness.light,
         primaryColor: Colors.lightBlue[800],
@@ -42,8 +73,6 @@ class MyApp extends StatelessWidget {
               fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
-      debugShowCheckedModeBanner: false,
-      home: const Home(title: appName),
     );
   }
 }
@@ -60,7 +89,6 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    Noti.initialize(flutterLocalNotificationsPlugin);
   }
 
   @override
@@ -117,10 +145,6 @@ class _HomeState extends State<Home> {
                         minimumSize: const Size.fromHeight(70),
                       ),
                       onPressed: () {
-                        Noti.showBigTextNotification(
-                            title: "Remember to drive safely!!!",
-                            body: "Keep your eyes on the road",
-                            fln: flutterLocalNotificationsPlugin);
                         Navigator.push(
                             context,
                             MaterialPageRoute(
