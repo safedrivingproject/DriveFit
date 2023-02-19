@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:core';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -16,8 +17,8 @@ class FaceDetectorView extends StatefulWidget {
 class _FaceDetectorViewState extends State<FaceDetectorView> {
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
-      enableContours: false,
       enableClassification: true,
+      minFaceSize: 0.8,
     ),
   );
   bool _canProcess = true;
@@ -30,6 +31,11 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   double? smileProb;
   double? leftEyeOpenProb;
   double? rightEyeOpenProb;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {

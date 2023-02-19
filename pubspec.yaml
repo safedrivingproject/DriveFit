@@ -39,6 +39,7 @@ dependencies:
   google_mlkit_face_detection: ^0.5.0
   google_mlkit_commons: ^0.2.0
   camera: ^0.10.3
+  flutter_local_notifications: ^13.0.0
 
 dev_dependencies:
   flutter_test:
