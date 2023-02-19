@@ -1,33 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'notification_controller.dart';
 import 'face_detector_view.dart';
+import 'notification_page.dart';
 
 List<CameraDescription> cameras = [];
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  AwesomeNotifications().initialize(
-      // set the icon to null if you want to use the default app icon
-      'resource://drawable/res_leaf',
-      [
-        NotificationChannel(
-            channelGroupKey: 'basic_channel_group',
-            channelKey: 'basic_channel',
-            channelName: 'Driving Reminders',
-            channelDescription: 'Notification channel for driving reminders',
-            playSound: true,
-            groupAlertBehavior: GroupAlertBehavior.Children,
-            importance: NotificationImportance.Max,
-            defaultPrivacy: NotificationPrivacy.Public,
-            defaultColor: Colors.redAccent,
-            ledColor: Colors.white)
-      ],
-      debug: true);
-
+  await NotificationController.initializeLocalNotifications();
   cameras = await availableCameras();
-
   runApp(const MyApp());
 }
 
@@ -41,14 +24,43 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  static const String routeHome = '/', routeNotification = '/notification-page';
+  static const appName = 'Driving Face Detection';
+
   @override
   void initState() {
+    NotificationController.startListeningNotificationEvents();
     super.initState();
+  }
+
+  List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
+    List<Route<dynamic>> pageStack = [];
+    pageStack
+        .add(MaterialPageRoute(builder: (_) => const Home(title: appName)));
+    if (initialRouteName == routeNotification &&
+        NotificationController.initialAction != null) {
+      pageStack.add(MaterialPageRoute(
+          builder: (_) => NotificationPage(
+              receivedAction: NotificationController.initialAction!)));
+    }
+    return pageStack;
+  }
+
+  Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case routeHome:
+        return MaterialPageRoute(builder: (_) => const Home(title: appName));
+
+      case routeNotification:
+        ReceivedAction receivedAction = settings.arguments as ReceivedAction;
+        return MaterialPageRoute(
+            builder: (_) => NotificationPage(receivedAction: receivedAction));
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    const appName = 'Driving Face Detection';
     return MaterialApp(
       navigatorKey: MyApp.navigatorKey,
       title: appName,
@@ -145,6 +157,7 @@ class _HomeState extends State<Home> {
                         minimumSize: const Size.fromHeight(70),
                       ),
                       onPressed: () {
+                        NotificationController.createNewReminderNotification();
                         Navigator.push(
                             context,
                             MaterialPageRoute(

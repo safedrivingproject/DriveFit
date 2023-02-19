@@ -30,7 +30,7 @@ class CameraView extends StatefulWidget {
 class _CameraViewState extends State<CameraView> {
   CameraController? _controller;
   int _cameraIndex = -1;
-  double zoomLevel = 0.0, minZoomLevel = 0.0, maxZoomLevel = 0.0;
+  double zoomLevel = 0.0, minZoomLevel = 0.0, maxZoomLevel = 5.0;
   bool _changingCameraLens = false;
 
   @override

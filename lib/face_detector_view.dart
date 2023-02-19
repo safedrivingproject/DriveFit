@@ -2,6 +2,7 @@ import 'dart:core';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
