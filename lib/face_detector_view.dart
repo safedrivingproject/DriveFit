@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:core';
+import 'dart:html';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -73,102 +74,14 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
                 child: ListView(
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("rotX",
-                                style:
-                                    Theme.of(context).textTheme.displaySmall),
-                            Text(rotX.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("rotY",
-                                style:
-                                    Theme.of(context).textTheme.displaySmall),
-                            Text(rotY.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("rotZ",
-                                style:
-                                    Theme.of(context).textTheme.displaySmall),
-                            Text(rotZ.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("smileProb",
-                                style:
-                                    Theme.of(context).textTheme.displaySmall),
-                            Text(smileProb.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("leftEyeOpenProb",
-                                style:
-                                    Theme.of(context).textTheme.displaySmall),
-                            Text(leftEyeOpenProb.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: SizedBox(
-                        height: 50,
-                        width: 200,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("rightEyeOpenProb",
-                                style:
-                                    Theme.of(context).textTheme.displaySmall),
-                            Text(rightEyeOpenProb.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
-                      ),
-                    ),
+                    FaceValueWidget(text: "rotX", value: rotX),
+                    FaceValueWidget(text: "rotY", value: rotY),
+                    FaceValueWidget(text: "rotZ", value: rotZ),
+                    FaceValueWidget(text: "smileProb", value: smileProb),
+                    FaceValueWidget(
+                        text: "leftEyeOpenProb", value: leftEyeOpenProb),
+                    FaceValueWidget(
+                        text: "rightEyeOpenProb", value: rightEyeOpenProb),
                   ],
                 ),
               ),
@@ -214,5 +127,34 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     if (mounted) {
       setState(() {});
     }
+  }
+}
+
+class FaceValueWidget extends StatelessWidget {
+  const FaceValueWidget({
+    Key? key,
+    required this.text,
+    required this.value,
+  }) : super(key: key);
+
+  final String text;
+  final double? value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        height: 50,
+        width: 200,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(text, style: Theme.of(context).textTheme.displaySmall),
+            Text(value.toString(),
+                style: Theme.of(context).textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
   }
 }
