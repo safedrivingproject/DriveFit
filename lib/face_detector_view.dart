@@ -28,6 +28,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   bool _canProcess = true;
   bool _isBusy = false;
+  bool cancelTimer = false;
   CustomPaint? _customPaint;
   String? _text;
   double? rotX;
@@ -100,6 +101,10 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
           reminderCount = 0;
         }
       }
+      if (cancelTimer == true) {
+        cancelTimer = false;
+        timer.cancel();
+      }
     });
     super.initState();
   }
@@ -108,6 +113,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   void dispose() {
     _canProcess = false;
     _assetsAudioPlayer.dispose();
+    cancelTimer = true;
     _faceDetector.close();
     super.dispose();
   }
