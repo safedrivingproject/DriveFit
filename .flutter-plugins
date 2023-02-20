@@ -1,4 +1,6 @@
 # This is a generated file; do not edit or check into version control.
+assets_audio_player=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\assets_audio_player-3.0.6\\
+assets_audio_player_web=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\assets_audio_player_web-3.0.6\\
 awesome_notifications=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\awesome_notifications-0.7.4+1\\
 camera=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\camera-0.10.3\\
 camera_android=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\camera_android-0.10.3\\
@@ -7,3 +9,8 @@ camera_web=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.o
 flutter_plugin_android_lifecycle=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\flutter_plugin_android_lifecycle-2.0.7\\
 google_mlkit_commons=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\google_mlkit_commons-0.2.0\\
 google_mlkit_face_detection=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\google_mlkit_face_detection-0.5.0\\
+path_provider=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\path_provider-2.0.12\\
+path_provider_android=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\path_provider_android-2.0.22\\
+path_provider_foundation=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\path_provider_foundation-2.1.1\\
+path_provider_linux=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\path_provider_linux-2.1.8\\
+path_provider_windows=C:\\Users\\NUC7i5\\AppData\\Local\\Pub\\Cache\\hosted\\pub.dartlang.org\\path_provider_windows-2.1.3\\
