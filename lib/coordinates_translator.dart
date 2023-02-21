@@ -34,3 +34,11 @@ double translateY(
       return y * size.height / absoluteImageSize.height;
   }
 }
+
+double calcFaceCenterX(double left, double right) {
+  return (left + right) * 0.5;
+}
+
+double calcFaceCenterY(double top, double bottom) {
+  return (top + bottom) * 0.5;
+}

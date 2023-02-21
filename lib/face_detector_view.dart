@@ -8,6 +8,8 @@ import 'notification_controller.dart';
 
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
+import 'coordinates_translator.dart';
+import 'global_variables.dart' as globals;
 
 class FaceDetectorView extends StatefulWidget {
   const FaceDetectorView({super.key});
@@ -31,11 +33,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   bool cancelTimer = false;
   CustomPaint? _customPaint;
   String? _text;
-  double? rotX;
-  double? rotY;
-  double? rotZ;
-  double? leftEyeOpenProb;
-  double? rightEyeOpenProb;
+  double? rotX, rotY, rotZ, leftEyeOpenProb, rightEyeOpenProb;
   List<Face> faces = [];
 
   void sendReminder() {
@@ -172,28 +170,53 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       _text = '';
     });
     faces = await _faceDetector.processImage(inputImage);
-    for (Face face in faces) {
-      rotX = face.headEulerAngleX; // Head is tilted up and down rotX degrees
-      rotY = face.headEulerAngleY; // Head is rotated to the right rotY degrees
-      rotZ = face.headEulerAngleZ; // Head is tilted sideways rotZ degrees
+    if (faces.isNotEmpty) {
+      final face = faces[0];
+      rotX = face.headEulerAngleX; // up and down rotX degrees
+      rotY = face.headEulerAngleY; // right and left rotY degrees
+      rotZ = face.headEulerAngleZ; // sideways rotZ degrees
       leftEyeOpenProb = face.leftEyeOpenProbability;
       rightEyeOpenProb = face.rightEyeOpenProbability;
-    }
-    if (inputImage.inputImageData?.size != null &&
-        inputImage.inputImageData?.imageRotation != null) {
-      final painter = FaceDetectorPainter(
-          faces,
-          inputImage.inputImageData!.size,
-          inputImage.inputImageData!.imageRotation);
-      _customPaint = CustomPaint(painter: painter);
-    } else {
-      String text = 'Faces found: ${faces.length}\n\n';
-      for (final face in faces) {
-        text += 'face: ${face.boundingBox}\n\n';
+      Size size = const Size(1.0, 1.0);
+      if (inputImage.inputImageData?.size != null &&
+          inputImage.inputImageData?.imageRotation != null) {
+        globals.faceCenterX = calcFaceCenterX(
+            translateX(
+                face.boundingBox.left,
+                inputImage.inputImageData!.imageRotation,
+                size,
+                inputImage.inputImageData!.size),
+            translateX(
+                face.boundingBox.right,
+                inputImage.inputImageData!.imageRotation,
+                size,
+                inputImage.inputImageData!.size));
+        globals.faceCenterY = calcFaceCenterY(
+            translateY(
+                face.boundingBox.top,
+                inputImage.inputImageData!.imageRotation,
+                size,
+                inputImage.inputImageData!.size),
+            translateY(
+                face.boundingBox.bottom,
+                inputImage.inputImageData!.imageRotation,
+                size,
+                inputImage.inputImageData!.size));
+        final painter = FaceDetectorPainter(
+            faces,
+            inputImage.inputImageData!.size,
+            inputImage.inputImageData!.imageRotation);
+        _customPaint = CustomPaint(painter: painter);
+      } else {
+        String text = 'Faces found: ${faces.length}\n\n';
+        for (final face in faces) {
+          text += 'face: ${face.boundingBox}\n\n';
+        }
+        _text = text;
+        _customPaint = null;
       }
-      _text = text;
-      _customPaint = null;
     }
+
     _isBusy = false;
     if (mounted) {
       setState(() {});

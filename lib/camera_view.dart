@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
 import '../main.dart';
+import 'global_variables.dart' as globals;
 
 class CameraView extends StatefulWidget {
   const CameraView(
@@ -31,7 +33,9 @@ class _CameraViewState extends State<CameraView> {
   CameraController? _controller;
   int _cameraIndex = -1;
   double zoomLevel = 0.0, minZoomLevel = 0.0, maxZoomLevel = 5.0;
+  double _maxAvailableExposureOffset = 0.0, _minAvailableExposureOffset = 0.0;
   bool _changingCameraLens = false;
+  bool _cameraOn = false;
 
   @override
   void initState() {
@@ -55,9 +59,11 @@ class _CameraViewState extends State<CameraView> {
         }
       }
     }
-
     if (_cameraIndex != -1) {
-      _startLiveFeed();
+      if (!_cameraOn) {
+        _cameraOn = true;
+        _startLiveFeed();
+      }
     }
   }
 
@@ -73,9 +79,9 @@ class _CameraViewState extends State<CameraView> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: _body(),
-      floatingActionButton: _floatingActionButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      body: _liveFeedBody(),
+      //floatingActionButton: _floatingActionButton(),
+      //floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -93,12 +99,6 @@ class _CameraViewState extends State<CameraView> {
             size: 40,
           ),
         ));
-  }
-
-  Widget _body() {
-    Widget body;
-    body = _liveFeedBody();
-    return body;
   }
 
   Widget _liveFeedBody() {
@@ -132,25 +132,6 @@ class _CameraViewState extends State<CameraView> {
             ),
           ),
           if (widget.customPaint != null) widget.customPaint!,
-          Positioned(
-            bottom: 100,
-            left: 50,
-            right: 50,
-            child: Slider(
-              value: zoomLevel,
-              min: minZoomLevel,
-              max: maxZoomLevel,
-              onChanged: (newSliderValue) {
-                setState(() {
-                  zoomLevel = newSliderValue;
-                  _controller!.setZoomLevel(zoomLevel);
-                });
-              },
-              divisions: (maxZoomLevel - 1).toInt() < 1
-                  ? null
-                  : (maxZoomLevel - 1).toInt(),
-            ),
-          )
         ],
       ),
     );
@@ -167,12 +148,15 @@ class _CameraViewState extends State<CameraView> {
       if (!mounted) {
         return;
       }
+      _cameraOn = true;
       _controller?.getMinZoomLevel().then((value) {
         zoomLevel = value;
-        minZoomLevel = value;
       });
-      _controller?.getMaxZoomLevel().then((value) {
-        maxZoomLevel = value;
+      _controller?.getMinExposureOffset().then((value) {
+        _minAvailableExposureOffset = value;
+      });
+      _controller?.getMaxExposureOffset().then((value) {
+        _maxAvailableExposureOffset = value;
       });
       _controller?.startImageStream(_processCameraImage);
       setState(() {});
@@ -180,6 +164,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Future _stopLiveFeed() async {
+    _cameraOn = false;
     await _controller?.stopImageStream();
     await _controller?.dispose();
     _controller = null;
@@ -205,13 +190,15 @@ class _CameraViewState extends State<CameraView> {
 
     if (state == AppLifecycleState.inactive) {
       cameraController.dispose();
-    } else if (state == AppLifecycleState.resumed) {
+    }
+    if (state == AppLifecycleState.resumed) {
       _startLiveFeed();
     }
   }
 
   Future _processCameraImage(CameraImage image) async {
-    print('processing camera image');
+    _controller
+        ?.setExposurePoint(Offset(globals.faceCenterX, globals.faceCenterY));
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);
