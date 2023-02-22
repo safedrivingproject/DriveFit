@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:assets_audio_player/assets_audio_player.dart';
-import 'notification_controller.dart';
 import 'face_detector_view.dart';
 
 class Home extends StatefulWidget {
@@ -70,7 +68,27 @@ class _HomeState extends State<Home> {
                             context,
                             MaterialPageRoute(
                                 builder: (context) =>
-                                    const FaceDetectorView()));
+                                    const FaceDetectorView(calibrationMode: true,)));
+                      },
+                      child: Text(
+                        "Calibrate",
+                        style: Theme.of(context).textTheme.displayMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 10),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(70),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const FaceDetectorView(calibrationMode: false,)));
                       },
                       child: Text(
                         "Start Face Detection",

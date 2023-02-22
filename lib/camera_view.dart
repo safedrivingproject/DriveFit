@@ -133,6 +133,10 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     );
   }
 
+  void pauseCameraPreview() {
+    _controller!.pausePreview();
+  }
+
   Future _startLiveFeed() async {
     final camera = cameras[_cameraIndex];
     _controller = CameraController(

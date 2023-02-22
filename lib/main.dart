@@ -33,31 +33,31 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
-  List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
-    List<Route<dynamic>> pageStack = [];
-    pageStack
-        .add(MaterialPageRoute(builder: (_) => const Home(title: appName)));
-    if (initialRouteName == routeNotification &&
-        NotificationController.initialAction != null) {
-      pageStack.add(MaterialPageRoute(
-          builder: (_) => NotificationPage(
-              receivedAction: NotificationController.initialAction!)));
-    }
-    return pageStack;
-  }
+  //List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
+  //  List<Route<dynamic>> pageStack = [];
+  //  pageStack
+  //      .add(MaterialPageRoute(builder: (_) => const Home(title: appName)));
+  //  if (initialRouteName == routeNotification &&
+  //      NotificationController.initialAction != null) {
+  //    pageStack.add(MaterialPageRoute(
+  //        builder: (_) => NotificationPage(
+  //            receivedAction: NotificationController.initialAction!)));
+  //  }
+  //  return pageStack;
+  //}
 
-  Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-    switch (settings.name) {
-      case routeHome:
-        return MaterialPageRoute(builder: (_) => const Home(title: appName));
+  //Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+  //  switch (settings.name) {
+  //    case routeHome:
+  //      return MaterialPageRoute(builder: (_) => const Home(title: appName));
 
-      case routeNotification:
-        ReceivedAction receivedAction = settings.arguments as ReceivedAction;
-        return MaterialPageRoute(
-            builder: (_) => NotificationPage(receivedAction: receivedAction));
-    }
-    return null;
-  }
+  //    case routeNotification:
+  //      ReceivedAction receivedAction = settings.arguments as ReceivedAction;
+  //      return MaterialPageRoute(
+  //          builder: (_) => NotificationPage(receivedAction: receivedAction));
+  //  }
+  //  return null;
+  //}
 
   @override
   Widget build(BuildContext context) {

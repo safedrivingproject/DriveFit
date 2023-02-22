@@ -12,7 +12,12 @@ import 'coordinates_translator.dart';
 import 'global_variables.dart' as globals;
 
 class FaceDetectorView extends StatefulWidget {
-  const FaceDetectorView({super.key});
+  const FaceDetectorView({
+    Key? key,
+    required this.calibrationMode,
+  }) : super(key: key);
+
+  final bool calibrationMode;
 
   @override
   State<FaceDetectorView> createState() => _FaceDetectorViewState();
@@ -28,9 +33,12 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     ),
   );
 
+  bool hasCalibrated = false;
+  int caliSeconds = 5;
+  Timer? periodicDetectionTimer, periodicCalibrationTimer;
+  bool cancelTimer = false;
   bool _canProcess = true;
   bool _isBusy = false;
-  bool cancelTimer = false;
   CustomPaint? _customPaint;
   String? _text;
   double? rotX, rotY, rotZ, leftEyeOpenProb, rightEyeOpenProb;
@@ -45,17 +53,15 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     NotificationController.createNewReminderNotification();
   }
 
-  @override
-  void initState() {
-    _assetsAudioPlayer.setVolume(0.5);
-
+  void detectionTimer() {
     var rotXCounter = 0;
     var rotYCounter = 0;
     var eyeCounter = 0;
     var reminderCount = 0;
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    periodicDetectionTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (faces.isNotEmpty) {
-        if (rotX! < -15) {
+        if (rotX! < (globals.neutralRotX - 15)) {
           rotXCounter++;
         } else {
           rotXCounter = 0;
@@ -67,7 +73,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
             rotXCounter = 0;
           }
         }
-        if (rotY! < -70 || rotY! > 10) {
+        if (rotY! < (globals.neutralRotY - 45) ||
+            rotY! > (globals.neutralRotY + 45)) {
           rotYCounter++;
         } else {
           rotYCounter = 0;
@@ -91,9 +98,9 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
             eyeCounter = 0;
           }
         }
-        if (rotX! > -15 &&
-            rotY! > -70 &&
-            rotY! < 10 &&
+        if (rotX! > (globals.neutralRotX - 15) &&
+            rotY! > (globals.neutralRotY - 45) &&
+            rotY! < (globals.neutralRotY + 45) &&
             leftEyeOpenProb! > 0.5 &&
             rightEyeOpenProb! > 0.5) {
           reminderCount = 0;
@@ -104,6 +111,33 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         timer.cancel();
       }
     });
+  }
+
+  void calibrationTimer() {
+    periodicCalibrationTimer =
+        Timer.periodic(const Duration(seconds: 5), (timer) {
+      setState(() {
+        globals.neutralRotX = rotX ?? 0;
+        globals.neutralRotY = rotY ?? -35;
+        caliSeconds--;
+      });
+      if (caliSeconds < 0) {
+        pauseCameraPreview();
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    _assetsAudioPlayer.setVolume(0.75);
+    periodicCalibrationTimer?.cancel();
+    periodicDetectionTimer?.cancel();
+    if (widget.calibrationMode == true) {
+      calibrationTimer();
+    } else if (widget.calibrationMode == false) {
+      detectionTimer();
+    }
     super.initState();
   }
 
@@ -158,6 +192,21 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
             ],
           ),
         ),
+        if (widget.calibrationMode == true)
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.black.withOpacity(0.5),
+              ),
+              child: Text(
+                "$caliSeconds",
+                style: Theme.of(context).textTheme.displayMedium,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
       ],
     );
   }
