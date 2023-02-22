@@ -1,4 +1,6 @@
 import 'dart:core';
+import 'dart:async';
+import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -14,6 +16,7 @@ class FaceDetectorView extends StatefulWidget {
 }
 
 class _FaceDetectorViewState extends State<FaceDetectorView> {
+  AssetsAudioPlayer _assetsAudioPlayer = AssetsAudioPlayer();
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableContours: false,
@@ -30,10 +33,82 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   double? smileProb;
   double? leftEyeOpenProb;
   double? rightEyeOpenProb;
+  List<Face> faces = [];
+  bool cancelTimer = false;
+
+  void sendReminder() {
+    _assetsAudioPlayer.open(
+      Audio('assets/audio/car_horn.mp3'),
+      playInBackground: PlayInBackground.enabled,
+    );
+  }
+
+  @override
+  void initState() {
+    _assetsAudioPlayer.setVolume(0.5);
+
+    var rotXCounter = 0;
+    var rotYCounter = 0;
+    var eyeCounter = 0;
+    var reminderCount = 0;
+    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (faces.isNotEmpty) {
+        if (rotX! < -15) {
+          rotXCounter++;
+        } else {
+          rotXCounter = 0;
+        }
+        if (reminderCount < 3) {
+          if (rotXCounter > 10) {
+            sendReminder();
+            reminderCount++;
+            rotXCounter = 0;
+          }
+        }
+        if (rotY! < -70 || rotY! > 10) {
+          rotYCounter++;
+        } else {
+          rotYCounter = 0;
+        }
+        if (reminderCount < 3) {
+          if (rotYCounter > 15) {
+            sendReminder();
+            reminderCount++;
+            rotYCounter = 0;
+          }
+        }
+        if (leftEyeOpenProb! < 0.5 && rightEyeOpenProb! < 0.5) {
+          eyeCounter++;
+        } else {
+          eyeCounter = 0;
+        }
+        if (reminderCount < 3) {
+          if (eyeCounter > 10) {
+            sendReminder();
+            reminderCount++;
+            eyeCounter = 0;
+          }
+        }
+        if (rotX! > -15 &&
+            rotY! > -70 &&
+            rotY! < 10 &&
+            leftEyeOpenProb! > 0.5 &&
+            rightEyeOpenProb! > 0.5) {
+          reminderCount = 0;
+        }
+      }
+      if (cancelTimer == true) {
+        cancelTimer = false;
+        timer.cancel();
+      }
+    });
+    super.initState();
+  }
 
   @override
   void dispose() {
     _canProcess = false;
+    cancelTimer = true;
     _faceDetector.close();
     super.dispose();
   }
@@ -180,8 +255,9 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     setState(() {
       _text = '';
     });
-    final faces = await _faceDetector.processImage(inputImage);
-    for (Face face in faces) {
+    faces = await _faceDetector.processImage(inputImage);
+    if (faces.isNotEmpty) {
+      Face face = faces[0];
       rotX = face.headEulerAngleX; // Head is tilted up and down rotX degrees
       rotY = face.headEulerAngleY; // Head is rotated to the right rotY degrees
       rotZ = face.headEulerAngleZ; // Head is tilted sideways rotZ degrees

@@ -26,7 +26,7 @@ double? leftEyeOpenProb;
 double? rightEyeOpenProb;
 bool isStreamingImages = false;
 
-void initCamera() {
+Future<void> initCamera() async {
   if (cameras.any(
     (element) =>
         element.lensDirection == initialDirection &&
@@ -47,7 +47,7 @@ void initCamera() {
   }
 
   if (_cameraIndex != -1) {
-    _startLiveFeed();
+    await _startLiveFeed();
   }
 }
 
