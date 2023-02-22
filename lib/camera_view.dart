@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -29,17 +28,18 @@ class CameraView extends StatefulWidget {
   State<CameraView> createState() => _CameraViewState();
 }
 
-class _CameraViewState extends State<CameraView> {
+class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   CameraController? _controller;
   int _cameraIndex = -1;
   double zoomLevel = 0.0, minZoomLevel = 0.0, maxZoomLevel = 5.0;
-  double _maxAvailableExposureOffset = 0.0, _minAvailableExposureOffset = 0.0;
-  bool _changingCameraLens = false;
+  //double _maxAvailableExposureOffset = 0.0, _minAvailableExposureOffset = 0.0;
+  //bool _changingCameraLens = false;
   bool _cameraOn = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     if (cameras.any(
       (element) =>
@@ -85,21 +85,21 @@ class _CameraViewState extends State<CameraView> {
     );
   }
 
-  Widget? _floatingActionButton() {
-    if (cameras.length == 1) return null;
-    return SizedBox(
-        height: 70.0,
-        width: 70.0,
-        child: FloatingActionButton(
-          onPressed: _switchLiveCamera,
-          child: Icon(
-            Platform.isIOS
-                ? Icons.flip_camera_ios_outlined
-                : Icons.flip_camera_android_outlined,
-            size: 40,
-          ),
-        ));
-  }
+  //Widget? _floatingActionButton() {
+  //  if (cameras.length == 1) return null;
+  //  return SizedBox(
+  //      height: 70.0,
+  //      width: 70.0,
+  //      child: FloatingActionButton(
+  //        onPressed: _switchLiveCamera,
+  //        child: Icon(
+  //          Platform.isIOS
+  //              ? Icons.flip_camera_ios_outlined
+  //              : Icons.flip_camera_android_outlined,
+  //          size: 40,
+  //        ),
+  //      ));
+  //}
 
   Widget _liveFeedBody() {
     if (_controller?.value.isInitialized == false) {
@@ -124,11 +124,7 @@ class _CameraViewState extends State<CameraView> {
           Transform.scale(
             scale: scale,
             child: Center(
-              child: _changingCameraLens
-                  ? const Center(
-                      child: Text('Changing camera lens'),
-                    )
-                  : CameraPreview(_controller!),
+              child: CameraPreview(_controller!),
             ),
           ),
           if (widget.customPaint != null) widget.customPaint!,
@@ -152,12 +148,12 @@ class _CameraViewState extends State<CameraView> {
       _controller?.getMinZoomLevel().then((value) {
         zoomLevel = value;
       });
-      _controller?.getMinExposureOffset().then((value) {
-        _minAvailableExposureOffset = value;
-      });
-      _controller?.getMaxExposureOffset().then((value) {
-        _maxAvailableExposureOffset = value;
-      });
+      //_controller?.getMinExposureOffset().then((value) {
+      //  _minAvailableExposureOffset = value;
+      //});
+      //_controller?.getMaxExposureOffset().then((value) {
+      //  _maxAvailableExposureOffset = value;
+      //});
       _controller?.startImageStream(_processCameraImage);
       setState(() {});
     });
@@ -170,14 +166,14 @@ class _CameraViewState extends State<CameraView> {
     _controller = null;
   }
 
-  Future _switchLiveCamera() async {
-    setState(() => _changingCameraLens = true);
-    _cameraIndex = (_cameraIndex + 1) % cameras.length;
-
-    await _stopLiveFeed();
-    await _startLiveFeed();
-    setState(() => _changingCameraLens = false);
-  }
+  //Future _switchLiveCamera() async {
+  //  setState(() => _changingCameraLens = true);
+  //  _cameraIndex = (_cameraIndex + 1) % cameras.length;
+  //
+  //  await _stopLiveFeed();
+  //  await _startLiveFeed();
+  //  setState(() => _changingCameraLens = false);
+  //}
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
