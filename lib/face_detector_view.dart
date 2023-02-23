@@ -9,6 +9,7 @@ import 'notification_controller.dart';
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
+import 'home_page.dart';
 import 'global_variables.dart' as globals;
 
 class FaceDetectorView extends StatefulWidget {
@@ -33,7 +34,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     ),
   );
 
-  bool hasCalibrated = false;
   int caliSeconds = 5;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool cancelTimer = false;
@@ -61,7 +61,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (faces.isNotEmpty) {
-        if (rotX! < (globals.neutralRotX - 15)) {
+        if (rotX! < (globals.neutralRotX - 15) ||
+            rotX! > (globals.neutralRotX + 15)) {
           rotXCounter++;
         } else {
           rotXCounter = 0;
@@ -73,8 +74,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
             rotXCounter = 0;
           }
         }
-        if (rotY! < (globals.neutralRotY - 45) ||
-            rotY! > (globals.neutralRotY + 45)) {
+        if (rotY! < (globals.neutralRotY - 40) ||
+            rotY! > (globals.neutralRotY + 40)) {
           rotYCounter++;
         } else {
           rotYCounter = 0;
@@ -99,8 +100,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
           }
         }
         if (rotX! > (globals.neutralRotX - 15) &&
-            rotY! > (globals.neutralRotY - 45) &&
-            rotY! < (globals.neutralRotY + 45) &&
+            rotY! > (globals.neutralRotY - 40) &&
+            rotY! < (globals.neutralRotY + 40) &&
             leftEyeOpenProb! > 0.5 &&
             rightEyeOpenProb! > 0.5) {
           reminderCount = 0;
@@ -115,14 +116,22 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   void calibrationTimer() {
     periodicCalibrationTimer =
-        Timer.periodic(const Duration(seconds: 5), (timer) {
+        Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         globals.neutralRotX = rotX ?? 0;
         globals.neutralRotY = rotY ?? -35;
         caliSeconds--;
       });
       if (caliSeconds < 0) {
-        pauseCameraPreview();
+        setState(() {
+          globals.hasCalibrated = true;
+        });
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const Home(
+                      title: globals.appName,
+                    )));
         timer.cancel();
       }
     });
@@ -170,43 +179,85 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
               const SizedBox(
                 height: 78,
               ),
-              Container(
-                width: double.infinity,
-                height: 300,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+              if (MediaQuery.of(context).orientation == Orientation.portrait)
+                Container(
+                  width: double.infinity,
+                  height: 350,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                  ),
+                  child: ListView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      FaceValueWidget(text: "rotX", value: rotX),
+                      FaceValueWidget(text: "rotY", value: rotY),
+                      //FaceValueWidget(text: "rotZ", value: rotZ),
+                      FaceValueWidget(
+                          text: "neutralRotX", value: globals.neutralRotX),
+                      FaceValueWidget(
+                          text: "neutralRotY", value: globals.neutralRotY),
+                      FaceValueWidget(
+                          text: "leftEyeOpenProb", value: leftEyeOpenProb),
+                      FaceValueWidget(
+                          text: "rightEyeOpenProb", value: rightEyeOpenProb),
+                    ],
+                  ),
                 ),
-                child: ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    FaceValueWidget(text: "rotX", value: rotX),
-                    FaceValueWidget(text: "rotY", value: rotY),
-                    FaceValueWidget(text: "rotZ", value: rotZ),
-                    FaceValueWidget(
-                        text: "leftEyeOpenProb", value: leftEyeOpenProb),
-                    FaceValueWidget(
-                        text: "rightEyeOpenProb", value: rightEyeOpenProb),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
         if (widget.calibrationMode == true)
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.black.withOpacity(0.5),
-              ),
-              child: Text(
-                "$caliSeconds",
-                style: Theme.of(context).textTheme.displayMedium,
-                textAlign: TextAlign.center,
-              ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+            ),
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "Get into your normal driving position",
+                  style: Theme.of(context).textTheme.displayMedium,
+                  textAlign: TextAlign.center,
+                ),
+                ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 30)),
+                Text(
+                  caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+                  style: Theme.of(context).textTheme.displayLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           )
+        else if (widget.calibrationMode == false)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(70),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    "Stop driving",
+                    style: Theme.of(context).textTheme.displayMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 80),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

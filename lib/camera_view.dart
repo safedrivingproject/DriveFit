@@ -70,6 +70,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   @override
   void dispose() {
     _stopLiveFeed();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -78,6 +79,8 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        automaticallyImplyLeading: false,
+        centerTitle: true,
       ),
       body: _liveFeedBody(),
       //floatingActionButton: _floatingActionButton(),
@@ -190,9 +193,11 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.inactive) {
       cameraController.dispose();
-    }
-    if (state == AppLifecycleState.resumed) {
+    } else if (state == AppLifecycleState.resumed) {
       _startLiveFeed();
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 

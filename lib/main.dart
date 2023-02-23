@@ -4,6 +4,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'home_page.dart';
 import 'notification_controller.dart';
 import 'notification_page.dart';
+import 'global_variables.dart' as globals;
 
 List<CameraDescription> cameras = [];
 
@@ -24,8 +25,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  static const String routeHome = '/', routeNotification = '/notification-page';
-  static const appName = 'Driving Face Detection';
+  //static const String routeHome = '/', routeNotification = '/notification-page';
 
   @override
   void initState() {
@@ -33,7 +33,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
-  //List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
+  // List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
   //  List<Route<dynamic>> pageStack = [];
   //  pageStack
   //      .add(MaterialPageRoute(builder: (_) => const Home(title: appName)));
@@ -63,9 +63,9 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: MyApp.navigatorKey,
-      title: appName,
+      title: globals.appName,
       debugShowCheckedModeBanner: false,
-      home: const Home(title: appName),
+      home: const Home(title: globals.appName),
       theme: ThemeData(
         brightness: Brightness.light,
         primaryColor: Colors.lightBlue[800],

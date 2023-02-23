@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'face_detector_view.dart';
+import 'global_variables.dart' as globals;
 
 class Home extends StatefulWidget {
   final String title;
@@ -12,6 +13,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
+    setState(() {});
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -64,14 +66,15 @@ class _HomeState extends State<Home> {
                         minimumSize: const Size.fromHeight(70),
                       ),
                       onPressed: () {
-                        Navigator.push(
+                        Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                                builder: (context) =>
-                                    const FaceDetectorView(calibrationMode: true,)));
+                                builder: (context) => const FaceDetectorView(
+                                      calibrationMode: true,
+                                    )));
                       },
                       child: Text(
-                        "Calibrate",
+                        "Calibrate Camera",
                         style: Theme.of(context).textTheme.displayMedium,
                         textAlign: TextAlign.center,
                       ),
@@ -84,15 +87,28 @@ class _HomeState extends State<Home> {
                         minimumSize: const Size.fromHeight(70),
                       ),
                       onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const FaceDetectorView(calibrationMode: false,)));
+                        if (globals.hasCalibrated == true) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const FaceDetectorView(
+                                        calibrationMode: false,
+                                      )));
+                        } else if (globals.hasCalibrated == false) {
+                          null;
+                        }
                       },
                       child: Text(
-                        "Start Face Detection",
-                        style: Theme.of(context).textTheme.displayMedium,
+                        "Start Driving",
+                        style: globals.hasCalibrated == true
+                            ? Theme.of(context)
+                                .textTheme
+                                .displayMedium
+                                ?.copyWith(color: Colors.white)
+                            : Theme.of(context)
+                                .textTheme
+                                .displayMedium
+                                ?.copyWith(color: Colors.lightBlue[800]),
                         textAlign: TextAlign.center,
                       ),
                     ),
