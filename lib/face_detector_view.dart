@@ -9,7 +9,6 @@ import 'notification_controller.dart';
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
-import 'home_page.dart';
 import 'global_variables.dart' as globals;
 
 class FaceDetectorView extends StatefulWidget {
@@ -37,8 +36,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   int caliSeconds = 5;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool cancelTimer = false;
-  bool _canProcess = true;
-  bool _isBusy = false;
+  bool _canProcess = true, _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
   double? rotX, rotY, rotZ, leftEyeOpenProb, rightEyeOpenProb;
@@ -126,12 +124,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         setState(() {
           globals.hasCalibrated = true;
         });
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const Home(
-                      title: globals.appName,
-                    )));
+        Navigator.pop(context);
         timer.cancel();
       }
     });
@@ -139,6 +132,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   @override
   void initState() {
+    super.initState();
     _assetsAudioPlayer.setVolume(0.75);
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
@@ -147,7 +141,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     } else if (widget.calibrationMode == false) {
       detectionTimer();
     }
-    super.initState();
   }
 
   @override

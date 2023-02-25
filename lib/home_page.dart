@@ -66,12 +66,14 @@ class _HomeState extends State<Home> {
                         minimumSize: const Size.fromHeight(70),
                       ),
                       onPressed: () {
-                        Navigator.pushReplacement(
+                        Navigator.push(
                             context,
                             MaterialPageRoute(
                                 builder: (context) => const FaceDetectorView(
                                       calibrationMode: true,
-                                    )));
+                                    ))).then(((value) {
+                          setState(() {});
+                        }));
                       },
                       child: Text(
                         "Calibrate Camera",
