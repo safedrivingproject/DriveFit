@@ -30,6 +30,12 @@
 @import camera_avfoundation;
 #endif
 
+#if __has_include(<flutter_sensors/FlutterSensorsPlugin.h>)
+#import <flutter_sensors/FlutterSensorsPlugin.h>
+#else
+@import flutter_sensors;
+#endif
+
 #if __has_include(<google_mlkit_commons/GoogleMlKitCommonsPlugin.h>)
 #import <google_mlkit_commons/GoogleMlKitCommonsPlugin.h>
 #else
@@ -55,6 +61,7 @@
   [AssetsAudioPlayerWebPlugin registerWithRegistrar:[registry registrarForPlugin:@"AssetsAudioPlayerWebPlugin"]];
   [AwesomeNotificationsPlugin registerWithRegistrar:[registry registrarForPlugin:@"AwesomeNotificationsPlugin"]];
   [CameraPlugin registerWithRegistrar:[registry registrarForPlugin:@"CameraPlugin"]];
+  [FlutterSensorsPlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterSensorsPlugin"]];
   [GoogleMlKitCommonsPlugin registerWithRegistrar:[registry registrarForPlugin:@"GoogleMlKitCommonsPlugin"]];
   [GoogleMlKitFaceDetectionPlugin registerWithRegistrar:[registry registrarForPlugin:@"GoogleMlKitFaceDetectionPlugin"]];
   [PathProviderPlugin registerWithRegistrar:[registry registrarForPlugin:@"PathProviderPlugin"]];

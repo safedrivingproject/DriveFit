@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'face_detector_view.dart';
+import 'driving_view.dart';
 import 'global_variables.dart' as globals;
 
 class Home extends StatefulWidget {
@@ -69,8 +69,9 @@ class _HomeState extends State<Home> {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const FaceDetectorView(
+                                builder: (context) => const DrivingView(
                                       calibrationMode: true,
+                                      accelerometerOn: false,
                                     ))).then(((value) {
                           setState(() {});
                         }));
@@ -93,8 +94,9 @@ class _HomeState extends State<Home> {
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => const FaceDetectorView(
+                                  builder: (context) => const DrivingView(
                                         calibrationMode: false,
+                                        accelerometerOn: true,
                                       )));
                         } else if (globals.hasCalibrated == false) {
                           null;
@@ -102,6 +104,40 @@ class _HomeState extends State<Home> {
                       },
                       child: Text(
                         "Start Driving",
+                        style: globals.hasCalibrated == true
+                            ? Theme.of(context)
+                                .textTheme
+                                .displayMedium
+                                ?.copyWith(color: Colors.white)
+                            : Theme.of(context)
+                                .textTheme
+                                .displayMedium
+                                ?.copyWith(color: Colors.lightBlue[800]),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 10),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(70),
+                      ),
+                      onPressed: () {
+                        if (globals.hasCalibrated == true) {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const DrivingView(
+                                        calibrationMode: false,
+                                        accelerometerOn: false,
+                                      )));
+                        } else if (globals.hasCalibrated == false) {
+                          null;
+                        }
+                      },
+                      child: Text(
+                        "Start Driving w/ no accelerometer",
                         style: globals.hasCalibrated == true
                             ? Theme.of(context)
                                 .textTheme

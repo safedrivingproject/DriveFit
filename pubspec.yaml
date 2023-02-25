@@ -41,6 +41,7 @@ dependencies:
   camera: any
   awesome_notifications: any
   assets_audio_player: any
+  flutter_sensors: any
 
 dev_dependencies:
   flutter_test:
