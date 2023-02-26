@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -182,28 +183,30 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   //  setState(() => _changingCameraLens = false);
   //}
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? cameraController = _controller;
+  // @override
+  // void didChangeAppLifecycleState(AppLifecycleState state) {
+  //   final CameraController? cameraController = _controller;
 
-    // App state changed before we got the chance to initialize.
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      return;
-    }
+  //   // App state changed before we got the chance to initialize.
+  //   if (cameraController == null || !cameraController.value.isInitialized) {
+  //     return;
+  //   }
 
-    if (state == AppLifecycleState.inactive) {
-      cameraController.dispose();
-    } else if (state == AppLifecycleState.resumed) {
-      _startLiveFeed();
-      if (mounted) {
-        setState(() {});
-      }
-    }
-  }
+  //   if (state == AppLifecycleState.resumed) {
+  //     _startLiveFeed();
+  //     if (mounted) {
+  //       setState(() {});
+  //     }
+  //   }
+  // }
 
   Future _processCameraImage(CameraImage image) async {
-    _controller
-        ?.setExposurePoint(Offset(globals.faceCenterX, globals.faceCenterY));
+    try {
+      _controller
+          ?.setExposurePoint(Offset(globals.faceCenterX, globals.faceCenterY));
+    } catch (e) {
+      log("$e");
+    }
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);

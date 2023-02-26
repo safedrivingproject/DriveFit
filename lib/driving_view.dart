@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:core';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:assets_audio_player/assets_audio_player.dart';
+import 'package:flutter_sensors/flutter_sensors.dart';
 
 import 'notification_controller.dart';
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
-import 'accelerometer_view.dart';
 import 'global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
@@ -39,13 +40,30 @@ class _DrivingViewState extends State<DrivingView> {
   int caliSeconds = 5;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool cancelTimer = false;
+  bool carMoving = false;
+
   bool _canProcess = true, _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
+
   double? rotX, rotY, rotZ, leftEyeOpenProb, rightEyeOpenProb;
-  double rotXOffset = 15, rotYOffset = 40, eyeProbThreshold = 0.5;
+  double rotXOffset = 20,
+      rotYLeftOffset = 35,
+      rotYRightOffset = 20,
+      eyeProbThreshold = 0.5,
+      maxAccelThreshold = 1.5;
   List<Face> faces = [];
 
+  bool _accelAvailable = false;
+  List<double> accelData = List.filled(3, 0.0);
+  StreamSubscription? _accelSubscription;
+  double _rawAccelX = 0, _rawAccelY = 9.8, _rawAccelZ = 0;
+  double accelX = 0, accelY = 0, accelZ = 0;
+  var tempAccelList = <double>[];
+
+  /// *******************************************************
+  /// INATTENTIVENESS DETECTION
+  /// *******************************************************
   void sendReminder() {
     _assetsAudioPlayer.open(
       Audio('assets/audio/car_horn.mp3'),
@@ -59,37 +77,51 @@ class _DrivingViewState extends State<DrivingView> {
     var rotXCounter = 0;
     var rotYCounter = 0;
     var eyeCounter = 0;
+    var accelMovingCounter = 0;
+    var accelStoppedCounter = 0;
+    double maxAccel = 0;
     var reminderCount = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (faces.isEmpty) return;
-      if (widget.accelerometerOn) {}
-      if (rotX! < (globals.neutralRotX - rotXOffset) ||
-          rotX! > (globals.neutralRotX + rotXOffset)) {
-        rotXCounter++;
-      } else {
-        rotXCounter = 0;
-      }
-      if (reminderCount < 3) {
-        if (rotXCounter > 10) {
-          sendReminder();
-          reminderCount++;
-          rotXCounter = 0;
+
+      /// Detect if car is moving
+      if (widget.accelerometerOn) {
+        tempAccelList.add(globals.resultantAccel);
+        if (tempAccelList.length > 10) {
+          tempAccelList.removeAt(0);
         }
-      }
-      if (rotY! < (globals.neutralRotY - rotYOffset) ||
-          rotY! > (globals.neutralRotY + rotYOffset)) {
-        rotYCounter++;
-      } else {
-        rotYCounter = 0;
-      }
-      if (reminderCount < 3) {
-        if (rotYCounter > 15) {
-          sendReminder();
-          reminderCount++;
-          rotYCounter = 0;
+        maxAccel = tempAccelList.fold<double>(0, max);
+        if (maxAccel > maxAccelThreshold) {
+          accelMovingCounter++;
+        } else {
+          accelMovingCounter = 0;
         }
+        if (accelMovingCounter > 20) {
+          if (mounted) {
+            setState(() {
+              carMoving = true;
+            });
+          }
+        }
+        if (maxAccel <= maxAccelThreshold) {
+          accelStoppedCounter++;
+        } else {
+          accelStoppedCounter = 0;
+        }
+        if (accelStoppedCounter > 20) {
+          if (mounted) {
+            setState(() {
+              carMoving = false;
+            });
+          }
+        }
+      } else {
+        carMoving = true;
       }
+
+      /// Detect if face turned away / eyes closed for too long
+      /// when the car is moving
       if (leftEyeOpenProb! < eyeProbThreshold &&
           rightEyeOpenProb! < eyeProbThreshold) {
         eyeCounter++;
@@ -104,8 +136,9 @@ class _DrivingViewState extends State<DrivingView> {
         }
       }
       if (rotX! > (globals.neutralRotX - rotXOffset) &&
-          rotY! > (globals.neutralRotY - rotYOffset) &&
-          rotY! < (globals.neutralRotY + rotYOffset) &&
+          rotX! < (globals.neutralRotX + rotXOffset) &&
+          rotY! > (globals.neutralRotY - rotYRightOffset) &&
+          rotY! < (globals.neutralRotY + rotYLeftOffset) &&
           leftEyeOpenProb! > eyeProbThreshold &&
           rightEyeOpenProb! > eyeProbThreshold) {
         reminderCount = 0;
@@ -115,15 +148,50 @@ class _DrivingViewState extends State<DrivingView> {
         cancelTimer = false;
         timer.cancel();
       }
+
+      if (!carMoving) return;
+
+      if (rotX! < (globals.neutralRotX - rotXOffset) ||
+          rotX! > (globals.neutralRotX + rotXOffset)) {
+        rotXCounter++;
+      } else {
+        rotXCounter = 0;
+      }
+      if (reminderCount < 3) {
+        if (rotXCounter > 10) {
+          sendReminder();
+          reminderCount++;
+          rotXCounter = 0;
+        }
+      }
+      if (rotY! > (globals.neutralRotY + rotYLeftOffset) ||
+          rotY! < (globals.neutralRotY - rotYRightOffset)) {
+        rotYCounter++;
+      } else {
+        rotYCounter = 0;
+      }
+      if (reminderCount < 3) {
+        if (rotYCounter > 15) {
+          sendReminder();
+          reminderCount++;
+          rotYCounter = 0;
+        }
+      }
     });
   }
 
+  /// *******************************************************
+  /// CALIBRATION
+  /// *******************************************************
   void calibrationTimer() {
     periodicCalibrationTimer =
         Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        globals.neutralRotX = rotX ?? 0;
-        globals.neutralRotY = rotY ?? -35;
+        globals.neutralRotX = rotX ?? 5;
+        globals.neutralRotY = rotY ?? -25;
+        globals.neutralAccelX = _rawAccelX;
+        globals.neutralAccelY = _rawAccelY;
+        globals.neutralAccelZ = _rawAccelZ;
         caliSeconds--;
       });
       if (caliSeconds < 0) {
@@ -136,137 +204,57 @@ class _DrivingViewState extends State<DrivingView> {
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _assetsAudioPlayer.setVolume(0.75);
-    periodicCalibrationTimer?.cancel();
-    periodicDetectionTimer?.cancel();
-    if (widget.calibrationMode == true) {
-      calibrationTimer();
-    } else if (widget.calibrationMode == false) {
-      detectionTimer();
+  /// *******************************************************
+  /// ACCELEROMETER STUFF
+  /// *******************************************************
+  void _initAccelerometer() async {
+    await SensorManager()
+        .isSensorAvailable(Sensors.ACCELEROMETER)
+        .then((result) {
+      setState(() {
+        _accelAvailable = result;
+      });
+      _startAccelerometer();
+    });
+  }
+
+  Future<void> _startAccelerometer() async {
+    if (_accelSubscription != null) return;
+    if (_accelAvailable) {
+      final stream = await SensorManager().sensorUpdates(
+        sensorId: Sensors.ACCELEROMETER,
+        interval: Sensors.SENSOR_DELAY_GAME,
+      );
+      _accelSubscription = stream.listen((sensorEvent) {
+        if (mounted) {
+          setState(() {
+            accelData = sensorEvent.data;
+            _rawAccelX = accelData[0];
+            _rawAccelY = accelData[1];
+            _rawAccelZ = accelData[2];
+            accelX = _rawAccelX - globals.neutralAccelX;
+            accelY = _rawAccelY - globals.neutralAccelY;
+            accelZ = _rawAccelZ - globals.neutralAccelZ;
+            globals.resultantAccel = calcResultantAccel();
+          });
+        }
+      });
     }
   }
 
-  @override
-  void dispose() {
-    _canProcess = false;
-    _assetsAudioPlayer.dispose();
-    cancelTimer = true;
-    _faceDetector.close();
-    super.dispose();
+  void _stopAccelerometer() {
+    if (_accelSubscription == null) return;
+    _accelSubscription?.cancel();
+    _accelSubscription = null;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        CameraView(
-          title: 'Face Detector',
-          customPaint: _customPaint,
-          text: _text,
-          onImage: (inputImage) {
-            processImage(inputImage);
-          },
-          initialDirection: CameraLensDirection.front,
-        ),
-        Align(
-          alignment: Alignment.center,
-          child: Column(
-            children: [
-              const SizedBox(
-                height: 78,
-              ),
-              if (MediaQuery.of(context).orientation == Orientation.portrait)
-                Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 350,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                      ),
-                      child: ListView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          FaceValueWidget(text: "rotX", value: rotX),
-                          FaceValueWidget(text: "rotY", value: rotY),
-                          //FaceValueWidget(text: "rotZ", value: rotZ),
-                          FaceValueWidget(
-                              text: "neutralRotX", value: globals.neutralRotX),
-                          FaceValueWidget(
-                              text: "neutralRotY", value: globals.neutralRotY),
-                          FaceValueWidget(
-                              text: "leftEyeOpenProb", value: leftEyeOpenProb),
-                          FaceValueWidget(
-                              text: "rightEyeOpenProb",
-                              value: rightEyeOpenProb),
-                        ],
-                      ),
-                    ),
-                    if (widget.accelerometerOn == true) AccelerometerView()
-                  ],
-                ),
-            ],
-          ),
-        ),
-        if (widget.calibrationMode == true)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-            ),
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  "Get into your normal driving position",
-                  style: Theme.of(context).textTheme.displayMedium,
-                  textAlign: TextAlign.center,
-                ),
-                ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 30)),
-                Text(
-                  caliSeconds < 1 ? "Complete!" : "$caliSeconds",
-                  style: Theme.of(context).textTheme.displayLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          )
-        else if (widget.calibrationMode == false)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(70),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text(
-                    "Stop driving",
-                    style: Theme.of(context).textTheme.displayMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 80),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
+  double calcResultantAccel() {
+    return sqrt(accelX * accelX + accelY * accelY + accelZ * accelZ);
   }
 
+  /// *******************************************************
+  /// FACE DETECTION
+  /// *******************************************************
   Future<void> processImage(InputImage inputImage) async {
     if (!_canProcess) return;
     if (_isBusy) return;
@@ -327,10 +315,150 @@ class _DrivingViewState extends State<DrivingView> {
       setState(() {});
     }
   }
+
+  /// *******************************************************
+  /// TYPICAL WIDGET STUFF
+  /// *******************************************************
+  @override
+  void initState() {
+    super.initState();
+    _assetsAudioPlayer.setVolume(0.75);
+    periodicCalibrationTimer?.cancel();
+    periodicDetectionTimer?.cancel();
+    if (widget.calibrationMode == true) {
+      calibrationTimer();
+    } else if (widget.calibrationMode == false) {
+      detectionTimer();
+    }
+    if (widget.accelerometerOn) {
+      _initAccelerometer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _canProcess = false;
+    _assetsAudioPlayer.dispose();
+    cancelTimer = true;
+    _faceDetector.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        CameraView(
+          title: 'Face Detector',
+          customPaint: _customPaint,
+          text: _text,
+          onImage: (inputImage) {
+            processImage(inputImage);
+          },
+          initialDirection: CameraLensDirection.front,
+        ),
+        Column(
+          children: [
+            const SizedBox(
+              height: 78,
+            ),
+            if (MediaQuery.of(context).orientation == Orientation.portrait)
+              Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 320,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                    ),
+                    child: ListView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        DataValueWidget(text: "rotX", value: rotX),
+                        DataValueWidget(text: "rotY", value: rotY),
+                        //FaceValueWidget(text: "rotZ", value: rotZ),
+                        DataValueWidget(
+                            text: "neutralRotX", value: globals.neutralRotX),
+                        DataValueWidget(
+                            text: "neutralRotY", value: globals.neutralRotY),
+                        DataValueWidget(
+                            text: "leftEyeOpenProb", value: leftEyeOpenProb),
+                        DataValueWidget(
+                            text: "rightEyeOpenProb", value: rightEyeOpenProb),
+                      ],
+                    ),
+                  ),
+                  if (widget.accelerometerOn == true)
+                    DataValueWidget(
+                        text: "carMoving", value: carMoving ? 1 : 0),
+                  DataValueWidget(
+                      text: "resultantAccel", value: globals.resultantAccel),
+                  DataValueWidget(text: "accelX", value: accelX),
+                  DataValueWidget(text: "accelY", value: accelY),
+                  DataValueWidget(text: "accelZ", value: accelZ),
+                ],
+              ),
+          ],
+        ),
+        if (widget.calibrationMode == true)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+            ),
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "Get into your normal driving position",
+                  style: Theme.of(context).textTheme.displayMedium,
+                  textAlign: TextAlign.center,
+                ),
+                ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 30)),
+                Text(
+                  caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+                  style: Theme.of(context).textTheme.displayLarge,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          )
+        else if (widget.calibrationMode == false)
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(70),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    "Stop driving",
+                    style: Theme.of(context).textTheme.displayMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 80),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }
 
-class FaceValueWidget extends StatelessWidget {
-  const FaceValueWidget({
+class DataValueWidget extends StatelessWidget {
+  const DataValueWidget({
     Key? key,
     required this.text,
     required this.value,

@@ -71,13 +71,13 @@ class _HomeState extends State<Home> {
                             MaterialPageRoute(
                                 builder: (context) => const DrivingView(
                                       calibrationMode: true,
-                                      accelerometerOn: false,
+                                      accelerometerOn: true,
                                     ))).then(((value) {
                           setState(() {});
                         }));
                       },
                       child: Text(
-                        "Calibrate Camera",
+                        "Calibrate",
                         style: Theme.of(context).textTheme.displayMedium,
                         textAlign: TextAlign.center,
                       ),
@@ -137,7 +137,7 @@ class _HomeState extends State<Home> {
                         }
                       },
                       child: Text(
-                        "Start Driving w/ no accelerometer",
+                        "Start Driving w/o accelerometer",
                         style: globals.hasCalibrated == true
                             ? Theme.of(context)
                                 .textTheme
