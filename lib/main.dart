@@ -65,10 +65,10 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: MyApp.navigatorKey,
       title: globals.appName,
       debugShowCheckedModeBanner: false,
-      home: const Home(title: globals.appName),
+      home: const HomePage(title: globals.appName),
       theme: ThemeData(
         brightness: Brightness.light,
-        primaryColor: Colors.lightBlue[800],
+        primaryColor: Colors.blue[800],
         fontFamily: 'Segoe UI',
         textTheme: const TextTheme(
           bodyLarge: TextStyle(

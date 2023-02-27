@@ -51,7 +51,7 @@ class _DrivingViewState extends State<DrivingView> {
       rotYLeftOffset = 35,
       rotYRightOffset = 20,
       eyeProbThreshold = 0.5,
-      maxAccelThreshold = 1.5;
+      maxAccelThreshold = 1.0;
   List<Face> faces = [];
 
   bool _accelAvailable = false;
@@ -367,7 +367,7 @@ class _DrivingViewState extends State<DrivingView> {
                 children: [
                   Container(
                     width: double.infinity,
-                    height: 320,
+                    height: 700,
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.5),
                     ),
@@ -385,17 +385,18 @@ class _DrivingViewState extends State<DrivingView> {
                             text: "leftEyeOpenProb", value: leftEyeOpenProb),
                         DataValueWidget(
                             text: "rightEyeOpenProb", value: rightEyeOpenProb),
+                        if (widget.accelerometerOn == true)
+                          DataValueWidget(
+                              text: "carMoving", value: carMoving ? 1 : 0),
+                        DataValueWidget(
+                            text: "resultantAccel",
+                            value: globals.resultantAccel),
+                        DataValueWidget(text: "accelX", value: accelX),
+                        DataValueWidget(text: "accelY", value: accelY),
+                        DataValueWidget(text: "accelZ", value: accelZ),
                       ],
                     ),
                   ),
-                  if (widget.accelerometerOn == true)
-                    DataValueWidget(
-                        text: "carMoving", value: carMoving ? 1 : 0),
-                  DataValueWidget(
-                      text: "resultantAccel", value: globals.resultantAccel),
-                  DataValueWidget(text: "accelX", value: accelX),
-                  DataValueWidget(text: "accelY", value: accelY),
-                  DataValueWidget(text: "accelZ", value: accelZ),
                 ],
               ),
           ],
