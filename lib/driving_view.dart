@@ -46,13 +46,19 @@ class _DrivingViewState extends State<DrivingView> {
   CustomPaint? _customPaint;
   String? _text;
 
-  double? rotX, rotY, rotZ, leftEyeOpenProb, rightEyeOpenProb;
+  double? rotX = 0,
+      rotY = 0,
+      rotZ = 0,
+      leftEyeOpenProb = 0,
+      rightEyeOpenProb = 0;
   double rotXOffset = 20,
-      rotYLeftOffset = 35,
+      rotYLeftOffset = 30,
       rotYRightOffset = 20,
       eyeProbThreshold = 0.5,
       maxAccelThreshold = 1.0;
   List<Face> faces = [];
+
+  bool startCalibration = false;
 
   bool _accelAvailable = false;
   List<double> accelData = List.filled(3, 0.0);
@@ -64,13 +70,20 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// INATTENTIVENESS DETECTION
   /// *******************************************************
-  void sendReminder() {
+  void sendSleepyReminder() {
     _assetsAudioPlayer.open(
       Audio('assets/audio/car_horn.mp3'),
       playInBackground: PlayInBackground.enabled,
     );
-    NotificationController.cancelNotifications();
-    NotificationController.createNewReminderNotification();
+    NotificationController.createSleepyNotification();
+  }
+
+  void sendDistractedReminder() {
+    _assetsAudioPlayer.open(
+      Audio('assets/audio/car_horn.mp3'),
+      playInBackground: PlayInBackground.enabled,
+    );
+    NotificationController.createDistractedNotification();
   }
 
   void detectionTimer() {
@@ -79,13 +92,36 @@ class _DrivingViewState extends State<DrivingView> {
     var eyeCounter = 0;
     var accelMovingCounter = 0;
     var accelStoppedCounter = 0;
+    var faceEmptyCounter = 0;
+    var hasFace = true;
+    var needReminderType = 0;
+    // ReminderType => 0: No need reminder, 1: Sleepy (Eyes Closed), 2: Distracted(Head rotation)
     double maxAccel = 0;
     var reminderCount = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (faces.isEmpty) return;
+      // if (faces.isEmpty) return; (will lead to inaccurate detection)
+      if (faces.isEmpty) {
+        faceEmptyCounter++;
+      } else {
+        faceEmptyCounter = 0;
+        if (mounted) {
+          setState(() {
+            hasFace = true;
+          });
+        }
+      }
+      if (faceEmptyCounter > 50) {
+        if (mounted) {
+          setState(() {
+            hasFace = false;
+          });
+        }
+        faceEmptyCounter = 51;
+      }
+      if (!hasFace) return;
 
-      /// Detect if car is moving
+      ///TODO: replace with GPS
       if (widget.accelerometerOn) {
         tempAccelList.add(globals.resultantAccel);
         if (tempAccelList.length > 10) {
@@ -120,8 +156,7 @@ class _DrivingViewState extends State<DrivingView> {
         carMoving = true;
       }
 
-      /// Detect if face turned away / eyes closed for too long
-      /// when the car is moving
+      /// Eyes Closed
       if (leftEyeOpenProb! < eyeProbThreshold &&
           rightEyeOpenProb! < eyeProbThreshold) {
         eyeCounter++;
@@ -130,11 +165,12 @@ class _DrivingViewState extends State<DrivingView> {
       }
       if (reminderCount < 3) {
         if (eyeCounter > 10) {
-          sendReminder();
+          needReminderType = 1;
           reminderCount++;
           eyeCounter = 0;
         }
       }
+
       if (rotX! > (globals.neutralRotX - rotXOffset) &&
           rotX! < (globals.neutralRotX + rotXOffset) &&
           rotY! > (globals.neutralRotY - rotYRightOffset) &&
@@ -151,6 +187,7 @@ class _DrivingViewState extends State<DrivingView> {
 
       if (!carMoving) return;
 
+      /// Head up or down
       if (rotX! < (globals.neutralRotX - rotXOffset) ||
           rotX! > (globals.neutralRotX + rotXOffset)) {
         rotXCounter++;
@@ -159,11 +196,13 @@ class _DrivingViewState extends State<DrivingView> {
       }
       if (reminderCount < 3) {
         if (rotXCounter > 10) {
-          sendReminder();
+          needReminderType = 2;
           reminderCount++;
           rotXCounter = 0;
         }
       }
+
+      /// Head Left or Right
       if (rotY! > (globals.neutralRotY + rotYLeftOffset) ||
           rotY! < (globals.neutralRotY - rotYRightOffset)) {
         rotYCounter++;
@@ -171,11 +210,20 @@ class _DrivingViewState extends State<DrivingView> {
         rotYCounter = 0;
       }
       if (reminderCount < 3) {
-        if (rotYCounter > 15) {
-          sendReminder();
+        if (rotYCounter > 25) {
+          needReminderType = 2;
           reminderCount++;
           rotYCounter = 0;
         }
+      }
+
+      if (needReminderType > 0) {
+        if (needReminderType == 1) {
+          sendSleepyReminder();
+        } else if (needReminderType == 2) {
+          sendDistractedReminder();
+        }
+        needReminderType = 0;
       }
     });
   }
@@ -184,20 +232,30 @@ class _DrivingViewState extends State<DrivingView> {
   /// CALIBRATION
   /// *******************************************************
   void calibrationTimer() {
+    if (mounted) {
+      setState(() {
+        startCalibration = true;
+      });
+    }
     periodicCalibrationTimer =
         Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        globals.neutralRotX = rotX ?? 5;
-        globals.neutralRotY = rotY ?? -25;
-        globals.neutralAccelX = _rawAccelX;
-        globals.neutralAccelY = _rawAccelY;
-        globals.neutralAccelZ = _rawAccelZ;
-        caliSeconds--;
-      });
-      if (caliSeconds < 0) {
+      if (mounted) {
         setState(() {
-          globals.hasCalibrated = true;
+          globals.neutralRotX = rotX ?? 5;
+          globals.neutralRotY = rotY ?? -25;
+          globals.neutralAccelX = _rawAccelX;
+          globals.neutralAccelY = _rawAccelY;
+          globals.neutralAccelZ = _rawAccelZ;
+          caliSeconds--;
         });
+      }
+      if (caliSeconds < 0) {
+        if (mounted) {
+          setState(() {
+            globals.hasCalibrated = true;
+            startCalibration = false;
+          });
+        }
         Navigator.pop(context);
         timer.cancel();
       }
@@ -211,9 +269,11 @@ class _DrivingViewState extends State<DrivingView> {
     await SensorManager()
         .isSensorAvailable(Sensors.ACCELEROMETER)
         .then((result) {
-      setState(() {
-        _accelAvailable = result;
-      });
+      if (mounted) {
+        setState(() {
+          _accelAvailable = result;
+        });
+      }
       _startAccelerometer();
     });
   }
@@ -259,9 +319,11 @@ class _DrivingViewState extends State<DrivingView> {
     if (!_canProcess) return;
     if (_isBusy) return;
     _isBusy = true;
-    setState(() {
-      _text = '';
-    });
+    if (mounted) {
+      setState(() {
+        _text = '';
+      });
+    }
     faces = await _faceDetector.processImage(inputImage);
     if (faces.isNotEmpty) {
       final face = faces[0];
@@ -317,7 +379,7 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   /// *******************************************************
-  /// TYPICAL WIDGET STUFF
+  /// WIDGET INIT, DISPOSE & BUILD
   /// *******************************************************
   @override
   void initState() {
@@ -326,7 +388,11 @@ class _DrivingViewState extends State<DrivingView> {
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
     if (widget.calibrationMode == true) {
-      calibrationTimer();
+      if (mounted) {
+        setState(() {
+          globals.inCalibrationMode = true;
+        });
+      }
     } else if (widget.calibrationMode == false) {
       detectionTimer();
     }
@@ -338,9 +404,11 @@ class _DrivingViewState extends State<DrivingView> {
   @override
   void dispose() {
     _canProcess = false;
-    _assetsAudioPlayer.dispose();
     cancelTimer = true;
+    globals.inCalibrationMode = false;
+    _assetsAudioPlayer.dispose();
     _faceDetector.close();
+    _stopAccelerometer();
     super.dispose();
   }
 
@@ -365,67 +433,107 @@ class _DrivingViewState extends State<DrivingView> {
             if (MediaQuery.of(context).orientation == Orientation.portrait)
               Column(
                 children: [
-                  Container(
-                    width: double.infinity,
-                    height: 700,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                    ),
-                    child: ListView(
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        DataValueWidget(text: "rotX", value: rotX),
-                        DataValueWidget(text: "rotY", value: rotY),
-                        //FaceValueWidget(text: "rotZ", value: rotZ),
-                        DataValueWidget(
-                            text: "neutralRotX", value: globals.neutralRotX),
-                        DataValueWidget(
-                            text: "neutralRotY", value: globals.neutralRotY),
-                        DataValueWidget(
-                            text: "leftEyeOpenProb", value: leftEyeOpenProb),
-                        DataValueWidget(
-                            text: "rightEyeOpenProb", value: rightEyeOpenProb),
-                        if (widget.accelerometerOn == true)
+                  if (globals.showDebug)
+                    Container(
+                      width: double.infinity,
+                      height: widget.accelerometerOn ? 700 : 350,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      child: ListView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        children: [
+                          DataValueWidget(text: "rotX", value: rotX),
+                          DataValueWidget(text: "rotY", value: rotY),
+                          //FaceValueWidget(text: "rotZ", value: rotZ),
                           DataValueWidget(
-                              text: "carMoving", value: carMoving ? 1 : 0),
-                        DataValueWidget(
-                            text: "resultantAccel",
-                            value: globals.resultantAccel),
-                        DataValueWidget(text: "accelX", value: accelX),
-                        DataValueWidget(text: "accelY", value: accelY),
-                        DataValueWidget(text: "accelZ", value: accelZ),
-                      ],
+                              text: "neutralRotX", value: globals.neutralRotX),
+                          DataValueWidget(
+                              text: "neutralRotY", value: globals.neutralRotY),
+                          DataValueWidget(
+                              text: "leftEyeOpenProb", value: leftEyeOpenProb),
+                          DataValueWidget(
+                              text: "rightEyeOpenProb",
+                              value: rightEyeOpenProb),
+                          if (widget.accelerometerOn == true)
+                            Column(
+                              children: [
+                                DataValueWidget(
+                                    text: "carMoving",
+                                    value: carMoving ? 1 : 0),
+                                DataValueWidget(
+                                    text: "resultantAccel",
+                                    value: globals.resultantAccel),
+                                DataValueWidget(text: "accelX", value: accelX),
+                                DataValueWidget(text: "accelY", value: accelY),
+                                DataValueWidget(text: "accelZ", value: accelZ),
+                              ],
+                            )
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
           ],
         ),
         if (widget.calibrationMode == true)
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-            ),
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  "Get into your normal driving position",
-                  style: Theme.of(context).textTheme.displayMedium,
-                  textAlign: TextAlign.center,
+          Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(70),
+                      ),
+                      onPressed: () {
+                        if (startCalibration == false) {
+                          calibrationTimer();
+                        }
+                      },
+                      child: Text(
+                        "Calibrate",
+                        style: Theme.of(context).textTheme.displayMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 80),
+                    ),
+                  ],
                 ),
-                ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 30)),
-                Text(
-                  caliSeconds < 1 ? "Complete!" : "$caliSeconds",
-                  style: Theme.of(context).textTheme.displayLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: MediaQuery.of(context).size.width,
+                    color: Colors.black.withOpacity(0.5),
+                    padding: const EdgeInsets.all(15),
+                    child: Text(
+                      "Please look straight and get into normal driving position",
+                      style: Theme.of(context).textTheme.displayMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  if (startCalibration == true)
+                    Container(
+                      width: MediaQuery.of(context).size.width,
+                      color: Colors.black.withOpacity(0.5),
+                      padding: const EdgeInsets.all(15),
+                      child: Text(
+                        caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+                        style: Theme.of(context).textTheme.displayLarge,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+              ),
+            ],
           )
         else if (widget.calibrationMode == false)
           Padding(

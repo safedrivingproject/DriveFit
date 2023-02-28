@@ -128,7 +128,13 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
           Transform.scale(
             scale: scale,
             child: Center(
-              child: CameraPreview(_controller!),
+              child: globals.inCalibrationMode
+                  ? CameraPreview(_controller!)
+                  : globals.showCameraPreview
+                      ? CameraPreview(_controller!)
+                      : Container(
+                          color: Colors.grey,
+                        ),
             ),
           ),
           if (widget.customPaint != null) widget.customPaint!,

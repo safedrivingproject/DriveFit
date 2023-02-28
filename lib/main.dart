@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'home_page.dart';
 import 'notification_controller.dart';
-import 'notification_page.dart';
 import 'global_variables.dart' as globals;
 
 List<CameraDescription> cameras = [];

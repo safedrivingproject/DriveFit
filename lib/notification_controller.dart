@@ -107,7 +107,7 @@ class NotificationController {
   ///     NOTIFICATION CREATION METHODS
   ///  *********************************************
   ///
-  static Future<void> createNewReminderNotification() async {
+  static Future<void> createSleepyNotification() async {
     bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
     if (!isAllowed) isAllowed = await displayNotificationRationale();
     if (!isAllowed) return;
@@ -117,7 +117,33 @@ class NotificationController {
         id: -1, // -1 is replaced by a random number
         channelKey: 'alerts',
         title: 'Drive Safely!',
-        body: "It saves your life and money!",
+        body: "Keep up your energy!",
+        bigPicture:
+            'https://storage.googleapis.com/cms-storage-bucket/d406c736e7c4c57f5f61.png',
+        largeIcon:
+            'https://storage.googleapis.com/cms-storage-bucket/0dbfcc7a59cd1cf16282.png',
+        //'asset://assets/images/balloons-in-sky.jpg',
+        notificationLayout: NotificationLayout.BigPicture,
+        payload: {'notificationId': '1234567890'},
+        wakeUpScreen: true,
+        fullScreenIntent: true,
+        criticalAlert: true,
+        actionType: ActionType.DisabledAction,
+      ),
+    );
+  }
+
+  static Future<void> createDistractedNotification() async {
+    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+    if (!isAllowed) isAllowed = await displayNotificationRationale();
+    if (!isAllowed) return;
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: -1, // -1 is replaced by a random number
+        channelKey: 'alerts',
+        title: 'Drive Safely!',
+        body: "Keep your eyes on the road!",
         bigPicture:
             'https://storage.googleapis.com/cms-storage-bucket/d406c736e7c4c57f5f61.png',
         largeIcon:

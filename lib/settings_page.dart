@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:settings_ui/settings_ui.dart';
-import 'driving_view.dart';
 import 'global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
@@ -33,13 +32,51 @@ class _SettingsPageState extends State<SettingsPage> {
                 leading: const Icon(Icons.speed),
                 initialValue: globals.useAccelerometer,
                 onToggle: (value) {
-                  setState(() {
-                    globals.useAccelerometer = value;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      globals.useAccelerometer = value;
+                    });
+                  }
                 },
               ),
             ],
-          )
+          ),
+          SettingsSection(
+            margin: const EdgeInsetsDirectional.all(20),
+            title: const Text("Debug"),
+            tiles: [
+              SettingsTile.switchTile(
+                title: const Text("Show debug info"),
+                leading: const Icon(Icons.speed),
+                initialValue: globals.showDebug,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      globals.showDebug = value;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          SettingsSection(
+            margin: const EdgeInsetsDirectional.all(20),
+            title: const Text("Camera"),
+            tiles: [
+              SettingsTile.switchTile(
+                title: const Text("Show camera preview when driving"),
+                leading: const Icon(Icons.speed),
+                initialValue: globals.showCameraPreview,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      globals.showCameraPreview = value;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
         ]));
   }
 }

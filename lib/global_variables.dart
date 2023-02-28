@@ -6,4 +6,7 @@ double neutralRotX = 5, neutralRotY = -25;
 double neutralAccelX = 0.0, neutralAccelY = 9.8, neutralAccelZ = 0.0;
 double resultantAccel = 0;
 bool hasCalibrated = false;
-bool useAccelerometer = true;
+bool useAccelerometer = false;
+bool inCalibrationMode = true;
+bool showDebug = false;
+bool showCameraPreview = true;
