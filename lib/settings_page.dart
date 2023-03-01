@@ -47,7 +47,7 @@ class _SettingsPageState extends State<SettingsPage> {
             tiles: [
               SettingsTile.switchTile(
                 title: const Text("Show debug info"),
-                leading: const Icon(Icons.speed),
+                leading: const Icon(Icons.bug_report_outlined),
                 initialValue: globals.showDebug,
                 onToggle: (value) {
                   if (mounted) {
@@ -65,12 +65,24 @@ class _SettingsPageState extends State<SettingsPage> {
             tiles: [
               SettingsTile.switchTile(
                 title: const Text("Show camera preview when driving"),
-                leading: const Icon(Icons.speed),
+                leading: const Icon(Icons.visibility),
                 initialValue: globals.showCameraPreview,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
                       globals.showCameraPreview = value;
+                    });
+                  }
+                },
+              ),
+              SettingsTile.switchTile(
+                title: const Text("Use High Camera Resolution"),
+                leading: const Icon(Icons.camera_rounded),
+                initialValue: globals.useHighCameraResolution,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      globals.useHighCameraResolution = value;
                     });
                   }
                 },

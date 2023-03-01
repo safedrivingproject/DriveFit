@@ -10,3 +10,4 @@ bool useAccelerometer = false;
 bool inCalibrationMode = true;
 bool showDebug = false;
 bool showCameraPreview = true;
+bool useHighCameraResolution = false;

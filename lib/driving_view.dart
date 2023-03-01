@@ -47,14 +47,14 @@ class _DrivingViewState extends State<DrivingView> {
   String? _text;
 
   double? rotX = 0,
-      rotY = 0,
-      rotZ = 0,
-      leftEyeOpenProb = 0,
-      rightEyeOpenProb = 0;
+      rotY = globals.neutralRotX,
+      rotZ = globals.neutralRotY,
+      leftEyeOpenProb = 1.0,
+      rightEyeOpenProb = 1.0;
   double rotXOffset = 20,
-      rotYLeftOffset = 30,
-      rotYRightOffset = 20,
-      eyeProbThreshold = 0.5,
+      rotYLeftOffset = 25,
+      rotYRightOffset = 30,
+      eyeProbThreshold = 0.2,
       maxAccelThreshold = 1.0;
   List<Face> faces = [];
 

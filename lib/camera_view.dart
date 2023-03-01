@@ -36,6 +36,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   //double _maxAvailableExposureOffset = 0.0, _minAvailableExposureOffset = 0.0;
   //bool _changingCameraLens = false;
   bool _cameraOn = false;
+  Timer? exposureTimer;
 
   @override
   void initState() {
@@ -71,6 +72,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   @override
   void dispose() {
     _stopLiveFeed();
+    exposureTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -151,26 +153,69 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     final camera = cameras[_cameraIndex];
     _controller = CameraController(
       camera,
-      ResolutionPreset.low,
+      globals.useHighCameraResolution
+          ? ResolutionPreset.medium
+          : ResolutionPreset.low,
       enableAudio: false,
     );
-    _controller?.initialize().then((_) {
-      if (!mounted) {
-        return;
+    try {
+      await _controller?.initialize();
+    } on CameraException catch (e) {
+      switch (e.code) {
+        case 'CameraAccessDenied':
+          showInSnackBar('You have denied camera access.');
+          break;
+        case 'CameraAccessDeniedWithoutPrompt':
+          // iOS only
+          showInSnackBar('Please go to Settings app to enable camera access.');
+          break;
+        case 'CameraAccessRestricted':
+          // iOS only
+          showInSnackBar('Camera access is restricted.');
+          break;
+        case 'AudioAccessDenied':
+          showInSnackBar('You have denied audio access.');
+          break;
+        case 'AudioAccessDeniedWithoutPrompt':
+          // iOS only
+          showInSnackBar('Please go to Settings app to enable audio access.');
+          break;
+        case 'AudioAccessRestricted':
+          // iOS only
+          showInSnackBar('Audio access is restricted.');
+          break;
+        default:
+          _showCameraException(e);
+          break;
       }
-      _cameraOn = true;
-      _controller?.getMinZoomLevel().then((value) {
-        zoomLevel = value;
-      });
-      //_controller?.getMinExposureOffset().then((value) {
-      //  _minAvailableExposureOffset = value;
-      //});
-      //_controller?.getMaxExposureOffset().then((value) {
-      //  _maxAvailableExposureOffset = value;
-      //});
-      _controller?.startImageStream(_processCameraImage);
-      setState(() {});
+    }
+
+    if (!mounted) {
+      return;
+    }
+    _cameraOn = true;
+    _controller?.getMinZoomLevel().then((value) {
+      zoomLevel = value;
     });
+    //_controller?.getMinExposureOffset().then((value) {
+    //  _minAvailableExposureOffset = value;
+    //});
+    //_controller?.getMaxExposureOffset().then((value) {
+    //  _maxAvailableExposureOffset = value;
+    //});
+    exposureTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      try {
+        if (mounted) {
+          _controller?.setExposurePoint(
+              Offset(globals.faceCenterX, globals.faceCenterY));
+          // _controller?.setExposurePoint(const Offset(0.5, 0.5));
+        }
+      } catch (e) {
+        log("$e");
+      }
+    });
+    _controller?.startImageStream(_processCameraImage);
+    setState(() {});
   }
 
   Future _stopLiveFeed() async {
@@ -207,12 +252,6 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   // }
 
   Future _processCameraImage(CameraImage image) async {
-    try {
-      _controller
-          ?.setExposurePoint(Offset(globals.faceCenterX, globals.faceCenterY));
-    } catch (e) {
-      log("$e");
-    }
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in image.planes) {
       allBytes.putUint8List(plane.bytes);
@@ -252,5 +291,20 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
         InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
 
     widget.onImage(inputImage);
+  }
+
+  void showInSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showCameraException(CameraException e) {
+    _logError(e.code, e.description);
+    showInSnackBar('Error: ${e.code}\n${e.description}');
+  }
+
+  void _logError(String code, String? message) {
+    // ignore: avoid_print
+    print('Error: $code${message == null ? '' : '\nError Message: $message'}');
   }
 }
