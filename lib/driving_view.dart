@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:assets_audio_player/assets_audio_player.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
 
 import 'notification_controller.dart';
@@ -28,7 +28,8 @@ class DrivingView extends StatefulWidget {
 }
 
 class _DrivingViewState extends State<DrivingView> {
-  final AssetsAudioPlayer _assetsAudioPlayer = AssetsAudioPlayer();
+  final AudioPlayer audioPlayer = AudioPlayer();
+  // StreamSubscription? audioSubscription;
 
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
@@ -54,7 +55,7 @@ class _DrivingViewState extends State<DrivingView> {
   double rotXOffset = 20,
       rotYLeftOffset = 25,
       rotYRightOffset = 30,
-      eyeProbThreshold = 0.2,
+      eyeProbThreshold = 0.3,
       maxAccelThreshold = 1.0;
   List<Face> faces = [];
 
@@ -68,21 +69,59 @@ class _DrivingViewState extends State<DrivingView> {
   var tempAccelList = <double>[];
 
   /// *******************************************************
+  /// INIT & DISPOSE
+  /// *******************************************************
+  @override
+  void initState() {
+    super.initState();
+    audioPlayer.setSource(AssetSource('audio/car_horn_high.mp3'));
+    audioPlayer.setVolume(1.0);
+    audioPlayer.setReleaseMode(ReleaseMode.stop);
+
+    periodicCalibrationTimer?.cancel();
+    periodicDetectionTimer?.cancel();
+    if (widget.calibrationMode == true) {
+      if (mounted) {
+        setState(() {
+          globals.inCalibrationMode = true;
+        });
+      }
+    } else if (widget.calibrationMode == false) {
+      detectionTimer();
+    }
+    if (widget.accelerometerOn) {
+      _initAccelerometer();
+    }
+
+    // audioSubscription = audioPlayer.onPlayerComplete.listen((event) {
+    //   setState(() {
+    //     audioPlayer.stop();
+    //   });
+    // });
+  }
+
+  @override
+  void dispose() {
+    _canProcess = false;
+    cancelTimer = true;
+    globals.inCalibrationMode = false;
+    // audioSubscription?.cancel();
+    audioPlayer.dispose();
+    _faceDetector.close();
+    _stopAccelerometer();
+    super.dispose();
+  }
+
+  /// *******************************************************
   /// INATTENTIVENESS DETECTION
   /// *******************************************************
   void sendSleepyReminder() {
-    _assetsAudioPlayer.open(
-      Audio('assets/audio/car_horn.mp3'),
-      playInBackground: PlayInBackground.enabled,
-    );
+    audioPlayer.resume();
     NotificationController.createSleepyNotification();
   }
 
   void sendDistractedReminder() {
-    _assetsAudioPlayer.open(
-      Audio('assets/audio/car_horn.mp3'),
-      playInBackground: PlayInBackground.enabled,
-    );
+    audioPlayer.resume();
     NotificationController.createDistractedNotification();
   }
 
@@ -117,7 +156,6 @@ class _DrivingViewState extends State<DrivingView> {
             hasFace = false;
           });
         }
-        faceEmptyCounter = 51;
       }
       if (!hasFace) return;
 
@@ -379,38 +417,8 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   /// *******************************************************
-  /// WIDGET INIT, DISPOSE & BUILD
+  /// WIDGET BUILD
   /// *******************************************************
-  @override
-  void initState() {
-    super.initState();
-    _assetsAudioPlayer.setVolume(0.75);
-    periodicCalibrationTimer?.cancel();
-    periodicDetectionTimer?.cancel();
-    if (widget.calibrationMode == true) {
-      if (mounted) {
-        setState(() {
-          globals.inCalibrationMode = true;
-        });
-      }
-    } else if (widget.calibrationMode == false) {
-      detectionTimer();
-    }
-    if (widget.accelerometerOn) {
-      _initAccelerometer();
-    }
-  }
-
-  @override
-  void dispose() {
-    _canProcess = false;
-    cancelTimer = true;
-    globals.inCalibrationMode = false;
-    _assetsAudioPlayer.dispose();
-    _faceDetector.close();
-    _stopAccelerometer();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -40,7 +40,7 @@ dependencies:
   google_mlkit_commons: any
   camera: any
   awesome_notifications: any
-  assets_audio_player: any
+  audioplayers: any
   flutter_sensors: any
   settings_ui: any
 

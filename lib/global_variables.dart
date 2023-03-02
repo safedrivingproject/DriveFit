@@ -11,3 +11,4 @@ bool inCalibrationMode = true;
 bool showDebug = false;
 bool showCameraPreview = true;
 bool useHighCameraResolution = false;
+var alarmAudioPath = "audio/car_horn_high.mp3";

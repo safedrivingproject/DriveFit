@@ -92,3 +92,17 @@ class _SettingsPageState extends State<SettingsPage> {
         ]));
   }
 }
+
+class selectAlarmPage extends StatefulWidget {
+  const selectAlarmPage({super.key});
+
+  @override
+  State<selectAlarmPage> createState() => _selectAlarmPageState();
+}
+
+class _selectAlarmPageState extends State<selectAlarmPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
+}
