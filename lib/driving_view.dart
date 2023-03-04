@@ -209,6 +209,7 @@ class _DrivingViewState extends State<DrivingView> {
         }
       }
 
+      /// Restored normal position
       if (rotX! > (globals.neutralRotX - rotXOffset) &&
           rotX! < (globals.neutralRotX + rotXOffset) &&
           rotY! > (globals.neutralRotY - rotYRightOffset) &&

@@ -117,7 +117,7 @@ class NotificationController {
         id: -1, // -1 is replaced by a random number
         channelKey: 'alerts',
         title: 'Drive Safely!',
-        body: "Keep up your energy!",
+        body: "Wanna park and take a nap?",
         bigPicture:
             'https://storage.googleapis.com/cms-storage-bucket/d406c736e7c4c57f5f61.png',
         largeIcon:
