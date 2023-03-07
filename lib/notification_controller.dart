@@ -163,7 +163,7 @@ class NotificationController {
     await AwesomeNotifications().resetGlobalBadge();
   }
 
-  static Future<void> cancelNotifications() async {
-    await AwesomeNotifications().cancelAll();
+  static Future<void> dismissAlertNotifications() async {
+    await AwesomeNotifications().dismissNotificationsByChannelKey('alerts');
   }
 }

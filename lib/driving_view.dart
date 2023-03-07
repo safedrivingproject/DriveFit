@@ -47,16 +47,12 @@ class _DrivingViewState extends State<DrivingView> {
   CustomPaint? _customPaint;
   String? _text;
 
-  double? rotX = 0,
-      rotY = globals.neutralRotX,
-      rotZ = globals.neutralRotY,
+  double? rotX = globals.neutralRotX,
+      rotY = globals.neutralRotY,
+      rotZ = 0,
       leftEyeOpenProb = 1.0,
       rightEyeOpenProb = 1.0;
-  double rotXOffset = 20,
-      rotYLeftOffset = 25,
-      rotYRightOffset = 30,
-      eyeProbThreshold = 0.3,
-      maxAccelThreshold = 1.0;
+  double maxAccelThreshold = 1.0;
   List<Face> faces = [];
 
   bool startCalibration = false;
@@ -117,11 +113,13 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   void sendSleepyReminder() {
     audioPlayer.resume();
+    NotificationController.dismissAlertNotifications();
     NotificationController.createSleepyNotification();
   }
 
   void sendDistractedReminder() {
     audioPlayer.resume();
+    NotificationController.dismissAlertNotifications();
     NotificationController.createDistractedNotification();
   }
 
@@ -195,8 +193,8 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       /// Eyes Closed
-      if (leftEyeOpenProb! < eyeProbThreshold &&
-          rightEyeOpenProb! < eyeProbThreshold) {
+      if (leftEyeOpenProb! < globals.eyeProbThreshold &&
+          rightEyeOpenProb! < globals.eyeProbThreshold) {
         eyeCounter++;
       } else {
         eyeCounter = 0;
@@ -210,12 +208,12 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       /// Restored normal position
-      if (rotX! > (globals.neutralRotX - rotXOffset) &&
-          rotX! < (globals.neutralRotX + rotXOffset) &&
-          rotY! > (globals.neutralRotY - rotYRightOffset) &&
-          rotY! < (globals.neutralRotY + rotYLeftOffset) &&
-          leftEyeOpenProb! > eyeProbThreshold &&
-          rightEyeOpenProb! > eyeProbThreshold) {
+      if (rotX! > (globals.neutralRotX - globals.rotXOffset) &&
+          rotX! < (globals.neutralRotX + globals.rotXOffset) &&
+          rotY! > (globals.neutralRotY - globals.rotYRightOffset) &&
+          rotY! < (globals.neutralRotY + globals.rotYLeftOffset) &&
+          leftEyeOpenProb! > globals.eyeProbThreshold &&
+          rightEyeOpenProb! > globals.eyeProbThreshold) {
         reminderCount = 0;
       }
 
@@ -227,8 +225,8 @@ class _DrivingViewState extends State<DrivingView> {
       if (!carMoving) return;
 
       /// Head up or down
-      if (rotX! < (globals.neutralRotX - rotXOffset) ||
-          rotX! > (globals.neutralRotX + rotXOffset)) {
+      if (rotX! < (globals.neutralRotX - globals.rotXOffset) ||
+          rotX! > (globals.neutralRotX + globals.rotXOffset)) {
         rotXCounter++;
       } else {
         rotXCounter = 0;
@@ -242,8 +240,8 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       /// Head Left or Right
-      if (rotY! > (globals.neutralRotY + rotYLeftOffset) ||
-          rotY! < (globals.neutralRotY - rotYRightOffset)) {
+      if (rotY! > (globals.neutralRotY + globals.rotYLeftOffset) ||
+          rotY! < (globals.neutralRotY - globals.rotYRightOffset)) {
         rotYCounter++;
       } else {
         rotYCounter = 0;
@@ -278,22 +276,27 @@ class _DrivingViewState extends State<DrivingView> {
     }
     periodicCalibrationTimer =
         Timer.periodic(const Duration(seconds: 1), (timer) {
+      globals.neutralRotX = rotX ?? 5;
+      globals.neutralRotY = rotY ?? -25;
+      globals.neutralAccelX = _rawAccelX;
+      globals.neutralAccelY = _rawAccelY;
+      globals.neutralAccelZ = _rawAccelZ;
+      if (globals.neutralRotY <= 0) {
+        globals.rotYLeftOffset = 25;
+        globals.rotYRightOffset = 15;
+      } else if (globals.neutralRotY > 0) {
+        globals.rotYLeftOffset = 15;
+        globals.rotYRightOffset = 25;
+      }
+      caliSeconds--;
       if (mounted) {
-        setState(() {
-          globals.neutralRotX = rotX ?? 5;
-          globals.neutralRotY = rotY ?? -25;
-          globals.neutralAccelX = _rawAccelX;
-          globals.neutralAccelY = _rawAccelY;
-          globals.neutralAccelZ = _rawAccelZ;
-          caliSeconds--;
-        });
+        setState(() {});
       }
       if (caliSeconds < 0) {
+        globals.hasCalibrated = true;
+        startCalibration = false;
         if (mounted) {
-          setState(() {
-            globals.hasCalibrated = true;
-            startCalibration = false;
-          });
+          setState(() {});
         }
         Navigator.pop(context);
         timer.cancel();
