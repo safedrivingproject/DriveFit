@@ -1,4 +1,4 @@
-package com.example.face_detection
+package com.example.drive_fit
 
 import io.flutter.embedding.android.FlutterActivity
 

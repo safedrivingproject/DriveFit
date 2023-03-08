@@ -1,4 +1,4 @@
-import 'package:face_detection/settings_page.dart';
+import 'package:drive_fit/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'driving_view.dart';
 import 'global_variables.dart' as globals;
@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
                         constraints: const BoxConstraints(minHeight: 100),
                         alignment: Alignment.center,
                         child: Text(
-                          'Drive Smart',
+                          globals.appName,
                           style: Theme.of(context)
                               .textTheme
                               .displayLarge

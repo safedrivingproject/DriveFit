@@ -63,7 +63,7 @@
     },
     {
       "name": "camera",
-      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dartlang.org/camera-0.10.3",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dartlang.org/camera-0.10.3+2",
       "packageUri": "lib/",
       "languageVersion": "2.14"
     },
@@ -392,13 +392,13 @@
       "languageVersion": "2.17"
     },
     {
-      "name": "face_detection",
+      "name": "drive_fit",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-03-02T11:58:02.686121Z",
+  "generated": "2023-03-08T14:22:27.908848Z",
   "generator": "pub",
   "generatorVersion": "2.18.6"
 }

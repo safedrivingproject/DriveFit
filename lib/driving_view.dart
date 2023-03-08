@@ -283,9 +283,9 @@ class _DrivingViewState extends State<DrivingView> {
       globals.neutralAccelZ = _rawAccelZ;
       if (globals.neutralRotY <= 0) {
         globals.rotYLeftOffset = 25;
-        globals.rotYRightOffset = 15;
+        globals.rotYRightOffset = 20;
       } else if (globals.neutralRotY > 0) {
-        globals.rotYLeftOffset = 15;
+        globals.rotYLeftOffset = 20;
         globals.rotYRightOffset = 25;
       }
       caliSeconds--;
