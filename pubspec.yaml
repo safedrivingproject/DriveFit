@@ -44,6 +44,7 @@ dependencies:
   flutter_sensors: ^1.0.1
   settings_ui: ^2.0.2
   dynamic_color: ^1.5.4
+  google_fonts: ^4.0.3
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
       - assets/audio/
+      - assets/google_fonts/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

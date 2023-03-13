@@ -18,7 +18,7 @@ class _SettingsPageState extends State<SettingsPage> {
         appBar: AppBar(
           title: Text(
             widget.title,
-            style: Theme.of(context).textTheme.displaySmall,
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
           centerTitle: true,
         ),

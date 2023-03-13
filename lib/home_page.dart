@@ -1,4 +1,5 @@
 import 'package:drive_fit/settings_page.dart';
+import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'driving_mode/driving_view.dart';
 import 'global_variables.dart' as globals;
@@ -17,116 +18,139 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.title,
-          style: Theme.of(context).textTheme.displaySmall,
+        leading: IconButton(
+          icon: const Icon(Icons.settings),
+          color: lightColorScheme.onPrimary,
+          iconSize: 30.0,
+          padding: const EdgeInsets.all(8.0),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => const SettingsPage(title: "Settings")));
+          },
         ),
-        centerTitle: true,
+        backgroundColor: lightColorScheme.primary,
+        elevation: 0,
+        toolbarHeight: kToolbarHeight + 1.25,
       ),
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.center,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8.0),
-                        decoration: BoxDecoration(
-                            border: Border.all(width: 2.0),
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(20))),
-                        constraints: const BoxConstraints(minHeight: 100),
-                        alignment: Alignment.center,
-                        child: Text(
-                          globals.appName,
-                          style: Theme.of(context).textTheme.displayLarge,
-                        ),
-                      ),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(
-                            minHeight: 100, maxHeight: 500),
-                      ),
-                    ],
-                  ),
+        top: false,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height * 0.3,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [lightColorScheme.primary, Color(0x0062A8AC)],
+                  stops: [0, 1],
+                  begin: AlignmentDirectional(0, -1),
+                  end: AlignmentDirectional(0, 1),
                 ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(70),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const DrivingView(
-                                      calibrationMode: true,
-                                      accelerometerOn: true,
-                                    ))).then(((value) {
-                          setState(() {});
-                        }));
-                      },
-                      child: Text(
-                        "Calibrate",
-                        style: Theme.of(context).textTheme.displayMedium,
-                        textAlign: TextAlign.center,
-                      ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                              border: Border.all(width: 2.0),
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(20))),
+                          constraints: const BoxConstraints(minHeight: 100),
+                          alignment: Alignment.center,
+                          child: Text(
+                            globals.appName,
+                            style: Theme.of(context).textTheme.displayLarge,
+                          ),
+                        ),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(
+                              minHeight: 100, maxHeight: 500),
+                        ),
+                      ],
                     ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 10),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(70),
-                      ),
-                      onPressed: () {
-                        if (globals.hasCalibrated == true) {
+                  ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(70),
+                        ),
+                        onPressed: () {
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) => DrivingView(
-                                        calibrationMode: false,
-                                        accelerometerOn:
-                                            globals.useAccelerometer
-                                                ? true
-                                                : false,
-                                      )));
-                        } else if (globals.hasCalibrated == false) {
-                          null;
-                        }
-                      },
-                      child: Text(
-                        "Start Driving",
-                        style: globals.hasCalibrated == true
-                            ? Theme.of(context)
-                                .textTheme
-                                .displayMedium
-                                ?.copyWith(color: Colors.white)
-                            : Theme.of(context)
-                                .textTheme
-                                .displayMedium
-                                ?.copyWith(color: Colors.lightBlue[800]),
-                        textAlign: TextAlign.center,
+                                  builder: (context) => const DrivingView(
+                                        calibrationMode: true,
+                                        accelerometerOn: true,
+                                      ))).then(((value) {
+                            setState(() {});
+                          }));
+                        },
+                        child: Text(
+                          "Calibrate",
+                          style: Theme.of(context).textTheme.labelLarge,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 10),
-                    ),
-                  ],
-                ),
-              ],
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 10),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(70),
+                        ),
+                        onPressed: () {
+                          if (globals.hasCalibrated == true) {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => DrivingView(
+                                          calibrationMode: false,
+                                          accelerometerOn:
+                                              globals.useAccelerometer
+                                                  ? true
+                                                  : false,
+                                        )));
+                          } else if (globals.hasCalibrated == false) {
+                            null;
+                          }
+                        },
+                        child: Text(
+                          "Start Driving",
+                          style: globals.hasCalibrated == true
+                              ? Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.secondary)
+                              : Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.outline),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 10),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
-      drawer: const NavigationDrawer(),
+      // drawer: const NavigationDrawer(),
     );
   }
 }
