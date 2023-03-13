@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   awesome_notifications
+  dynamic_color
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

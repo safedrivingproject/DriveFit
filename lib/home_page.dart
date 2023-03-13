@@ -1,6 +1,6 @@
 import 'package:drive_fit/settings_page.dart';
 import 'package:flutter/material.dart';
-import 'driving_view.dart';
+import 'driving_mode/driving_view.dart';
 import 'global_variables.dart' as globals;
 
 class HomePage extends StatefulWidget {
@@ -37,20 +37,14 @@ class _HomePageState extends State<HomePage> {
                       Container(
                         padding: const EdgeInsets.all(8.0),
                         decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Theme.of(context).primaryColorDark,
-                                width: 2.0),
+                            border: Border.all(width: 2.0),
                             borderRadius:
                                 const BorderRadius.all(Radius.circular(20))),
                         constraints: const BoxConstraints(minHeight: 100),
                         alignment: Alignment.center,
                         child: Text(
                           globals.appName,
-                          style: Theme.of(context)
-                              .textTheme
-                              .displayLarge
-                              ?.copyWith(
-                                  color: Theme.of(context).primaryColorDark),
+                          style: Theme.of(context).textTheme.displayLarge,
                         ),
                       ),
                       ConstrainedBox(

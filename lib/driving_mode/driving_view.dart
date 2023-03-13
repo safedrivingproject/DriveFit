@@ -7,11 +7,11 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
 
-import 'notification_controller.dart';
+import '/notification_controller.dart';
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
-import 'global_variables.dart' as globals;
+import '/global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
   const DrivingView({

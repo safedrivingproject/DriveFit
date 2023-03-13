@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
-import '../main.dart';
+import '../../main.dart';
 
 CameraController? _controller;
 int _cameraIndex = -1;

@@ -43,6 +43,7 @@ dependencies:
   audioplayers: ^3.0.1
   flutter_sensors: ^1.0.1
   settings_ui: ^2.0.2
+  dynamic_color: ^1.5.4
 
 dev_dependencies:
   flutter_test:

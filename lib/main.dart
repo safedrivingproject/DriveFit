@@ -4,6 +4,9 @@ import 'home_page.dart';
 import 'notification_controller.dart';
 import 'global_variables.dart' as globals;
 
+import 'theme/color_schemes.g.dart';
+import 'theme/custom_color.g.dart';
+
 List<CameraDescription> cameras = [];
 
 Future<void> main() async {
@@ -65,22 +68,17 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       home: const HomePage(title: globals.appName),
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.light,
-        primaryColor: Colors.blue[800],
-        fontFamily: 'Segoe UI',
+        colorScheme: lightColorScheme,
+        fontFamily: 'Outfit',
         textTheme: const TextTheme(
-          bodyLarge: TextStyle(
-              fontSize: 16.0, fontFamily: 'Arial', color: Colors.white),
-          bodyMedium: TextStyle(
-              fontSize: 14.0, fontFamily: 'Arial', color: Colors.white),
-          bodySmall: TextStyle(
-              fontSize: 12.0, fontFamily: 'Arial', color: Colors.white),
-          displayLarge: TextStyle(
-              fontSize: 50.0, fontWeight: FontWeight.bold, color: Colors.white),
-          displayMedium: TextStyle(
-              fontSize: 35.0, fontWeight: FontWeight.bold, color: Colors.white),
-          displaySmall: TextStyle(
-              fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),
+          bodyLarge: TextStyle(fontSize: 16.0, fontFamily: 'Inter'),
+          bodyMedium: TextStyle(fontSize: 14.0, fontFamily: 'Inter'),
+          bodySmall: TextStyle(fontSize: 12.0, fontFamily: 'Inter'),
+          displayLarge: TextStyle(fontSize: 50.0, fontWeight: FontWeight.bold),
+          displayMedium: TextStyle(fontSize: 35.0, fontWeight: FontWeight.bold),
+          displaySmall: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
         ),
       ),
     );
