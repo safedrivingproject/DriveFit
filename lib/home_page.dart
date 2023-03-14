@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.settings),
-          color: lightColorScheme.onPrimary,
+          color: lightColorScheme.background,
           iconSize: 30.0,
           padding: const EdgeInsets.all(8.0),
           onPressed: () {
@@ -28,10 +28,11 @@ class _HomePageState extends State<HomePage> {
                 builder: (context) => const SettingsPage(title: "Settings")));
           },
         ),
-        backgroundColor: lightColorScheme.primary,
+        backgroundColor: bgColorVerdigris,
         elevation: 0,
         toolbarHeight: kToolbarHeight + 1.25,
       ),
+      extendBodyBehindAppBar: true,
       body: SafeArea(
         top: false,
         child: Stack(
@@ -39,10 +40,10 @@ class _HomePageState extends State<HomePage> {
           children: [
             Container(
               width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height * 0.3,
-              decoration: BoxDecoration(
+              height: MediaQuery.of(context).size.height * 0.2,
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [lightColorScheme.primary, Color(0x0062A8AC)],
+                  colors: [bgColorVerdigris, Colors.transparent],
                   stops: [0, 1],
                   begin: AlignmentDirectional(0, -1),
                   end: AlignmentDirectional(0, 1),
@@ -53,6 +54,9 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               child: Column(
                 children: [
+                  Container(
+                    height: kToolbarHeight,
+                  ),
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -81,10 +85,9 @@ class _HomePageState extends State<HomePage> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(70),
-                        ),
+                      FilledButton.icon(
+                        style: ButtonStyle(),
+                        icon: Icon(Icons.architecture, color: globals.hasCalibrated ? bgColorVerdigris : lightColorScheme.primary,),
                         onPressed: () {
                           Navigator.push(
                               context,
@@ -96,9 +99,9 @@ class _HomePageState extends State<HomePage> {
                             setState(() {});
                           }));
                         },
-                        child: Text(
+                        label: Text(
                           "Calibrate",
-                          style: Theme.of(context).textTheme.labelLarge,
+                          style: Theme.of(context).textTheme.bodyLarge,
                           textAlign: TextAlign.center,
                         ),
                       ),

@@ -63,3 +63,6 @@ const darkColorScheme = ColorScheme(
   shadow: Color(0xFF000000),
   surfaceTint: Color(0xFF4CD9E1),
 );
+
+const bgColorVerdigris = Color(0xFF62A8AC);
+const bgColorLightBlue = Color(0xFF90C3C8);
