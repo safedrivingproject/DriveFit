@@ -64,5 +64,7 @@ const darkColorScheme = ColorScheme(
   surfaceTint: Color(0xFF4CD9E1),
 );
 
+const lcsPrimaryTransparent = Color(0x0000696E);
 const bgColorVerdigris = Color(0xFF62A8AC);
+const bgColorVerdigrisTransparent = Color(0x0062A8AC);
 const bgColorLightBlue = Color(0xFF90C3C8);
