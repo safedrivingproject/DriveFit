@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:core';
 import 'dart:math';
+import 'package:drive_fit/home_page.dart';
+import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -38,7 +40,7 @@ class _DrivingViewState extends State<DrivingView> {
     ),
   );
 
-  int caliSeconds = 5;
+  int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool cancelTimer = false;
   bool carMoving = false;
@@ -276,30 +278,31 @@ class _DrivingViewState extends State<DrivingView> {
     }
     periodicCalibrationTimer =
         Timer.periodic(const Duration(seconds: 1), (timer) {
-      globals.neutralRotX = rotX ?? 5;
-      globals.neutralRotY = rotY ?? -25;
-      globals.neutralAccelX = _rawAccelX;
-      globals.neutralAccelY = _rawAccelY;
-      globals.neutralAccelZ = _rawAccelZ;
-      if (globals.neutralRotY <= 0) {
-        globals.rotYLeftOffset = 25;
-        globals.rotYRightOffset = 20;
-      } else if (globals.neutralRotY > 0) {
-        globals.rotYLeftOffset = 20;
-        globals.rotYRightOffset = 25;
-      }
       caliSeconds--;
-      if (mounted) {
-        setState(() {});
-      }
       if (caliSeconds < 0) {
         globals.hasCalibrated = true;
         startCalibration = false;
         if (mounted) {
           setState(() {});
+          Navigator.pop(context);
         }
-        Navigator.pop(context);
         timer.cancel();
+      } else {
+        globals.neutralRotX = rotX ?? 5;
+        globals.neutralRotY = rotY ?? -25;
+        globals.neutralAccelX = _rawAccelX;
+        globals.neutralAccelY = _rawAccelY;
+        globals.neutralAccelZ = _rawAccelZ;
+        if (globals.neutralRotY <= 0) {
+          globals.rotYLeftOffset = 25;
+          globals.rotYRightOffset = 20;
+        } else if (globals.neutralRotY > 0) {
+          globals.rotYLeftOffset = 20;
+          globals.rotYRightOffset = 25;
+        }
+        if (mounted) {
+          setState(() {});
+        }
       }
     });
   }
@@ -426,153 +429,249 @@ class _DrivingViewState extends State<DrivingView> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        CameraView(
-          title: 'Face Detector',
-          customPaint: _customPaint,
-          text: _text,
-          onImage: (inputImage) {
-            processImage(inputImage);
-          },
-          initialDirection: CameraLensDirection.front,
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          globals.inCalibrationMode ? "Calibrate" : "Driving",
+          style: Theme.of(context)
+              .textTheme
+              .headlineSmall
+              ?.copyWith(color: lightColorScheme.onPrimary),
         ),
-        Column(
-          children: [
-            const SizedBox(
-              height: 78,
-            ),
-            if (MediaQuery.of(context).orientation == Orientation.portrait)
-              Column(
-                children: [
-                  if (globals.showDebug)
-                    Container(
-                      width: double.infinity,
-                      height: widget.accelerometerOn ? 700 : 350,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                      ),
-                      child: ListView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          DataValueWidget(text: "rotX", value: rotX),
-                          DataValueWidget(text: "rotY", value: rotY),
-                          //FaceValueWidget(text: "rotZ", value: rotZ),
-                          DataValueWidget(
-                              text: "neutralRotX", value: globals.neutralRotX),
-                          DataValueWidget(
-                              text: "neutralRotY", value: globals.neutralRotY),
-                          DataValueWidget(
-                              text: "leftEyeOpenProb", value: leftEyeOpenProb),
-                          DataValueWidget(
-                              text: "rightEyeOpenProb",
-                              value: rightEyeOpenProb),
-                          if (widget.accelerometerOn == true)
-                            Column(
-                              children: [
-                                DataValueWidget(
-                                    text: "carMoving",
-                                    value: carMoving ? 1 : 0),
-                                DataValueWidget(
-                                    text: "resultantAccel",
-                                    value: globals.resultantAccel),
-                                DataValueWidget(text: "accelX", value: accelX),
-                                DataValueWidget(text: "accelY", value: accelY),
-                                DataValueWidget(text: "accelZ", value: accelZ),
-                              ],
-                            )
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-          ],
-        ),
-        if (widget.calibrationMode == true)
-          Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
+        iconTheme: IconThemeData(color: lightColorScheme.onPrimary),
+        automaticallyImplyLeading: widget.calibrationMode ? true : false,
+        centerTitle: true,
+        backgroundColor: lightColorScheme.primary,
+      ),
+      body: Stack(
+        children: [
+          CameraView(
+            customPaint: _customPaint,
+            text: _text,
+            onImage: (inputImage) {
+              processImage(inputImage);
+            },
+            initialDirection: CameraLensDirection.front,
+          ),
+          if (widget.calibrationMode == true)
+            Column(
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(70),
-                      ),
-                      onPressed: () {
-                        if (startCalibration == false) {
-                          calibrationTimer();
-                        }
-                      },
-                      child: Text(
-                        "Calibrate",
-                        style: Theme.of(context).textTheme.displayMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 80),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: MediaQuery.of(context).size.width,
-                    color: Colors.black.withOpacity(0.5),
-                    padding: const EdgeInsets.all(15),
-                    child: Text(
-                      "Please look straight and get into normal driving position",
-                      style: Theme.of(context).textTheme.displayMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  if (startCalibration == true)
                     Container(
                       width: MediaQuery.of(context).size.width,
                       color: Colors.black.withOpacity(0.5),
-                      padding: const EdgeInsets.all(15),
-                      child: Text(
-                        caliSeconds < 1 ? "Complete!" : "$caliSeconds",
-                        style: Theme.of(context).textTheme.displayLarge,
-                        textAlign: TextAlign.center,
+                      padding: const EdgeInsets.all(30),
+                      child: Column(
+                        children: const [
+                          CalibrateInstruction(
+                            bullet: "1.",
+                            instruction:
+                                "Secure your phone in the phone holder",
+                          ),
+                          SizedBox(height: 5),
+                          CalibrateInstruction(
+                            bullet: "2.",
+                            instruction:
+                                "Make sure your head is visible in the camera preview",
+                          ),
+                          SizedBox(height: 5),
+                          CalibrateInstruction(
+                            bullet: "3.",
+                            instruction:
+                                "Look forward towards the road (just like when you are driving attentively)",
+                          ),
+                          SizedBox(height: 5),
+                          CalibrateInstruction(
+                            bullet: "4.",
+                            instruction: "Press 'Calibrate' and wait 3 seconds",
+                          ),
+                        ],
                       ),
                     ),
+                    if (startCalibration == true)
+                      Container(
+                        width: MediaQuery.of(context).size.width,
+                        color: Colors.black.withOpacity(0.5),
+                        padding: const EdgeInsets.all(15),
+                        child: Text(
+                          caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+                          style: Theme.of(context)
+                              .textTheme
+                              .displayMedium
+                              ?.copyWith(
+                                color: lightColorScheme.onPrimary,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                  ],
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(16.0))),
+                          backgroundColor: lightColorScheme.primary,
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                        onPressed: () {
+                          if (startCalibration == false) {
+                            calibrationTimer();
+                          }
+                        },
+                        child: Text(
+                          "Calibrate",
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(color: lightColorScheme.onPrimary),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 80),
+              ],
+            )
+          else if (widget.calibrationMode == false)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(16.0))),
+                      backgroundColor: lightColorScheme.primary,
+                      minimumSize: const Size.fromHeight(50),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      "Stop driving",
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelLarge
+                          ?.copyWith(color: lightColorScheme.onPrimary),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 80),
                 ],
               ),
-            ],
-          )
-        else if (widget.calibrationMode == false)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(70),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text(
-                    "Stop driving",
-                    style: Theme.of(context).textTheme.displayMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 80),
-                ),
-              ],
             ),
+          Column(
+            children: [
+              if (MediaQuery.of(context).orientation == Orientation.portrait)
+                Column(
+                  children: [
+                    if (globals.showDebug)
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                        ),
+                        padding: const EdgeInsets.all(16.0),
+                        child: ListView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          children: [
+                            DataValueWidget(text: "rotX", value: rotX),
+                            DataValueWidget(text: "rotY", value: rotY),
+                            DataValueWidget(
+                                text: "neutralRotX",
+                                value: globals.neutralRotX),
+                            DataValueWidget(
+                                text: "neutralRotY",
+                                value: globals.neutralRotY),
+                            DataValueWidget(
+                                text: "leftEyeOpenProb",
+                                value: leftEyeOpenProb),
+                            DataValueWidget(
+                                text: "rightEyeOpenProb",
+                                value: rightEyeOpenProb),
+                            if (widget.accelerometerOn == true)
+                              Column(
+                                children: [
+                                  DataValueWidget(
+                                      text: "carMoving",
+                                      value: carMoving ? 1 : 0),
+                                  DataValueWidget(
+                                      text: "resultantAccel",
+                                      value: globals.resultantAccel),
+                                  DataValueWidget(
+                                      text: "accelX", value: accelX),
+                                  DataValueWidget(
+                                      text: "accelY", value: accelY),
+                                  DataValueWidget(
+                                      text: "accelZ", value: accelZ),
+                                ],
+                              )
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class CalibrateInstruction extends StatelessWidget {
+  const CalibrateInstruction({
+    super.key,
+    required this.bullet,
+    required this.instruction,
+  });
+
+  final String bullet;
+  final String instruction;
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 1,
+          child: Text(
+            bullet,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: lightColorScheme.onPrimary),
+            textAlign: TextAlign.right,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 10,
+          child: Text(
+            instruction,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(color: lightColorScheme.onPrimary),
+            textAlign: TextAlign.left,
+          ),
+        ),
       ],
     );
   }
@@ -597,9 +696,16 @@ class DataValueWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(text, style: Theme.of(context).textTheme.displaySmall),
+            Text(text,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: lightColorScheme.onPrimary)),
             Text(value.toString(),
-                style: Theme.of(context).textTheme.bodyMedium),
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: lightColorScheme.onPrimary)),
           ],
         ),
       ),

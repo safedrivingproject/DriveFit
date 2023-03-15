@@ -43,24 +43,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SettingsSection(
             margin: const EdgeInsetsDirectional.all(20),
-            title: const Text("Debug"),
-            tiles: [
-              SettingsTile.switchTile(
-                title: const Text("Show debug info"),
-                leading: const Icon(Icons.bug_report_outlined),
-                initialValue: globals.showDebug,
-                onToggle: (value) {
-                  if (mounted) {
-                    setState(() {
-                      globals.showDebug = value;
-                    });
-                  }
-                },
-              ),
-            ],
-          ),
-          SettingsSection(
-            margin: const EdgeInsetsDirectional.all(20),
             title: const Text("Camera"),
             tiles: [
               SettingsTile.switchTile(
@@ -83,6 +65,24 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (mounted) {
                     setState(() {
                       globals.useHighCameraResolution = value;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          SettingsSection(
+            margin: const EdgeInsetsDirectional.all(20),
+            title: const Text("Developer"),
+            tiles: [
+              SettingsTile.switchTile(
+                title: const Text("Show debug info"),
+                leading: const Icon(Icons.bug_report_outlined),
+                initialValue: globals.showDebug,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      globals.showDebug = value;
                     });
                   }
                 },

@@ -12,14 +12,12 @@ import '/global_variables.dart' as globals;
 class CameraView extends StatefulWidget {
   const CameraView(
       {Key? key,
-      required this.title,
       required this.customPaint,
       this.text,
       required this.onImage,
       this.initialDirection = CameraLensDirection.back})
       : super(key: key);
 
-  final String title;
   final CustomPaint? customPaint;
   final String? text;
   final Function(InputImage inputImage) onImage;
@@ -79,16 +77,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-      ),
-      body: _liveFeedBody(),
-      //floatingActionButton: _floatingActionButton(),
-      //floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-    );
+    return _liveFeedBody();
   }
 
   //Widget? _floatingActionButton() {
