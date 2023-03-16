@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_page.dart';
+import 'home/home_page.dart';
 import 'notification_controller.dart';
 import 'global_variables.dart' as globals;
 

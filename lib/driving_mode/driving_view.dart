@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:core';
 import 'dart:math';
-import 'package:drive_fit/home_page.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';

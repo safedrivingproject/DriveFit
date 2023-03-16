@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:settings_ui/settings_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
@@ -11,6 +12,47 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  bool? useAccelerometer, showCameraPreview, useHighCameraResolution, showDebug;
+
+  Future<void> _loadDefaultSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
+        showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+        useHighCameraResolution =
+            (prefs.getBool('useHighCameraResolution') ?? false);
+        showDebug = (prefs.getBool('showDebug') ?? false);
+      });
+    }
+  }
+
+  Future<void> _saveBool(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        prefs.setBool(key, value);
+      });
+    }
+  }
+
+  Future<bool> _readBool(String key, bool defaultValue) async {
+    final prefs = await SharedPreferences.getInstance();
+    bool boolValue = prefs.getBool(key) ?? defaultValue;
+    return boolValue;
+  }
+
+  Future<void> _clearSPData() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.clear();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDefaultSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     setState(() {});
@@ -30,11 +72,12 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.switchTile(
                 title: const Text("Use accelerometer"),
                 leading: const Icon(Icons.speed),
-                initialValue: globals.useAccelerometer,
+                initialValue: useAccelerometer,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
-                      globals.useAccelerometer = value;
+                      useAccelerometer = value;
+                      _saveBool('useAccelerometer', value);
                     });
                   }
                 },
@@ -48,11 +91,12 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.switchTile(
                 title: const Text("Show camera preview when driving"),
                 leading: const Icon(Icons.visibility),
-                initialValue: globals.showCameraPreview,
+                initialValue: showCameraPreview,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
-                      globals.showCameraPreview = value;
+                      showCameraPreview = value;
+                      _saveBool('showCameraPreview', value);
                     });
                   }
                 },
@@ -60,11 +104,12 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.switchTile(
                 title: const Text("Use High Camera Resolution"),
                 leading: const Icon(Icons.camera_rounded),
-                initialValue: globals.useHighCameraResolution,
+                initialValue: useHighCameraResolution,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
-                      globals.useHighCameraResolution = value;
+                      useHighCameraResolution = value;
+                      _saveBool('useHighCameraResolution', value);
                     });
                   }
                 },
@@ -78,13 +123,60 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.switchTile(
                 title: const Text("Show debug info"),
                 leading: const Icon(Icons.bug_report_outlined),
-                initialValue: globals.showDebug,
+                initialValue: showDebug,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
-                      globals.showDebug = value;
+                      showDebug = value;
+                      _saveBool('showDebug', value);
                     });
                   }
+                },
+              ),
+            ],
+          ),
+          SettingsSection(
+            title: const Text("Data"),
+            tiles: [
+              SettingsTile.navigation(
+                title: const Text("Clear Data"),
+                leading: const Icon(Icons.info_outline_rounded),
+                onPressed: (context) {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text("Are you sure?"),
+                          content: const Text(
+                              "All user preferences and drive data will be reset. Calibration would be required again."),
+                          actions: [
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                if (mounted) {
+                                  setState(() {
+                                    _clearSPData();
+                                    _loadDefaultSettings();
+                                  });
+                                }
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Reset"),
+                            ),
+                          ],
+                        );
+                      });
                 },
               ),
             ],

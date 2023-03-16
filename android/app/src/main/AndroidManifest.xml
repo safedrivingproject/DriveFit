@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
    <application
-        android:label="DriveFit v0.01"
+        android:label="DriveFit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
