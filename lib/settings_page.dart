@@ -1,3 +1,4 @@
+import 'package:drive_fit/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,7 +13,11 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool? useAccelerometer, showCameraPreview, useHighCameraResolution, showDebug;
+  bool? useAccelerometer,
+      showCameraPreview,
+      useHighCameraResolution,
+      showDebug,
+      hasCalibrated;
 
   Future<void> _loadDefaultSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -23,6 +28,7 @@ class _SettingsPageState extends State<SettingsPage> {
         useHighCameraResolution =
             (prefs.getBool('useHighCameraResolution') ?? false);
         showDebug = (prefs.getBool('showDebug') ?? false);
+        hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
       });
     }
   }
@@ -55,15 +61,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    setState(() {});
     return Scaffold(
         appBar: AppBar(
-          title: Text(
-            widget.title,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          centerTitle: true,
-        ),
+            title: Text(
+              widget.title,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.of(context)
+                    .pushReplacement(MaterialPageRoute(builder: (context) {
+                  return const HomePage(title: globals.appName);
+                }));
+              },
+            )),
         body: SettingsList(sections: [
           SettingsSection(
             margin: const EdgeInsetsDirectional.all(20),

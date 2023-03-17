@@ -1,5 +1,6 @@
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../driving_mode/driving_view.dart';
 import '../global_variables.dart' as globals;
 
@@ -11,6 +12,27 @@ class DrivePage extends StatefulWidget {
 }
 
 class _DrivePageState extends State<DrivePage> {
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        globals.useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
+        globals.showCameraPreview =
+            (prefs.getBool('showCameraPreview') ?? true);
+        globals.useHighCameraResolution =
+            (prefs.getBool('useHighCameraResolution') ?? false);
+        globals.showDebug = (prefs.getBool('showDebug') ?? false);
+        globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -249,15 +271,13 @@ class _DrivePageState extends State<DrivePage> {
                         : lightColorScheme.background,
                   ),
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                             builder: (context) => const DrivingView(
                                   calibrationMode: true,
                                   accelerometerOn: true,
-                                ))).then(((value) {
-                      setState(() {});
-                    }));
+                                )));
                   },
                   label: Text(
                     "Calibrate",
@@ -295,7 +315,7 @@ class _DrivePageState extends State<DrivePage> {
                   ),
                   onPressed: () {
                     if (globals.hasCalibrated == true) {
-                      Navigator.push(
+                      Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
                               builder: (context) => DrivingView(

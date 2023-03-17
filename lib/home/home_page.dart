@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
           icon: const Icon(Icons.settings),
           color: lightColorScheme.background,
           onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(
+            Navigator.of(context).pushReplacement(MaterialPageRoute(
                 builder: (context) => const SettingsPage(title: "Settings")));
           },
         ),

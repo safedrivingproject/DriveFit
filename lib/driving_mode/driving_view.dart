@@ -7,11 +7,13 @@ import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '/notification_controller.dart';
 import 'camera_view.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
+import '/home/home_page.dart';
 import '/global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
@@ -65,6 +67,30 @@ class _DrivingViewState extends State<DrivingView> {
   double accelX = 0, accelY = 0, accelZ = 0;
   var tempAccelList = <double>[];
 
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        globals.useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
+        globals.showCameraPreview =
+            (prefs.getBool('showCameraPreview') ?? true);
+        globals.useHighCameraResolution =
+            (prefs.getBool('useHighCameraResolution') ?? false);
+        globals.showDebug = (prefs.getBool('showDebug') ?? false);
+        globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
+      });
+    }
+  }
+
+  Future<void> _saveBool(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        prefs.setBool(key, value);
+      });
+    }
+  }
+
   /// *******************************************************
   /// INIT & DISPOSE
   /// *******************************************************
@@ -74,7 +100,7 @@ class _DrivingViewState extends State<DrivingView> {
     audioPlayer.setSource(AssetSource('audio/car_horn_high.mp3'));
     audioPlayer.setVolume(1.0);
     audioPlayer.setReleaseMode(ReleaseMode.stop);
-
+    _loadSettings();
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
     if (widget.calibrationMode == true) {
@@ -279,28 +305,33 @@ class _DrivingViewState extends State<DrivingView> {
         Timer.periodic(const Duration(seconds: 1), (timer) {
       caliSeconds--;
       if (caliSeconds < 0) {
-        globals.hasCalibrated = true;
-        startCalibration = false;
         if (mounted) {
-          setState(() {});
-          Navigator.pop(context);
+          setState(() {
+            _saveBool('hasCalibrated', true);
+            startCalibration = false;
+          });
+          Navigator.of(context)
+              .pushReplacement(MaterialPageRoute(builder: (context) {
+            return const HomePage(title: globals.appName);
+          }));
         }
         timer.cancel();
       } else {
-        globals.neutralRotX = rotX ?? 5;
-        globals.neutralRotY = rotY ?? -25;
-        globals.neutralAccelX = _rawAccelX;
-        globals.neutralAccelY = _rawAccelY;
-        globals.neutralAccelZ = _rawAccelZ;
-        if (globals.neutralRotY <= 0) {
-          globals.rotYLeftOffset = 25;
-          globals.rotYRightOffset = 20;
-        } else if (globals.neutralRotY > 0) {
-          globals.rotYLeftOffset = 20;
-          globals.rotYRightOffset = 25;
-        }
         if (mounted) {
-          setState(() {});
+          setState(() {
+            globals.neutralRotX = rotX ?? 5;
+            globals.neutralRotY = rotY ?? -25;
+            globals.neutralAccelX = _rawAccelX;
+            globals.neutralAccelY = _rawAccelY;
+            globals.neutralAccelZ = _rawAccelZ;
+            if (globals.neutralRotY <= 0) {
+              globals.rotYLeftOffset = 25;
+              globals.rotYRightOffset = 20;
+            } else if (globals.neutralRotY > 0) {
+              globals.rotYLeftOffset = 20;
+              globals.rotYRightOffset = 25;
+            }
+          });
         }
       }
     });
@@ -559,7 +590,10 @@ class _DrivingViewState extends State<DrivingView> {
                       minimumSize: const Size.fromHeight(50),
                     ),
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (context) {
+                        return const HomePage(title: globals.appName);
+                      }));
                     },
                     child: Text(
                       "Stop driving",
@@ -579,7 +613,7 @@ class _DrivingViewState extends State<DrivingView> {
               if (MediaQuery.of(context).orientation == Orientation.portrait)
                 Column(
                   children: [
-                    if (globals.showDebug)
+                    if (globals.showDebug == true)
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
