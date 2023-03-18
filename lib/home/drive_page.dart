@@ -1,3 +1,4 @@
+import 'package:drive_fit/driving_mode/driving_logic.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -274,7 +275,7 @@ class _DrivePageState extends State<DrivePage> {
                     Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const DrivingView(
+                            builder: (context) => const DrivingLogic(
                                   calibrationMode: true,
                                   accelerometerOn: true,
                                 )));
