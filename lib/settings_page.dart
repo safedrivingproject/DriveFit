@@ -18,6 +18,7 @@ class _SettingsPageState extends State<SettingsPage> {
       useHighCameraResolution,
       showDebug,
       hasCalibrated;
+  double? neutralRotX = 5, neutralRotY = -25;
 
   Future<void> _loadDefaultSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,6 +30,8 @@ class _SettingsPageState extends State<SettingsPage> {
             (prefs.getBool('useHighCameraResolution') ?? false);
         showDebug = (prefs.getBool('showDebug') ?? false);
         hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
+        neutralRotX = (prefs.getDouble('neutralRotX') ?? 5.0);
+        neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
       });
     }
   }
