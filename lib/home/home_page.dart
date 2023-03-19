@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/settings_page.dart';
+import '../settings/settings_page.dart';
 import '/theme/color_schemes.g.dart';
 import 'drive_page.dart';
 

@@ -2,7 +2,7 @@ import 'package:drive_fit/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'global_variables.dart' as globals;
+import '../global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
   final String title;

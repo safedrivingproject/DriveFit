@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'main.dart';
+import '/main.dart';
+import '/theme/color_schemes.g.dart';
 
 class NotificationController {
   static ReceivedAction? initialAction;
@@ -8,7 +9,7 @@ class NotificationController {
   //Initializations
   static Future<void> initializeLocalNotifications() async {
     await AwesomeNotifications().initialize(
-        'resource://drawable/res_leaf',
+        null,
         [
           NotificationChannel(
               channelKey: 'alerts',
@@ -18,7 +19,7 @@ class NotificationController {
               groupAlertBehavior: GroupAlertBehavior.Children,
               importance: NotificationImportance.Max,
               defaultPrivacy: NotificationPrivacy.Public,
-              defaultColor: Colors.red,
+              defaultColor: lightColorScheme.primary,
               ledColor: Colors.red)
         ],
         debug: true);

@@ -12,7 +12,7 @@ import 'package:drive_fit/theme/color_schemes.g.dart';
 
 import '/home/home_page.dart';
 import 'camera_view.dart';
-import '/notification_controller.dart';
+import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
 import '/global_variables.dart' as globals;
