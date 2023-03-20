@@ -18,11 +18,6 @@ class _DrivePageState extends State<DrivePage> {
     if (mounted) {
       setState(() {
         globals.useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
-        globals.showCameraPreview =
-            (prefs.getBool('showCameraPreview') ?? true);
-        globals.useHighCameraResolution =
-            (prefs.getBool('useHighCameraResolution') ?? false);
-        globals.showDebug = (prefs.getBool('showDebug') ?? false);
         globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
       });
     }
@@ -122,7 +117,7 @@ class _DrivePageState extends State<DrivePage> {
                                       child: Icon(
                                         Icons.cloud_queue,
                                         color: lightColorScheme.onBackground,
-                                        size: 24,
+                                        size: 28,
                                       ),
                                     ),
                                     Text(
@@ -130,7 +125,7 @@ class _DrivePageState extends State<DrivePage> {
                                       textAlign: TextAlign.start,
                                       style: Theme.of(context)
                                           .textTheme
-                                          .headlineLarge,
+                                          .headlineMedium,
                                     ),
                                   ],
                                 ),
@@ -149,7 +144,7 @@ class _DrivePageState extends State<DrivePage> {
                                       child: Icon(
                                         Icons.waves,
                                         color: lightColorScheme.onBackground,
-                                        size: 24,
+                                        size: 28,
                                       ),
                                     ),
                                     Text(
@@ -157,7 +152,7 @@ class _DrivePageState extends State<DrivePage> {
                                       textAlign: TextAlign.start,
                                       style: Theme.of(context)
                                           .textTheme
-                                          .headlineLarge,
+                                          .headlineMedium,
                                     ),
                                   ],
                                 ),
@@ -219,18 +214,18 @@ class _DrivePageState extends State<DrivePage> {
                                     Padding(
                                       padding:
                                           const EdgeInsetsDirectional.fromSTEB(
-                                              8, 8, 8, 0),
+                                              8, 4, 8, 0),
                                       child: Icon(
                                         Icons.speed,
                                         color: lightColorScheme.onBackground,
-                                        size: 24,
+                                        size: 28,
                                       ),
                                     ),
                                     Text('Slow down',
                                         textAlign: TextAlign.start,
                                         style: Theme.of(context)
                                             .textTheme
-                                            .headlineLarge),
+                                            .headlineMedium),
                                   ],
                                 ),
                               ),

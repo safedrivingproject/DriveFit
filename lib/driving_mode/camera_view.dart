@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:camera/camera.dart';
+import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart';
 import '/global_variables.dart' as globals;
@@ -35,12 +37,24 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   //bool _changingCameraLens = false;
   bool _cameraOn = false;
   Timer? exposureTimer;
+  bool showCameraPreview = true, useHighCameraResolution = false;
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+        useHighCameraResolution =
+            (prefs.getBool('useHighCameraResolution') ?? false);
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
+    _loadSettings();
     if (cameras.any(
       (element) =>
           element.lensDirection == widget.initialDirection &&
@@ -80,58 +94,47 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     return _liveFeedBody();
   }
 
-  //Widget? _floatingActionButton() {
-  //  if (cameras.length == 1) return null;
-  //  return SizedBox(
-  //      height: 70.0,
-  //      width: 70.0,
-  //      child: FloatingActionButton(
-  //        onPressed: _switchLiveCamera,
-  //        child: Icon(
-  //          Platform.isIOS
-  //              ? Icons.flip_camera_ios_outlined
-  //              : Icons.flip_camera_android_outlined,
-  //          size: 40,
-  //        ),
-  //      ));
-  //}
-
   Widget _liveFeedBody() {
     if (_controller?.value.isInitialized == false) {
-      return Container();
-    }
+      return Container(
+        alignment: Alignment.center,
+        color: lightColorScheme.background,
+        child: Text("Initializing Camera...",
+            style: Theme.of(context).textTheme.headlineLarge),
+      );
+    } else {
+      final size = MediaQuery.of(context).size;
+      // calculate scale depending on screen and camera ratios
+      // this is actually size.aspectRatio / (1 / camera.aspectRatio)
+      // because camera preview size is received as landscape
+      // but we're calculating for portrait orientation
+      var scale = size.aspectRatio * _controller!.value.aspectRatio;
 
-    final size = MediaQuery.of(context).size;
-    // calculate scale depending on screen and camera ratios
-    // this is actually size.aspectRatio / (1 / camera.aspectRatio)
-    // because camera preview size is received as landscape
-    // but we're calculating for portrait orientation
-    var scale = size.aspectRatio * _controller!.value.aspectRatio;
+      // to prevent scaling down, invert the value
+      if (scale < 1) scale = 1 / scale;
 
-    // to prevent scaling down, invert the value
-    if (scale < 1) scale = 1 / scale;
-
-    return Container(
-      color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          Transform.scale(
-            scale: scale,
-            child: Center(
-              child: globals.inCalibrationMode
-                  ? CameraPreview(_controller!)
-                  : globals.showCameraPreview
-                      ? CameraPreview(_controller!)
-                      : Container(
-                          color: Colors.grey,
-                        ),
+      return Container(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            Transform.scale(
+              scale: scale,
+              child: Center(
+                child: globals.inCalibrationMode
+                    ? CameraPreview(_controller!)
+                    : showCameraPreview
+                        ? CameraPreview(_controller!)
+                        : Container(
+                            color: lightColorScheme.background,
+                          ),
+              ),
             ),
-          ),
-          if (widget.customPaint != null) widget.customPaint!,
-        ],
-      ),
-    );
+            if (widget.customPaint != null) widget.customPaint!,
+          ],
+        ),
+      );
+    }
   }
 
   void pauseCameraPreview() {
@@ -142,9 +145,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     final camera = cameras[_cameraIndex];
     _controller = CameraController(
       camera,
-      globals.useHighCameraResolution
-          ? ResolutionPreset.medium
-          : ResolutionPreset.low,
+      useHighCameraResolution ? ResolutionPreset.medium : ResolutionPreset.low,
       enableAudio: false,
     );
     try {
