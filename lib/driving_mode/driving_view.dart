@@ -14,6 +14,7 @@ import 'camera_view.dart';
 import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
+import 'face_detection_service.dart';
 import '/global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
@@ -31,6 +32,8 @@ class DrivingView extends StatefulWidget {
 }
 
 class _DrivingViewState extends State<DrivingView> {
+  final FaceDetectionService faceDetectionService = FaceDetectionService();
+
   final AudioPlayer sleepyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
 
@@ -43,24 +46,14 @@ class _DrivingViewState extends State<DrivingView> {
 
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
-  bool cancelTimer = false;
-  bool carMoving = false;
+  bool carMoving = true;
   bool startCalibration = false;
   bool _canProcess = true, _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
   bool showCameraPreview = true;
 
-  double? rotX = globals.neutralRotX,
-      rotY = globals.neutralRotY,
-      rotZ = 0,
-      leftEyeOpenProb = 1.0,
-      rightEyeOpenProb = 1.0;
-  double neutralRotX = 5, neutralRotY = -25;
-  double rotYLeftOffset = 25, rotYRightOffset = 20;
   double maxAccelThreshold = 1.0;
-  List<Face> faces = [];
-  bool hasFace = true;
 
   bool _accelAvailable = false;
   List<double> accelData = List.filled(3, 0.0);
@@ -84,10 +77,14 @@ class _DrivingViewState extends State<DrivingView> {
         showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
         globals.showDebug = (prefs.getBool('showDebug') ?? false);
         globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
-        neutralRotX = (prefs.getDouble('neutralRotX') ?? 5.0);
-        neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
-        rotYLeftOffset = (prefs.getDouble('rotYLeftOffset') ?? 25);
-        rotYRightOffset = (prefs.getDouble('rotYRightOffset') ?? 20);
+        faceDetectionService.neutralRotX =
+            (prefs.getDouble('neutralRotX') ?? 5.0);
+        faceDetectionService.neutralRotY =
+            (prefs.getDouble('neutralRotY') ?? -25.0);
+        faceDetectionService.rotYLeftOffset =
+            (prefs.getDouble('rotYLeftOffset') ?? 25);
+        faceDetectionService.rotYRightOffset =
+            (prefs.getDouble('rotYRightOffset') ?? 20);
       });
     }
   }
@@ -152,9 +149,11 @@ class _DrivingViewState extends State<DrivingView> {
   @override
   void dispose() {
     _canProcess = false;
-    cancelTimer = true;
+    periodicDetectionTimer?.cancel();
+    periodicCalibrationTimer?.cancel();
     globals.inCalibrationMode = false;
     sleepyAudioPlayer.dispose();
+    inattentiveAudioPlayer.dispose();
     _faceDetector.close();
     _stopAccelerometer();
     super.dispose();
@@ -182,146 +181,77 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void detectionTimer() {
-    int rotXTimerCounter = 0;
-    int rotYCounter = 0;
-    int eyeCounter = 0;
     int accelMovingCounter = 0;
     int accelStoppedCounter = 0;
-    int faceEmptyCounter = 0;
 
-    int needReminderType = 0;
     var liveAccelList = List<double>.filled(10, 0);
     // ReminderType => 0: No need reminder, 1: Sleepy (Eyes Closed), 2: Distracted(Head rotation)
     double maxAccel = 0;
-    int reminderCount = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      //if (faces.isEmpty) return; (will lead to inaccurate detection)
-      if (faces.isEmpty) {
-        faceEmptyCounter++;
-      } else {
-        faceEmptyCounter = 0;
-        if (mounted) {
-          setState(() {
-            hasFace = true;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkHasFace();
+        });
       }
-      if (faceEmptyCounter > 30) {
-        if (mounted) {
-          setState(() {
-            hasFace = false;
-          });
-        }
-      }
-      if (!hasFace) return;
+
+      if (!faceDetectionService.hasFace) return;
 
       ///TODO: replace with GPS
-      if (widget.accelerometerOn) {
-        liveAccelList.add(globals.resultantAccel);
-        if (liveAccelList.length > 10) {
-          liveAccelList.removeAt(0);
-        }
-        maxAccel = liveAccelList.fold<double>(0, max);
-        if (maxAccel > maxAccelThreshold) {
-          accelMovingCounter++;
-        } else {
-          accelMovingCounter = 0;
-        }
-        if (accelMovingCounter > 20) {
-          if (mounted) {
-            setState(() {
-              carMoving = true;
-            });
-          }
-        }
-        if (maxAccel <= maxAccelThreshold) {
-          accelStoppedCounter++;
-        } else {
-          accelStoppedCounter = 0;
-        }
-        if (accelStoppedCounter > 20) {
-          if (mounted) {
-            setState(() {
-              carMoving = false;
-            });
-          }
-        }
-      } else {
-        carMoving = true;
-      }
+      // if (widget.accelerometerOn) {
+      //   liveAccelList.add(globals.resultantAccel);
+      //   if (liveAccelList.length > 10) {
+      //     liveAccelList.removeAt(0);
+      //   }
+      //   maxAccel = liveAccelList.fold<double>(0, max);
+      //   if (maxAccel > maxAccelThreshold) {
+      //     accelMovingCounter++;
+      //   } else {
+      //     accelMovingCounter = 0;
+      //   }
+      //   if (accelMovingCounter > 20) {
+      //     if (mounted) {
+      //       setState(() {
+      //         carMoving = true;
+      //       });
+      //     }
+      //   }
+      //   if (maxAccel <= maxAccelThreshold) {
+      //     accelStoppedCounter++;
+      //   } else {
+      //     accelStoppedCounter = 0;
+      //   }
+      //   if (accelStoppedCounter > 20) {
+      //     if (mounted) {
+      //       setState(() {
+      //         carMoving = false;
+      //       });
+      //     }
+      //   }
+      // } else {
+      carMoving = true;
+      // }
 
-      /// Eyes Closed
-      if (leftEyeOpenProb != null && rightEyeOpenProb != null) {
-        if (leftEyeOpenProb! < globals.eyeProbThreshold &&
-            rightEyeOpenProb! < globals.eyeProbThreshold) {
-          eyeCounter++;
-        } else {
-          eyeCounter = 0;
-        }
-        if (reminderCount < 3) {
-          if (eyeCounter > 10) {
-            needReminderType = 1;
-            reminderCount++;
-            eyeCounter = 0;
-          }
-        }
-      }
-
-      /// Restored normal position
-      if (rotX! > (globals.neutralRotX - globals.rotXOffset) &&
-          rotX! < (globals.neutralRotX + globals.rotXOffset) &&
-          rotY! > (globals.neutralRotY - globals.rotYRightOffset) &&
-          rotY! < (globals.neutralRotY + globals.rotYLeftOffset) &&
-          leftEyeOpenProb! > globals.eyeProbThreshold &&
-          rightEyeOpenProb! > globals.eyeProbThreshold) {
-        reminderCount = 0;
-      }
-
-      if (cancelTimer == true) {
-        cancelTimer = false;
-        timer.cancel();
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkEyesClosed();
+          faceDetectionService.checkNormalPosition();
+        });
       }
 
       if (!carMoving) return;
 
-      /// Head up or down
-      if (rotX! < (globals.neutralRotX - globals.rotXOffset) ||
-          rotX! > (globals.neutralRotX + globals.rotXOffset)) {
-        rotXTimerCounter++;
-      } else {
-        rotXTimerCounter = 0;
-      }
-      if (reminderCount < 3) {
-        if (rotXTimerCounter > 10) {
-          needReminderType = 1;
-          reminderCount++;
-          rotXTimerCounter = 0;
-        }
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkHeadUpDown();
+          faceDetectionService.checkHeadLeftRight();
+        });
       }
 
-      /// Head Left or Right
-      if (rotY! > (globals.neutralRotY + globals.rotYLeftOffset) ||
-          rotY! < (globals.neutralRotY - globals.rotYRightOffset)) {
-        rotYCounter++;
-      } else {
-        rotYCounter = 0;
-      }
-      if (reminderCount < 3) {
-        if (rotYCounter > 25) {
-          needReminderType = 2;
-          reminderCount++;
-          rotYCounter = 0;
-        }
-      }
-
-      if (needReminderType > 0) {
-        if (needReminderType == 1) {
-          sendSleepyReminder();
-        } else if (needReminderType == 2) {
-          sendDistractedReminder();
-        }
-        needReminderType = 0;
+      if (faceDetectionService.reminderType == "Drowsy") {
+        sendSleepyReminder();
+      } else if (faceDetectionService.reminderType == "Inattentive") {
+        sendDistractedReminder();
       }
     });
   }
@@ -362,27 +292,30 @@ class _DrivingViewState extends State<DrivingView> {
           timer.cancel();
         }
       } else {
-        liveRotXList.add(rotX ?? 5);
+        liveRotXList.add(faceDetectionService.rotX ?? 5);
         if (liveRotXList.length > 10) {
           liveRotXList.removeAt(0);
         }
-        liveRotYList.add(rotY ?? 5);
+        liveRotYList.add(faceDetectionService.rotY ?? -25);
         if (liveRotYList.length > 10) {
           liveRotYList.removeAt(0);
         }
         if (mounted) {
           setState(() {
-            neutralRotX = average(liveRotXList);
-            neutralRotY = average(liveRotYList);
+            faceDetectionService.neutralRotX = average(liveRotXList);
+            faceDetectionService.neutralRotY = average(liveRotYList);
             globals.neutralAccelX = _rawAccelX;
             globals.neutralAccelY = _rawAccelY;
             globals.neutralAccelZ = _rawAccelZ;
-            rotYLeftOffset = neutralRotY <= 0 ? 25 : 20;
-            rotYRightOffset = neutralRotY <= 0 ? 20 : 25;
-            _saveDouble('neutralRotX', neutralRotX);
-            _saveDouble('neutralRotY', neutralRotY);
-            _saveDouble('rotYLeftOffset', rotYLeftOffset);
-            _saveDouble('rotYRightOffset', rotYRightOffset);
+            faceDetectionService.rotYLeftOffset =
+                faceDetectionService.neutralRotY <= 0 ? 25 : 20;
+            faceDetectionService.rotYRightOffset =
+                faceDetectionService.neutralRotY <= 0 ? 20 : 25;
+            _saveDouble('neutralRotX', faceDetectionService.neutralRotX);
+            _saveDouble('neutralRotY', faceDetectionService.neutralRotY);
+            _saveDouble('rotYLeftOffset', faceDetectionService.rotYLeftOffset);
+            _saveDouble(
+                'rotYRightOffset', faceDetectionService.rotYRightOffset);
           });
         }
       }
@@ -474,14 +407,17 @@ class _DrivingViewState extends State<DrivingView> {
         _text = '';
       });
     }
-    faces = await _faceDetector.processImage(inputImage);
-    if (faces.isNotEmpty) {
-      final face = faces[0];
-      rotX = face.headEulerAngleX; // up and down rotX degrees
-      rotY = face.headEulerAngleY; // right and left rotY degrees
-      rotZ = face.headEulerAngleZ; // sideways rotZ degrees
-      leftEyeOpenProb = face.leftEyeOpenProbability;
-      rightEyeOpenProb = face.rightEyeOpenProbability;
+    // faces = await _faceDetector.processImage(inputImage);
+    faceDetectionService.faces = await _faceDetector.processImage(inputImage);
+    if (faceDetectionService.faces.isNotEmpty) {
+      final face = faceDetectionService.faces[0];
+      faceDetectionService.rotX =
+          face.headEulerAngleX; // up and down rotX degrees
+      faceDetectionService.rotY =
+          face.headEulerAngleY; // right and left rotY degrees
+      // rotZ = face.headEulerAngleZ; // sideways rotZ degrees
+      faceDetectionService.leftEyeOpenProb = face.leftEyeOpenProbability;
+      faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
       Size size = const Size(1.0, 1.0);
       if (inputImage.inputImageData?.size != null &&
@@ -509,13 +445,13 @@ class _DrivingViewState extends State<DrivingView> {
                 size,
                 inputImage.inputImageData!.size));
         final painter = FaceDetectorPainter(
-            faces,
+            faceDetectionService.faces,
             inputImage.inputImageData!.size,
             inputImage.inputImageData!.imageRotation);
         _customPaint = CustomPaint(painter: painter);
       } else {
-        String text = 'Faces found: ${faces.length}\n\n';
-        for (final face in faces) {
+        String text = 'Faces found: ${faceDetectionService.faces.length}\n\n';
+        for (final face in faceDetectionService.faces) {
           text += 'face: ${face.boundingBox}\n\n';
         }
         _text = text;
@@ -585,26 +521,42 @@ class _DrivingViewState extends State<DrivingView> {
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
                   children: [
-                    DataValueWidget(text: "rotX", value: rotX),
-                    DataValueWidget(text: "rotY", value: rotY),
-                    DataValueWidget(text: "neutralRotX", value: neutralRotX),
-                    DataValueWidget(text: "neutralRotY", value: neutralRotY),
                     DataValueWidget(
-                        text: "leftEyeOpenProb", value: leftEyeOpenProb),
+                        text: "rotX", doubleValue: faceDetectionService.rotX),
                     DataValueWidget(
-                        text: "rightEyeOpenProb", value: rightEyeOpenProb),
-                    DataValueWidget(text: "hasFace", value: hasFace ? 1 : 0),
+                        text: "rotY", doubleValue: faceDetectionService.rotY),
+                    DataValueWidget(
+                        text: "neutralRotX",
+                        doubleValue: faceDetectionService.neutralRotX),
+                    DataValueWidget(
+                        text: "neutralRotY",
+                        doubleValue: faceDetectionService.neutralRotY),
+                    DataValueWidget(
+                        text: "leftEyeOpenProb",
+                        doubleValue: faceDetectionService.leftEyeOpenProb),
+                    DataValueWidget(
+                        text: "rightEyeOpenProb",
+                        doubleValue: faceDetectionService.rightEyeOpenProb),
+                    DataValueWidget(
+                        text: "hasFace",
+                        boolValue: faceDetectionService.hasFace),
+                    DataValueWidget(
+                        text: "reminderCount",
+                        intValue: faceDetectionService.reminderCount),
+                    DataValueWidget(
+                        text: "reminderType",
+                        stringValue: faceDetectionService.reminderType),
                     if (widget.accelerometerOn == true)
                       Column(
                         children: [
                           DataValueWidget(
-                              text: "carMoving", value: carMoving ? 1 : 0),
+                              text: "carMoving", boolValue: carMoving),
                           DataValueWidget(
                               text: "resultantAccel",
-                              value: globals.resultantAccel),
-                          DataValueWidget(text: "accelX", value: accelX),
-                          DataValueWidget(text: "accelY", value: accelY),
-                          DataValueWidget(text: "accelZ", value: accelZ),
+                              doubleValue: globals.resultantAccel),
+                          DataValueWidget(text: "accelX", doubleValue: accelX),
+                          DataValueWidget(text: "accelY", doubleValue: accelY),
+                          DataValueWidget(text: "accelZ", doubleValue: accelZ),
                         ],
                       )
                   ],
@@ -838,17 +790,23 @@ class DataValueWidget extends StatelessWidget {
   const DataValueWidget({
     Key? key,
     required this.text,
-    required this.value,
+    this.doubleValue,
+    this.intValue,
+    this.boolValue,
+    this.stringValue,
   }) : super(key: key);
 
   final String text;
-  final double? value;
+  final double? doubleValue;
+  final int? intValue;
+  final bool? boolValue;
+  final String? stringValue;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: SizedBox(
-        height: 50,
+        height: 40,
         width: 200,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -858,7 +816,12 @@ class DataValueWidget extends StatelessWidget {
                     .textTheme
                     .titleMedium
                     ?.copyWith(color: lightColorScheme.onPrimary)),
-            Text(value.toString(),
+            Text(
+                doubleValue != null
+                    ? doubleValue.toString()
+                    : intValue != null
+                        ? intValue.toString()
+                        : boolValue != null ? boolValue.toString() : stringValue.toString(),
                 style: Theme.of(context)
                     .textTheme
                     .labelLarge
