@@ -15,6 +15,7 @@ import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
 import 'face_detection_service.dart';
+import 'geolocation_service.dart';
 import '/global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
@@ -33,6 +34,7 @@ class DrivingView extends StatefulWidget {
 
 class _DrivingViewState extends State<DrivingView> {
   final FaceDetectionService faceDetectionService = FaceDetectionService();
+  final GeolocationService geolocationService = GeolocationService();
 
   final AudioPlayer sleepyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
@@ -128,6 +130,7 @@ class _DrivingViewState extends State<DrivingView> {
   @override
   void initState() {
     super.initState();
+    geolocationService.positionItems.clear();
     initAudioPlayers();
     _loadSettings();
     periodicCalibrationTimer?.cancel();
@@ -144,6 +147,12 @@ class _DrivingViewState extends State<DrivingView> {
     if (widget.accelerometerOn) {
       _initAccelerometer();
     }
+    if (mounted) {
+      setState(() {
+        geolocationService.positionStreamStarted = true;
+        geolocationService.toggleServiceStatusStream();
+      });
+    }
   }
 
   @override
@@ -156,6 +165,10 @@ class _DrivingViewState extends State<DrivingView> {
     inattentiveAudioPlayer.dispose();
     _faceDetector.close();
     _stopAccelerometer();
+    if (geolocationService.positionStreamSubscription != null) {
+      geolocationService.positionStreamSubscription!.cancel();
+      geolocationService.positionStreamSubscription = null;
+    }
     super.dispose();
   }
 
@@ -183,9 +196,7 @@ class _DrivingViewState extends State<DrivingView> {
   void detectionTimer() {
     int accelMovingCounter = 0;
     int accelStoppedCounter = 0;
-
     var liveAccelList = List<double>.filled(10, 0);
-    // ReminderType => 0: No need reminder, 1: Sleepy (Eyes Closed), 2: Distracted(Head rotation)
     double maxAccel = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
@@ -511,56 +522,105 @@ class _DrivingViewState extends State<DrivingView> {
               initialDirection: CameraLensDirection.front,
             ),
             if (globals.showDebug == true)
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                ),
-                padding: const EdgeInsets.all(16.0),
-                child: ListView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  children: [
-                    DataValueWidget(
-                        text: "rotX", doubleValue: faceDetectionService.rotX),
-                    DataValueWidget(
-                        text: "rotY", doubleValue: faceDetectionService.rotY),
-                    DataValueWidget(
-                        text: "neutralRotX",
-                        doubleValue: faceDetectionService.neutralRotX),
-                    DataValueWidget(
-                        text: "neutralRotY",
-                        doubleValue: faceDetectionService.neutralRotY),
-                    DataValueWidget(
-                        text: "leftEyeOpenProb",
-                        doubleValue: faceDetectionService.leftEyeOpenProb),
-                    DataValueWidget(
-                        text: "rightEyeOpenProb",
-                        doubleValue: faceDetectionService.rightEyeOpenProb),
-                    DataValueWidget(
-                        text: "hasFace",
-                        boolValue: faceDetectionService.hasFace),
-                    DataValueWidget(
-                        text: "reminderCount",
-                        intValue: faceDetectionService.reminderCount),
-                    DataValueWidget(
-                        text: "reminderType",
-                        stringValue: faceDetectionService.reminderType),
-                    if (widget.accelerometerOn == true)
-                      Column(
-                        children: [
-                          DataValueWidget(
-                              text: "carMoving", boolValue: carMoving),
-                          DataValueWidget(
-                              text: "resultantAccel",
-                              doubleValue: globals.resultantAccel),
-                          DataValueWidget(text: "accelX", doubleValue: accelX),
-                          DataValueWidget(text: "accelY", doubleValue: accelY),
-                          DataValueWidget(text: "accelZ", doubleValue: accelZ),
-                        ],
-                      )
-                  ],
-                ),
+              Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                    ),
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      shrinkWrap: true,
+                      children: [
+                        DataValueWidget(
+                            text: "rotX",
+                            doubleValue: faceDetectionService.rotX),
+                        DataValueWidget(
+                            text: "rotY",
+                            doubleValue: faceDetectionService.rotY),
+                        DataValueWidget(
+                            text: "neutralRotX",
+                            doubleValue: faceDetectionService.neutralRotX),
+                        DataValueWidget(
+                            text: "neutralRotY",
+                            doubleValue: faceDetectionService.neutralRotY),
+                        DataValueWidget(
+                            text: "leftEyeOpenProb",
+                            doubleValue: faceDetectionService.leftEyeOpenProb),
+                        DataValueWidget(
+                            text: "rightEyeOpenProb",
+                            doubleValue: faceDetectionService.rightEyeOpenProb),
+                        DataValueWidget(
+                            text: "hasFace",
+                            boolValue: faceDetectionService.hasFace),
+                        DataValueWidget(
+                            text: "reminderCount",
+                            intValue: faceDetectionService.reminderCount),
+                        DataValueWidget(
+                            text: "reminderType",
+                            stringValue: faceDetectionService.reminderType),
+                        if (widget.accelerometerOn == true)
+                          Column(
+                            children: [
+                              DataValueWidget(
+                                  text: "carMoving", boolValue: carMoving),
+                              DataValueWidget(
+                                  text: "resultantAccel",
+                                  doubleValue: globals.resultantAccel),
+                              DataValueWidget(
+                                  text: "accelX", doubleValue: accelX),
+                              DataValueWidget(
+                                  text: "accelY", doubleValue: accelY),
+                              DataValueWidget(
+                                  text: "accelZ", doubleValue: accelZ),
+                            ],
+                          )
+                      ],
+                    ),
+                  ),
+                  Container(
+                    height: 150,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: geolocationService.positionItems.length,
+                      itemBuilder: (context, index) {
+                        final positionItem =
+                            geolocationService.positionItems[index];
+
+                        if (positionItem.type == PositionItemType.log) {
+                          return SizedBox(
+                            height: 10,
+                          );
+                        } else {
+                          return Card(
+                            child: ListTile(
+                              tileColor: lightColorScheme.secondary,
+                              title: Text(
+                                positionItem.displayValue,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  if (geolocationService.positionItems.isEmpty)
+                    Container(
+                      height: 50,
+                      width: MediaQuery.of(context).size.width,
+                      color: lightColorScheme.secondary,
+                      child: Text(
+                        "No location detected",
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(color: Colors.white),
+                      ),
+                    )
+                ],
               ),
             if (widget.calibrationMode == true)
               Column(
@@ -733,6 +793,29 @@ class _DrivingViewState extends State<DrivingView> {
                             textAlign: TextAlign.center,
                           ),
                         ),
+                        SizedBox(
+                          height: 10,
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            shape: const RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(16.0))),
+                            backgroundColor: lightColorScheme.primary,
+                            minimumSize: const Size.fromHeight(50),
+                          ),
+                          onPressed: () {
+                            geolocationService.getCurrentPosition();
+                          },
+                          child: Text(
+                            "Get Current Location",
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(color: lightColorScheme.onPrimary),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                         const SizedBox(height: 80),
                       ],
                     ),
@@ -821,7 +904,9 @@ class DataValueWidget extends StatelessWidget {
                     ? doubleValue.toString()
                     : intValue != null
                         ? intValue.toString()
-                        : boolValue != null ? boolValue.toString() : stringValue.toString(),
+                        : boolValue != null
+                            ? boolValue.toString()
+                            : stringValue.toString(),
                 style: Theme.of(context)
                     .textTheme
                     .labelLarge

@@ -201,14 +201,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-class selectAlarmPage extends StatefulWidget {
-  const selectAlarmPage({super.key});
+class SelectAlarmPage extends StatefulWidget {
+  const SelectAlarmPage({super.key});
 
   @override
-  State<selectAlarmPage> createState() => _selectAlarmPageState();
+  State<SelectAlarmPage> createState() => _SelectAlarmPageState();
 }
 
-class _selectAlarmPageState extends State<selectAlarmPage> {
+class _SelectAlarmPageState extends State<SelectAlarmPage> {
   @override
   Widget build(BuildContext context) {
     return Container();

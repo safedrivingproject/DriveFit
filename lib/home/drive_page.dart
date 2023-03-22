@@ -1,8 +1,7 @@
-import 'package:drive_fit/driving_mode/driving_view.dart';
+import '/driving_mode/driving_view.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../driving_mode/driving_view.dart';
 import '../global_variables.dart' as globals;
 
 class DrivePage extends StatefulWidget {

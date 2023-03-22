@@ -12,105 +12,55 @@ class FaceDetectionService {
   /// *******************************************
   /// *******************************************
   FaceDetectionService._internal() {
-    _neutralRotX = 5;
-    _neutralRotY = -25;
+    neutralRotX = 5;
+    neutralRotY = -25;
     //
-    _rotXOffset = 15;
-    _rotYLeftOffset = 25;
-    _rotYRightOffset = 20;
-    _eyeProbThreshold = 0.3;
+    rotXOffset = 15;
+    rotYLeftOffset = 25;
+    rotYRightOffset = 20;
+    eyeProbThreshold = 0.3;
     //
-    _faces = [];
+    faces = [];
     //
-    _rotX = 5;
-    _rotY = -25;
-    _leftEyeOpenProb = 1.0;
-    _rightEyeOpenProb = 1.0;
+    rotX = 5;
+    rotY = -25;
+    leftEyeOpenProb = 1.0;
+    rightEyeOpenProb = 1.0;
     //
-    _hasFaceCounter = 0;
-    _eyeCounter = 0;
-    _rotXCounter = 0;
-    _rotYCounter = 0;
+    hasFaceCounter = 0;
+    eyeCounter = 0;
+    rotXCounter = 0;
+    rotYCounter = 0;
     //
-    _reminderCount = 0;
-    _reminderType = "None";
+    reminderCount = 0;
+    reminderType = "None";
     //
-    _hasFace = false;
+    hasFace = false;
   }
 
-  double _neutralRotX = 5,
-      _neutralRotY = -25,
+  double neutralRotX = 5,
+      neutralRotY = -25,
       //
-      _rotXOffset = 15,
-      _rotYLeftOffset = 25,
-      _rotYRightOffset = 20,
-      _eyeProbThreshold = 0.3;
+      rotXOffset = 15,
+      rotYLeftOffset = 25,
+      rotYRightOffset = 20,
+      eyeProbThreshold = 0.3;
   //
-  List<Face> _faces = [];
-  double? _rotX = 5,
-      _rotY = -25,
-      _leftEyeOpenProb = 1.0,
-      _rightEyeOpenProb = 1.0;
+  List<Face> faces = [];
+  double? rotX = 5,
+      rotY = -25,
+      leftEyeOpenProb = 1.0,
+      rightEyeOpenProb = 1.0;
   //
-  int _hasFaceCounter = 0;
-  int _eyeCounter = 0;
-  int _rotXCounter = 0;
-  int _rotYCounter = 0;
+  int hasFaceCounter = 0;
+  int eyeCounter = 0;
+  int rotXCounter = 0;
+  int rotYCounter = 0;
   //
-  int _reminderCount = 0;
-  String _reminderType = "None";
+  int reminderCount = 0;
+  String reminderType = "None";
   //
-  bool _hasFace = false;
-
-  double get neutralRotX => _neutralRotX;
-  double get neutralRotY => _neutralRotY;
-  //
-  double get rotXOffset => _rotXOffset;
-  double get rotYLeftOffset => _rotYLeftOffset;
-  double get rotYRightOffset => _rotYRightOffset;
-  double get eyeProbThreshold => _eyeProbThreshold;
-  //
-  List<Face> get faces => _faces;
-  //
-  double? get rotX => _rotX;
-  double? get rotY => _rotY;
-  double? get leftEyeOpenProb => _leftEyeOpenProb;
-  double? get rightEyeOpenProb => _rightEyeOpenProb;
-  //
-  int get hasFaceCounter => _hasFaceCounter;
-  int get eyeCounter => _eyeCounter;
-  int get rotXCounter => _rotXCounter;
-  int get rotYCounter => _rotYCounter;
-  //
-  int get reminderCount => _reminderCount;
-  String get reminderType => _reminderType;
-  //
-  bool get hasFace => _hasFace;
-
-  set neutralRotX(double value) => _neutralRotX = value;
-  set neutralRotY(double value) => _neutralRotY = value;
-  //
-  set rotXOffset(double value) => _rotXOffset = value;
-  set rotYLeftOffset(double value) => _rotYLeftOffset = value;
-  set rotYRightOffset(double value) => _rotYRightOffset = value;
-  set eyeProbThreshold(double value) => _eyeProbThreshold = value;
-  //
-  set faces(List<Face> values) => _faces = values;
-  //
-  set rotX(double? value) => _rotX = value;
-  set rotY(double? value) => _rotY = value;
-  set leftEyeOpenProb(double? value) => _leftEyeOpenProb = value;
-  set rightEyeOpenProb(double? value) => _rightEyeOpenProb = value;
-  //
-  set hasFaceCounter(int value) => _hasFaceCounter = value;
-  set eyeCounter(int value) => _eyeCounter = value;
-  set rotXCounter(int value) => _rotXCounter = value;
-  set rotYCounter(int value) => _rotYCounter = value;
-  //
-  set reminderCount(int value) => _reminderCount = value;
-  set reminderType(String value) => _reminderType;
-  //
-  set hasFace(bool value) => _hasFace = value;
+  bool hasFace = false;
 
   /// *******************************************
   /// *******************************************
@@ -119,86 +69,86 @@ class FaceDetectionService {
   /// *******************************************
   void checkHasFace() {
     if (faces.isEmpty) {
-      _hasFaceCounter++;
+      hasFaceCounter++;
     } else {
-      _hasFaceCounter = 0;
-      _hasFace = true;
+      hasFaceCounter = 0;
+      hasFace = true;
     }
-    if (_hasFaceCounter > 30) {
-      _hasFace = false;
+    if (hasFaceCounter > 30) {
+      hasFace = false;
     }
   }
 
   void checkEyesClosed() {
-    if (_leftEyeOpenProb != null && _rightEyeOpenProb != null) {
-      if (_leftEyeOpenProb! < _eyeProbThreshold &&
-          _rightEyeOpenProb! < _eyeProbThreshold) {
-        _eyeCounter++;
+    if (leftEyeOpenProb != null && rightEyeOpenProb != null) {
+      if (leftEyeOpenProb! < eyeProbThreshold &&
+          rightEyeOpenProb! < eyeProbThreshold) {
+        eyeCounter++;
       } else {
-        _eyeCounter = 0;
+        eyeCounter = 0;
       }
-      if (_reminderCount >= 3) {
-        _reminderType = "None";
+      if (reminderCount >= 3) {
+        reminderType = "None";
         return;
       }
-      if (_eyeCounter > 10) {
-        _reminderType = "Drowsy";
-        _reminderCount++;
-        _eyeCounter = 0;
+      if (eyeCounter > 10) {
+        reminderType = "Drowsy";
+        reminderCount++;
+        eyeCounter = 0;
       }
     }
   }
 
   void checkNormalPosition() {
-    if (_rotX != null &&
-        _rotY != null &&
-        _leftEyeOpenProb != null &&
-        _rightEyeOpenProb != null) {
-      if (_rotX! > (_neutralRotX - _rotXOffset) &&
-          _rotX! < (_neutralRotX + _rotXOffset) &&
-          _rotY! > (_neutralRotY - _rotYRightOffset) &&
-          _rotY! < (_neutralRotY + _rotYLeftOffset) &&
-          _leftEyeOpenProb! > _eyeProbThreshold &&
-          _rightEyeOpenProb! > _eyeProbThreshold) {
-        _reminderCount = 0;
-        _reminderType = "None";
+    if (rotX != null &&
+        rotY != null &&
+        leftEyeOpenProb != null &&
+        rightEyeOpenProb != null) {
+      if (rotX! > (neutralRotX - rotXOffset) &&
+          rotX! < (neutralRotX + rotXOffset) &&
+          rotY! > (neutralRotY - rotYRightOffset) &&
+          rotY! < (neutralRotY + rotYLeftOffset) &&
+          leftEyeOpenProb! > eyeProbThreshold &&
+          rightEyeOpenProb! > eyeProbThreshold) {
+        reminderCount = 0;
+        reminderType = "None";
       }
     }
   }
 
   void checkHeadUpDown() {
-    if (_rotX! < (_neutralRotX - _rotXOffset) ||
-        _rotX! > (_neutralRotX + _rotXOffset)) {
-      _rotXCounter++;
+    if (rotX! < (neutralRotX - rotXOffset) ||
+        rotX! > (neutralRotX + rotXOffset)) {
+      rotXCounter++;
     } else {
-      _rotXCounter = 0;
+      rotXCounter = 0;
     }
-    if (_reminderCount >= 3) {
-        _reminderType = "None";
+    if (reminderCount >= 3) {
+        reminderType = "None";
         return;
       }
-    if (_rotXCounter > 10) {
-      _reminderType = "Drowsy";
-      _reminderCount++;
-      _rotXCounter = 0;
+    if (rotXCounter > 10) {
+      reminderType = "Drowsy";
+      reminderCount++;
+      rotXCounter = 0;
     }
   }
 
   void checkHeadLeftRight() {
-    if (_rotY! > (_neutralRotY + _rotYLeftOffset) ||
-        _rotY! < (_neutralRotY - _rotYRightOffset)) {
-      _rotYCounter++;
+    if (rotY! > (neutralRotY + rotYLeftOffset) ||
+        rotY! < (neutralRotY - rotYRightOffset)) {
+      rotYCounter++;
     } else {
-      _rotYCounter = 0;
+      rotYCounter = 0;
     }
-    if (_reminderCount >= 3) {
-        _reminderType = "None";
+    if (reminderCount >= 3) {
+        reminderType = "None";
         return;
       }
-    if (_rotYCounter > 25) {
-      _reminderType = "Inattentive";
-      _reminderCount++;
-      _rotYCounter = 0;
+    if (rotYCounter > 25) {
+      reminderType = "Inattentive";
+      reminderCount++;
+      rotYCounter = 0;
     }
   }
 }

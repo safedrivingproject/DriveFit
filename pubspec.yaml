@@ -46,6 +46,7 @@ dependencies:
   dynamic_color: ^1.5.4
   google_fonts: ^4.0.3
   shared_preferences: ^2.0.18
+  geolocator: ^9.0.2
 
 dev_dependencies:
   flutter_test:
