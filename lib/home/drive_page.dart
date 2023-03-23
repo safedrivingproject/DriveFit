@@ -1,7 +1,9 @@
-import '/driving_mode/driving_view.dart';
+import 'package:drive_fit/driving_mode/geolocation_service.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import '/driving_mode/driving_view.dart';
 import '../global_variables.dart' as globals;
 
 class DrivePage extends StatefulWidget {
@@ -12,20 +14,78 @@ class DrivePage extends StatefulWidget {
 }
 
 class _DrivePageState extends State<DrivePage> {
+  GeolocationService geolocationService = GeolocationService();
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        globals.useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
+        globals.enableGeolocation =
+            (prefs.getBool('enableGeolocation') ?? true);
         globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
       });
     }
+  }
+
+  Future<void> _checkPermissions() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    String permissionType = "";
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled don't continue
+      // accessing the position and request users of the
+      // App to enable the location services.
+      permissionType = "Services";
+      geolocationService.hasPermission = false;
+      showRequestPermissionsDialog(permissionType);
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied, next time you could try
+        // requesting permissions again (this is also where
+        // Android's shouldShowRequestPermissionRationale
+        // returned true. According to Android guidelines
+        // your App should show an explanatory UI now.
+        permissionType = "Permissions";
+        geolocationService.hasPermission = false;
+        showRequestPermissionsDialog(permissionType);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever, handle appropriately.
+      permissionType = "Permissions";
+      geolocationService.hasPermission = false;
+      showRequestPermissionsDialog(permissionType);
+      return;
+    }
+
+    // When we reach here, permissions are granted and we can
+    // continue accessing the position of the device.
+    geolocationService.hasPermission = true;
+  }
+
+  void showRequestPermissionsDialog(String permissionType) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) => RequestPermissionDialog(
+              type: permissionType,
+            ));
   }
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _checkPermissions();
   }
 
   @override
@@ -271,7 +331,7 @@ class _DrivePageState extends State<DrivePage> {
                         MaterialPageRoute(
                             builder: (context) => const DrivingView(
                                   calibrationMode: true,
-                                  accelerometerOn: true,
+                                  enableGeolocation: false,
                                 )));
                   },
                   label: Text(
@@ -315,8 +375,9 @@ class _DrivePageState extends State<DrivePage> {
                           MaterialPageRoute(
                               builder: (context) => DrivingView(
                                     calibrationMode: false,
-                                    accelerometerOn:
-                                        globals.useAccelerometer ? true : false,
+                                    enableGeolocation: globals.enableGeolocation
+                                        ? true
+                                        : false,
                                   )));
                     } else if (globals.hasCalibrated == false) {
                       null;
@@ -341,6 +402,37 @@ class _DrivePageState extends State<DrivePage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class RequestPermissionDialog extends StatelessWidget {
+  const RequestPermissionDialog({super.key, required this.type});
+  final String? type;
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("We would like your permission!"),
+      content: Text("Please open settings and enable Location $type"),
+      actions: [
+        FilledButton(
+          style: FilledButton.styleFrom(
+              textStyle: Theme.of(context).textTheme.labelLarge),
+          onPressed: () async {
+            Navigator.of(context).pop();
+            if (type == "Services") {
+              await Geolocator.openLocationSettings();
+            } else if (type == "Permissions") {
+              await Geolocator.openAppSettings();
+            } else {
+              const snackBar =
+                  SnackBar(content: Text("Unknown perimission type..."));
+              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+            }
+          },
+          child: const Text("Open"),
+        ),
+      ],
     );
   }
 }

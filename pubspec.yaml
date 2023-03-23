@@ -47,6 +47,8 @@ dependencies:
   google_fonts: ^4.0.3
   shared_preferences: ^2.0.18
   geolocator: ^9.0.2
+  geolocator_android: ^4.1.7
+  geolocator_apple: ^2.2.5
 
 dev_dependencies:
   flutter_test:

@@ -7,6 +7,7 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 
 import '/home/home_page.dart';
@@ -22,11 +23,13 @@ class DrivingView extends StatefulWidget {
   const DrivingView({
     Key? key,
     required this.calibrationMode,
-    required this.accelerometerOn,
+    this.accelerometerOn = false,
+    required this.enableGeolocation,
   }) : super(key: key);
 
   final bool calibrationMode;
   final bool accelerometerOn;
+  final bool enableGeolocation;
 
   @override
   State<DrivingView> createState() => _DrivingViewState();
@@ -62,6 +65,8 @@ class _DrivingViewState extends State<DrivingView> {
   StreamSubscription? _accelSubscription;
   double _rawAccelX = 0, _rawAccelY = 9.8, _rawAccelZ = 0;
   double accelX = 0, accelY = 0, accelZ = 0;
+
+  StreamSubscription<Position>? positionStreamSubscription;
 
   /// *******************************************************
   /// *******************************************************
@@ -130,7 +135,7 @@ class _DrivingViewState extends State<DrivingView> {
   @override
   void initState() {
     super.initState();
-    geolocationService.positionItems.clear();
+    geolocationService.positionList.clear();
     initAudioPlayers();
     _loadSettings();
     periodicCalibrationTimer?.cancel();
@@ -147,12 +152,13 @@ class _DrivingViewState extends State<DrivingView> {
     if (widget.accelerometerOn) {
       _initAccelerometer();
     }
-    if (mounted) {
-      setState(() {
-        geolocationService.positionStreamStarted = true;
-        geolocationService.toggleServiceStatusStream();
-      });
+    if (widget.enableGeolocation) {
+      geolocationService.startGeolocationStream(positionStreamSubscription);
+    } else {
+      carMoving = true;
     }
+
+    // Record initial position
   }
 
   @override
@@ -165,10 +171,9 @@ class _DrivingViewState extends State<DrivingView> {
     inattentiveAudioPlayer.dispose();
     _faceDetector.close();
     _stopAccelerometer();
-    if (geolocationService.positionStreamSubscription != null) {
-      geolocationService.positionStreamSubscription!.cancel();
-      geolocationService.positionStreamSubscription = null;
-    }
+    positionStreamSubscription?.cancel();
+    positionStreamSubscription = null;
+    geolocationService.positionStreamStarted = false;
     super.dispose();
   }
 
@@ -194,10 +199,10 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void detectionTimer() {
-    int accelMovingCounter = 0;
-    int accelStoppedCounter = 0;
-    var liveAccelList = List<double>.filled(10, 0);
-    double maxAccel = 0;
+    // int accelMovingCounter = 0;
+    // int accelStoppedCounter = 0;
+    // var liveAccelList = List<double>.filled(10, 0);
+    // double maxAccel = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted) {
@@ -261,8 +266,18 @@ class _DrivingViewState extends State<DrivingView> {
 
       if (faceDetectionService.reminderType == "Drowsy") {
         sendSleepyReminder();
+        if (mounted) {
+          setState(() {
+            faceDetectionService.reminderType = "None";
+          });
+        }
       } else if (faceDetectionService.reminderType == "Inattentive") {
         sendDistractedReminder();
+        if (mounted) {
+          setState(() {
+            faceDetectionService.reminderType = "None";
+          });
+        }
       }
     });
   }
@@ -531,7 +546,7 @@ class _DrivingViewState extends State<DrivingView> {
                     ),
                     padding: const EdgeInsets.all(16.0),
                     child: ListView(
-                      physics: const NeverScrollableScrollPhysics(),
+                      physics: const AlwaysScrollableScrollPhysics(),
                       shrinkWrap: true,
                       children: [
                         DataValueWidget(
@@ -576,50 +591,126 @@ class _DrivingViewState extends State<DrivingView> {
                               DataValueWidget(
                                   text: "accelZ", doubleValue: accelZ),
                             ],
+                          ),
+                        if (geolocationService.positionList.isNotEmpty)
+                          SizedBox(
+                            height: 150,
+                            child: ListView.builder(
+                              itemCount: geolocationService.positionList.length,
+                              itemBuilder: (context, index) {
+                                final positionItem =
+                                    geolocationService.positionList[
+                                        geolocationService.positionList.length -
+                                            1 -
+                                            index];
+                                return Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4.0),
+                                  color: lightColorScheme.secondary,
+                                  alignment: Alignment.center,
+                                  child: Center(
+                                    child: SizedBox(
+                                      child: Wrap(
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.start,
+                                        children: [
+                                          Text(
+                                            positionItem.latitude.toString(),
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                          const SizedBox(
+                                            width: 5,
+                                          ),
+                                          Text(
+                                            positionItem.longitude.toString(),
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                          const SizedBox(
+                                            width: 5,
+                                          ),
+                                          Text(
+                                            positionItem.speed.toString(),
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                          const SizedBox(
+                                            width: 5,
+                                          ),
+                                          Text(
+                                            positionItem.timestamp.toString(),
+                                            style: const TextStyle(
+                                                color: Colors.white),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              shrinkWrap: true,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                            ),
+                          )
+                        else if (geolocationService.positionList.isEmpty)
+                          SizedBox(
+                            height: 75,
+                            width: MediaQuery.of(context).size.width,
+                            child: Center(
+                              child: Text(
+                                "No positions",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(color: Colors.white),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           )
                       ],
                     ),
                   ),
-                  Container(
-                    height: 150,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: geolocationService.positionItems.length,
-                      itemBuilder: (context, index) {
-                        final positionItem =
-                            geolocationService.positionItems[index];
+                  // Container(
+                  //   height: 150,
+                  //   child: ListView.builder(
+                  //     shrinkWrap: true,
+                  //     itemCount: geolocationService.positionItems.length,
+                  //     itemBuilder: (context, index) {
+                  //       final positionItem =
+                  //           geolocationService.positionItems[index];
 
-                        if (positionItem.type == PositionItemType.log) {
-                          return SizedBox(
-                            height: 10,
-                          );
-                        } else {
-                          return Card(
-                            child: ListTile(
-                              tileColor: lightColorScheme.secondary,
-                              title: Text(
-                                positionItem.displayValue,
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                  if (geolocationService.positionItems.isEmpty)
-                    Container(
-                      height: 50,
-                      width: MediaQuery.of(context).size.width,
-                      color: lightColorScheme.secondary,
-                      child: Text(
-                        "No location detected",
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyLarge
-                            ?.copyWith(color: Colors.white),
-                      ),
-                    )
+                  //       if (positionItem.type == PositionItemType.log) {
+                  //         return SizedBox(
+                  //           height: 10,
+                  //         );
+                  //       } else {
+                  //         return Card(
+                  //           child: ListTile(
+                  //             tileColor: lightColorScheme.secondary,
+                  //             title: Text(
+                  //               positionItem.displayValue,
+                  //               style: const TextStyle(color: Colors.white),
+                  //             ),
+                  //           ),
+                  //         );
+                  //       }
+                  //     },
+                  //   ),
+                  // ),
+                  // if (geolocationService.positionItems.isEmpty)
+                  //   Container(
+                  //     height: 50,
+                  //     width: MediaQuery.of(context).size.width,
+                  //     color: lightColorScheme.secondary,
+                  //     child: Text(
+                  //       "No location detected",
+                  //       style: Theme.of(context)
+                  //           .textTheme
+                  //           .bodyLarge
+                  //           ?.copyWith(color: Colors.white),
+                  //     ),
+                  //   )
                 ],
               ),
             if (widget.calibrationMode == true)
@@ -718,51 +809,58 @@ class _DrivingViewState extends State<DrivingView> {
             else if (widget.calibrationMode == false)
               Stack(
                 children: [
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width,
-                    child: Column(
-                      children: [
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            Icons.security,
-                            size: 69,
-                            color: showCameraPreview
-                                ? lightColorScheme.onPrimary
-                                : lightColorScheme.primary,
+                  Column(
+                    children: [
+                      const Spacer(),
+                      if (!globals.showDebug)
+                        Center(
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Icon(
+                                  Icons.security,
+                                  size: 69,
+                                  color: showCameraPreview
+                                      ? lightColorScheme.onPrimary
+                                      : lightColorScheme.primary,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  "You are now protected!",
+                                  style: showCameraPreview
+                                      ? Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                              color: lightColorScheme.onPrimary)
+                                      : Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                child: Text(
+                                  "Drive Safely!",
+                                  style: showCameraPreview
+                                      ? Theme.of(context)
+                                          .textTheme
+                                          .displayMedium
+                                          ?.copyWith(
+                                              color: lightColorScheme.onPrimary)
+                                      : Theme.of(context)
+                                          .textTheme
+                                          .displayMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            "You are now protected!",
-                            style: showCameraPreview
-                                ? Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                        color: lightColorScheme.onPrimary)
-                                : Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                          child: Text(
-                            "Drive Safely!",
-                            style: showCameraPreview
-                                ? Theme.of(context)
-                                    .textTheme
-                                    .displayMedium
-                                    ?.copyWith(
-                                        color: lightColorScheme.onPrimary)
-                                : Theme.of(context).textTheme.displayMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const Spacer(),
-                      ],
-                    ),
+                      const Spacer(),
+                    ],
                   ),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -779,6 +877,11 @@ class _DrivingViewState extends State<DrivingView> {
                             minimumSize: const Size.fromHeight(50),
                           ),
                           onPressed: () {
+                            if (mounted) {
+                              setState(() {
+                              geolocationService.stopGeolocationStream(positionStreamSubscription);
+                            });
+                            }
                             Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(builder: (context) {
                               return const HomePage(title: globals.appName);
@@ -793,7 +896,7 @@ class _DrivingViewState extends State<DrivingView> {
                             textAlign: TextAlign.center,
                           ),
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
                         FilledButton(

@@ -13,7 +13,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool? useAccelerometer,
+  bool? enableGeolocation,
       showCameraPreview,
       useHighCameraResolution,
       showDebug,
@@ -24,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
+        enableGeolocation = (prefs.getBool('enableGeolocation') ?? true);
         showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
         useHighCameraResolution =
             (prefs.getBool('useHighCameraResolution') ?? false);
@@ -83,17 +83,19 @@ class _SettingsPageState extends State<SettingsPage> {
         body: SettingsList(sections: [
           SettingsSection(
             margin: const EdgeInsetsDirectional.all(20),
-            title: const Text("Accelerometer"),
+            title: const Text("Geolocation"),
             tiles: [
               SettingsTile.switchTile(
-                title: const Text("Use accelerometer"),
+                title: const Text("Enable Geolocation"),
+                description:
+                    const Text("Only issue alerts when the car is moving."),
                 leading: const Icon(Icons.speed),
-                initialValue: useAccelerometer,
+                initialValue: enableGeolocation,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
-                      useAccelerometer = value;
-                      _saveBool('useAccelerometer', value);
+                      enableGeolocation = value;
+                      _saveBool('enableGeolocation', value);
                     });
                   }
                 },
@@ -119,6 +121,8 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               SettingsTile.switchTile(
                 title: const Text("Use High Camera Resolution"),
+                description:
+                    const Text("Not required, only impacts performance."),
                 leading: const Icon(Icons.camera_rounded),
                 initialValue: useHighCameraResolution,
                 onToggle: (value) {

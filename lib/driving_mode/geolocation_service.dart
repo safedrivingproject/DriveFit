@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
@@ -11,19 +12,58 @@ class GeolocationService {
   /// INITIALIZATION
   /// *******************************************
   /// *******************************************
-  GeolocationService._internal();
-
-  final GeolocatorPlatform _geolocatorPlatform = GeolocatorPlatform.instance;
-  static const String _kLocationServicesDisabledMessage =
-      'Location services are disabled.';
-  static const String _kPermissionDeniedMessage = 'Permission denied.';
-  static const String _kPermissionDeniedForeverMessage =
-      'Permission denied forever.';
-  static const String _kPermissionGrantedMessage = 'Permission granted.';
-  final List<PositionItem> positionItems = <PositionItem>[];
-  StreamSubscription<Position>? positionStreamSubscription;
-  StreamSubscription<ServiceStatus>? _serviceStatusStreamSubscription;
+  bool hasPermission = false;
+  String permissionType = "";
+  late LocationSettings _locationSettings;
   bool positionStreamStarted = false;
+  List<PositionValue> positionList = [];
+  double currentLatitude = 0.0, currentLongitude = 0.0, currentSpeed = 0.0;
+  DateTime currentTimeStamp = DateTime.now();
+
+  GeolocationService._internal() {
+    hasPermission = false;
+    permissionType = "";
+    positionStreamStarted = false;
+    currentLatitude = 0.0;
+    currentLongitude = 0.0;
+    currentSpeed = 0.0;
+    _initSettings();
+  }
+
+  void _initSettings() {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      _locationSettings = AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 0,
+          forceLocationManager: true,
+          intervalDuration: const Duration(seconds: 1),
+          //(Optional) Set foreground notification config to keep the app alive
+          //when going to the background
+          foregroundNotificationConfig: const ForegroundNotificationConfig(
+            notificationText:
+                "DriveFit will continue to receive your location when you are driving.",
+            notificationTitle: "DriveFit is using geolocation",
+            notificationIcon: AndroidResource(
+                name: "res_logo_transparent_dark", defType: "drawable"),
+            enableWakeLock: true,
+          ));
+    } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      _locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.best,
+        activityType: ActivityType.automotiveNavigation,
+        distanceFilter: 0,
+        pauseLocationUpdatesAutomatically: true,
+        // Only set to true if our app will be started up in the background.
+        showBackgroundLocationIndicator: false,
+      );
+    } else {
+      _locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 0,
+      );
+    }
+  }
 
   /// *******************************************
   /// *******************************************
@@ -31,230 +71,64 @@ class GeolocationService {
   /// *******************************************
   /// *******************************************
 
+  void updatePositionList(Position position) {
+    currentLatitude = position.latitude;
+    currentLongitude = position.longitude;
+    currentSpeed = position.speed;
+    currentTimeStamp = position.timestamp ?? DateTime.now();
+    positionList.add(PositionValue(
+      latitude: currentLatitude,
+      longitude: currentLongitude,
+      speed: currentSpeed,
+      timestamp: currentTimeStamp,
+    ));
+  }
+
   Future<void> getCurrentPosition() async {
-    final hasPermission = await handlePermission();
-
-    if (!hasPermission) {
-      return;
-    }
-
-    final position = await _geolocatorPlatform.getCurrentPosition(
-        locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high, distanceFilter: 0));
-    updatePositionList(
-      PositionItemType.position,
-      position.toString(),
-    );
+    if (!hasPermission) return;
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best);
+    updatePositionList(position);
   }
 
-  Future<bool> handlePermission() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Test if location services are enabled.
-    serviceEnabled = await _geolocatorPlatform.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users of the
-      // App to enable the location services.
-      updatePositionList(
-        PositionItemType.log,
-        _kLocationServicesDisabledMessage,
-      );
-
-      return false;
-    }
-
-    permission = await _geolocatorPlatform.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await _geolocatorPlatform.requestPermission();
-      if (permission == LocationPermission.denied) {
-        // Permissions are denied, next time you could try
-        // requesting permissions again (this is also where
-        // Android's shouldShowRequestPermissionRationale
-        // returned true. According to Android guidelines
-        // your App should show an explanatory UI now.
-        updatePositionList(
-          PositionItemType.log,
-          _kPermissionDeniedMessage,
-        );
-
-        return false;
+  void startGeolocationStream(StreamSubscription<Position>? positionStream) {
+    if (!hasPermission) return;
+    if (positionStreamStarted) return;
+    // ignore: no_leading_underscores_for_local_identifiers
+    final _positionStream =
+        Geolocator.getPositionStream(locationSettings: _locationSettings);
+    positionStream = _positionStream.handleError((error) {
+      positionStream?.cancel();
+      positionStream = null;
+    }).listen((Position? position) {
+      if (position != null) {
+        updatePositionList(position);
       }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
-      updatePositionList(
-        PositionItemType.log,
-        _kPermissionDeniedForeverMessage,
-      );
-
-      return false;
-    }
-
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
-    updatePositionList(
-      PositionItemType.log,
-      _kPermissionGrantedMessage,
-    );
-    return true;
+      print(position == null
+          ? 'Unknown'
+          : '${position.latitude.toString()}, ${position.longitude.toString()}');
+    });
+    positionStreamStarted = true;
   }
 
-  void updatePositionList(PositionItemType type, String displayValue) {
-    positionItems.add(PositionItem(type, displayValue));
-  }
-
-  bool isListening() => !(positionStreamSubscription == null ||
-      positionStreamSubscription!.isPaused);
-
-  void toggleServiceStatusStream() {
-    if (_serviceStatusStreamSubscription == null) {
-      final serviceStatusStream = _geolocatorPlatform.getServiceStatusStream();
-      _serviceStatusStreamSubscription =
-          serviceStatusStream.handleError((error) {
-        _serviceStatusStreamSubscription?.cancel();
-        _serviceStatusStreamSubscription = null;
-      }).listen((serviceStatus) {
-        String serviceStatusValue;
-        if (serviceStatus == ServiceStatus.enabled) {
-          if (positionStreamStarted) {
-            toggleListening();
-          }
-          serviceStatusValue = 'enabled';
-        } else {
-          if (positionStreamSubscription != null) {
-            positionStreamSubscription?.cancel();
-            positionStreamSubscription = null;
-            updatePositionList(
-                PositionItemType.log, 'Position Stream has been canceled');
-          }
-          serviceStatusValue = 'disabled';
-        }
-        updatePositionList(
-          PositionItemType.log,
-          'Location service has been $serviceStatusValue',
-        );
-      });
+  void stopGeolocationStream(StreamSubscription<Position>? positionStream) {
+    if (positionStream != null) {
+      positionStream.cancel();
+      positionStream = null;
+      positionStreamStarted = false;
     }
-  }
-
-  void toggleListening() {
-    if (positionStreamSubscription == null) {
-      final positionStream = _geolocatorPlatform.getPositionStream();
-      positionStreamSubscription = positionStream.handleError((error) {
-        positionStreamSubscription?.cancel();
-        positionStreamSubscription = null;
-      }).listen((position) => updatePositionList(
-            PositionItemType.position,
-            position.toString(),
-          ));
-      positionStreamSubscription?.pause();
-    }
-
-    if (positionStreamSubscription == null) {
-      return;
-    }
-
-    String statusDisplayValue;
-    if (positionStreamSubscription!.isPaused) {
-      positionStreamSubscription!.resume();
-      statusDisplayValue = 'resumed';
-    } else {
-      positionStreamSubscription!.pause();
-      statusDisplayValue = 'paused';
-    }
-
-    updatePositionList(
-      PositionItemType.log,
-      'Listening for position updates $statusDisplayValue',
-    );
-  }
-
-  void _getLastKnownPosition() async {
-    final position = await _geolocatorPlatform.getLastKnownPosition();
-    if (position != null) {
-      updatePositionList(
-        PositionItemType.position,
-        position.toString(),
-      );
-    } else {
-      updatePositionList(
-        PositionItemType.log,
-        'No last known position available',
-      );
-    }
-  }
-
-  void getLocationAccuracy() async {
-    final status = await _geolocatorPlatform.getLocationAccuracy();
-    handleLocationAccuracyStatus(status);
-  }
-
-  void requestTemporaryFullAccuracy() async {
-    final status = await _geolocatorPlatform.requestTemporaryFullAccuracy(
-      purposeKey: "TemporaryPreciseAccuracy",
-    );
-    handleLocationAccuracyStatus(status);
-  }
-
-  void handleLocationAccuracyStatus(LocationAccuracyStatus status) {
-    String locationAccuracyStatusValue;
-    if (status == LocationAccuracyStatus.precise) {
-      locationAccuracyStatusValue = 'Precise';
-    } else if (status == LocationAccuracyStatus.reduced) {
-      locationAccuracyStatusValue = 'Reduced';
-    } else {
-      locationAccuracyStatusValue = 'Unknown';
-    }
-    updatePositionList(
-      PositionItemType.log,
-      '$locationAccuracyStatusValue location accuracy granted.',
-    );
-  }
-
-  void openAppSettings() async {
-    final opened = await _geolocatorPlatform.openAppSettings();
-    String displayValue;
-
-    if (opened) {
-      displayValue = 'Opened Application Settings.';
-    } else {
-      displayValue = 'Error opening Application Settings.';
-    }
-
-    updatePositionList(
-      PositionItemType.log,
-      displayValue,
-    );
-  }
-
-  void openLocationSettings() async {
-    final opened = await _geolocatorPlatform.openLocationSettings();
-    String displayValue;
-
-    if (opened) {
-      displayValue = 'Opened Location Settings';
-    } else {
-      displayValue = 'Error opening Location Settings';
-    }
-
-    updatePositionList(
-      PositionItemType.log,
-      displayValue,
-    );
+    positionStreamStarted = false;
   }
 }
 
-enum PositionItemType {
-  log,
-  position,
-}
+class PositionValue {
+  double latitude, longitude, speed;
+  DateTime timestamp;
 
-class PositionItem {
-  PositionItem(this.type, this.displayValue);
-
-  final PositionItemType type;
-  final String displayValue;
+  PositionValue({
+    required this.latitude,
+    required this.longitude,
+    required this.speed,
+    required this.timestamp,
+  });
 }
