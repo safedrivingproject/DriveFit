@@ -92,6 +92,8 @@ class _DrivingViewState extends State<DrivingView> {
             (prefs.getDouble('rotYLeftOffset') ?? 25);
         faceDetectionService.rotYRightOffset =
             (prefs.getDouble('rotYRightOffset') ?? 20);
+        faceDetectionService.rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
+        faceDetectionService.rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
       });
     }
   }
@@ -110,6 +112,15 @@ class _DrivingViewState extends State<DrivingView> {
     if (mounted) {
       setState(() {
         prefs.setDouble(key, value);
+      });
+    }
+  }
+
+  Future<void> _saveInt(String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        prefs.setInt(key, value);
       });
     }
   }
@@ -255,12 +266,14 @@ class _DrivingViewState extends State<DrivingView> {
         });
       }
 
-      if (!carMoving) return;
+      // if (!carMoving) return;
 
       if (mounted) {
         setState(() {
-          faceDetectionService.checkHeadUpDown();
-          faceDetectionService.checkHeadLeftRight();
+          faceDetectionService.checkHeadUpDown(
+              faceDetectionService.rotXDelay + (!carMoving ? 10 : 0));
+          faceDetectionService.checkHeadLeftRight(
+              faceDetectionService.rotYDelay + (!carMoving ? 10 : 0));
         });
       }
 
@@ -576,6 +589,9 @@ class _DrivingViewState extends State<DrivingView> {
                         DataValueWidget(
                             text: "reminderType",
                             stringValue: faceDetectionService.reminderType),
+                        DataValueWidget(
+                            text: "rotXDelay",
+                            intValue: faceDetectionService.rotXDelay),
                         if (widget.accelerometerOn == true)
                           Column(
                             children: [
@@ -879,8 +895,9 @@ class _DrivingViewState extends State<DrivingView> {
                           onPressed: () {
                             if (mounted) {
                               setState(() {
-                              geolocationService.stopGeolocationStream(positionStreamSubscription);
-                            });
+                                geolocationService.stopGeolocationStream(
+                                    positionStreamSubscription);
+                              });
                             }
                             Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(builder: (context) {

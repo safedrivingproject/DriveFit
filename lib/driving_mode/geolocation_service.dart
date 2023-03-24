@@ -33,24 +33,15 @@ class GeolocationService {
   void _initSettings() {
     if (defaultTargetPlatform == TargetPlatform.android) {
       _locationSettings = AndroidSettings(
-          accuracy: LocationAccuracy.best,
+          accuracy: LocationAccuracy.bestForNavigation,
           distanceFilter: 0,
           forceLocationManager: true,
           intervalDuration: const Duration(seconds: 1),
-          //(Optional) Set foreground notification config to keep the app alive
-          //when going to the background
-          foregroundNotificationConfig: const ForegroundNotificationConfig(
-            notificationText:
-                "DriveFit will continue to receive your location when you are driving.",
-            notificationTitle: "DriveFit is using geolocation",
-            notificationIcon: AndroidResource(
-                name: "res_logo_transparent_dark", defType: "drawable"),
-            enableWakeLock: true,
-          ));
+          );
     } else if (defaultTargetPlatform == TargetPlatform.iOS ||
         defaultTargetPlatform == TargetPlatform.macOS) {
       _locationSettings = AppleSettings(
-        accuracy: LocationAccuracy.best,
+        accuracy: LocationAccuracy.bestForNavigation,
         activityType: ActivityType.automotiveNavigation,
         distanceFilter: 0,
         pauseLocationUpdatesAutomatically: true,

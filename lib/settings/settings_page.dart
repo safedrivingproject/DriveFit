@@ -1,4 +1,6 @@
 import 'package:drive_fit/home/home_page.dart';
+import 'package:drive_fit/theme/color_schemes.g.dart';
+import 'package:drive_fit/unused/camera_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +21,7 @@ class _SettingsPageState extends State<SettingsPage> {
       showDebug,
       hasCalibrated;
   double? neutralRotX = 5, neutralRotY = -25;
+  int? rotXDelay = 10, rotYDelay = 25;
 
   Future<void> _loadDefaultSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -32,6 +35,8 @@ class _SettingsPageState extends State<SettingsPage> {
         hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
         neutralRotX = (prefs.getDouble('neutralRotX') ?? 5.0);
         neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
+        rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
+        rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
       });
     }
   }
@@ -41,6 +46,15 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       setState(() {
         prefs.setBool(key, value);
+      });
+    }
+  }
+
+  Future<void> _saveInt(String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        prefs.setInt(key, value);
       });
     }
   }
@@ -104,11 +118,11 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SettingsSection(
             margin: const EdgeInsetsDirectional.all(20),
-            title: const Text("Camera"),
+            title: const Text("Driving"),
             tiles: [
               SettingsTile.switchTile(
                 title: const Text("Show camera preview when driving"),
-                leading: const Icon(Icons.visibility),
+                leading: const Icon(Icons.visibility_outlined),
                 initialValue: showCameraPreview,
                 onToggle: (value) {
                   if (mounted) {
@@ -123,7 +137,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: const Text("Use High Camera Resolution"),
                 description:
                     const Text("Not required, only impacts performance."),
-                leading: const Icon(Icons.camera_rounded),
+                leading: const Icon(Icons.camera_enhance_outlined),
                 initialValue: useHighCameraResolution,
                 onToggle: (value) {
                   if (mounted) {
@@ -131,6 +145,83 @@ class _SettingsPageState extends State<SettingsPage> {
                       useHighCameraResolution = value;
                       _saveBool('useHighCameraResolution', value);
                     });
+                  }
+                },
+              ),
+              SettingsTile.navigation(
+                title: const Text(
+                    "Choose Vertical Head Movement Alert Sensitivity"),
+                description: Text(
+                    "The delay between head tilted down and issuing alert. (${rotXDelay! * 0.1} s)"),
+                leading: const Icon(Icons.timer_outlined),
+                onPressed: (context) async {
+                  switch (await showDialog<RotXDelayValue>(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return SimpleDialog(
+                          title: const Text('Select assignment'),
+                          children: <Widget>[
+                            SimpleDialogOption(
+                              onPressed: () {
+                                Navigator.pop(context, RotXDelayValue.short);
+                              },
+                              child: const Text('Short (0.5 s)'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                Navigator.pop(context, RotXDelayValue.normal);
+                              },
+                              child: const Text('Normal (1.0 s)'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                Navigator.pop(context, RotXDelayValue.long);
+                              },
+                              child: const Text('Long (2.0 s)'),
+                            ),
+                            SimpleDialogOption(
+                              onPressed: () {
+                                Navigator.pop(context, RotXDelayValue.veryLong);
+                              },
+                              child: const Text('Very Long (3.0 s)'),
+                            ),
+                          ],
+                        );
+                      })) {
+                    case RotXDelayValue.short:
+                      rotXDelay = 5;
+                      _saveInt('rotXDelay', rotXDelay ?? 5);
+                      const snackBar =
+                          SnackBar(content: Text("Setting updated."));
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      break;
+                    case RotXDelayValue.normal:
+                      rotXDelay = 10;
+                      _saveInt('rotXDelay', rotXDelay ?? 10);
+                      const snackBar =
+                          SnackBar(content: Text("Setting updated."));
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      break;
+                    case RotXDelayValue.long:
+                      rotXDelay = 20;
+                      _saveInt('rotXDelay', rotXDelay ?? 20);
+                      const snackBar =
+                          SnackBar(content: Text("Setting updated."));
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      break;
+                    case RotXDelayValue.veryLong:
+                      rotXDelay = 30;
+                      _saveInt('rotXDelay', rotXDelay ?? 30);
+                      const snackBar =
+                          SnackBar(content: Text("Setting updated."));
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      break;
+                    case null:
+                      rotXDelay = 10;
+                      const snackBar =
+                          SnackBar(content: Text("Setting unchanged."));
+                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                      break;
                   }
                 },
               ),
@@ -203,6 +294,26 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ]));
   }
+}
+
+enum RotXDelayValue {
+  short(5),
+  normal(10),
+  long(20),
+  veryLong(30);
+
+  final int value;
+  const RotXDelayValue(this.value);
+}
+
+enum RotYDelayValue {
+  short(15),
+  normal(25),
+  long(40),
+  veryLong(55);
+
+  final int value;
+  const RotYDelayValue(this.value);
 }
 
 class SelectAlarmPage extends StatefulWidget {

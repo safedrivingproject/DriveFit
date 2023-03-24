@@ -32,6 +32,9 @@ class FaceDetectionService {
     rotXCounter = 0;
     rotYCounter = 0;
     //
+    rotXDelay = 10;
+    rotYDelay = 25;
+    //
     reminderCount = 0;
     reminderType = "None";
     //
@@ -56,6 +59,8 @@ class FaceDetectionService {
   int eyeCounter = 0;
   int rotXCounter = 0;
   int rotYCounter = 0;
+  //
+  int rotXDelay = 10, rotYDelay = 25;
   //
   int reminderCount = 0;
   String reminderType = "None";
@@ -116,7 +121,7 @@ class FaceDetectionService {
     }
   }
 
-  void checkHeadUpDown() {
+  void checkHeadUpDown(int delay) {
     if (rotX! < (neutralRotX - rotXOffset) ||
         rotX! > (neutralRotX + rotXOffset)) {
       rotXCounter++;
@@ -127,14 +132,14 @@ class FaceDetectionService {
         reminderType = "None";
         return;
       }
-    if (rotXCounter > 10) {
+    if (rotXCounter > delay) {
       reminderType = "Drowsy";
       reminderCount++;
       rotXCounter = 0;
     }
   }
 
-  void checkHeadLeftRight() {
+  void checkHeadLeftRight(int delay) {
     if (rotY! > (neutralRotY + rotYLeftOffset) ||
         rotY! < (neutralRotY - rotYRightOffset)) {
       rotYCounter++;
@@ -145,7 +150,7 @@ class FaceDetectionService {
         reminderType = "None";
         return;
       }
-    if (rotYCounter > 25) {
+    if (rotYCounter > delay) {
       reminderType = "Inattentive";
       reminderCount++;
       rotYCounter = 0;
