@@ -94,6 +94,8 @@ class _DrivingViewState extends State<DrivingView> {
             (prefs.getDouble('rotYRightOffset') ?? 20);
         faceDetectionService.rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
         faceDetectionService.rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
+        geolocationService.carVelocityThreshold =
+            (prefs.getDouble('carVelocityThreshold') ?? 5.0);
       });
     }
   }
@@ -147,6 +149,7 @@ class _DrivingViewState extends State<DrivingView> {
   void initState() {
     super.initState();
     geolocationService.positionList.clear();
+    geolocationService.speedList.clear();
     initAudioPlayers();
     _loadSettings();
     periodicCalibrationTimer?.cancel();
@@ -164,7 +167,7 @@ class _DrivingViewState extends State<DrivingView> {
       _initAccelerometer();
     }
     if (widget.enableGeolocation) {
-      geolocationService.startGeolocationStream(positionStreamSubscription);
+      geolocationService.startGeolocationStream();
     } else {
       carMoving = true;
     }
@@ -177,14 +180,12 @@ class _DrivingViewState extends State<DrivingView> {
     _canProcess = false;
     periodicDetectionTimer?.cancel();
     periodicCalibrationTimer?.cancel();
+    geolocationService.stopGeolocationStream();
     globals.inCalibrationMode = false;
     sleepyAudioPlayer.dispose();
     inattentiveAudioPlayer.dispose();
     _faceDetector.close();
     _stopAccelerometer();
-    positionStreamSubscription?.cancel();
-    positionStreamSubscription = null;
-    geolocationService.positionStreamStarted = false;
     super.dispose();
   }
 
@@ -224,41 +225,6 @@ class _DrivingViewState extends State<DrivingView> {
 
       if (!faceDetectionService.hasFace) return;
 
-      ///TODO: replace with GPS
-      // if (widget.accelerometerOn) {
-      //   liveAccelList.add(globals.resultantAccel);
-      //   if (liveAccelList.length > 10) {
-      //     liveAccelList.removeAt(0);
-      //   }
-      //   maxAccel = liveAccelList.fold<double>(0, max);
-      //   if (maxAccel > maxAccelThreshold) {
-      //     accelMovingCounter++;
-      //   } else {
-      //     accelMovingCounter = 0;
-      //   }
-      //   if (accelMovingCounter > 20) {
-      //     if (mounted) {
-      //       setState(() {
-      //         carMoving = true;
-      //       });
-      //     }
-      //   }
-      //   if (maxAccel <= maxAccelThreshold) {
-      //     accelStoppedCounter++;
-      //   } else {
-      //     accelStoppedCounter = 0;
-      //   }
-      //   if (accelStoppedCounter > 20) {
-      //     if (mounted) {
-      //       setState(() {
-      //         carMoving = false;
-      //       });
-      //     }
-      //   }
-      // } else {
-      carMoving = true;
-      // }
-
       if (mounted) {
         setState(() {
           faceDetectionService.checkEyesClosed();
@@ -266,7 +232,12 @@ class _DrivingViewState extends State<DrivingView> {
         });
       }
 
-      // if (!carMoving) return;
+      if (mounted) {
+        setState(() {
+          carMoving = geolocationService.checkCarMoving();
+        });
+      }
+      if (!carMoving) return;
 
       if (mounted) {
         setState(() {
@@ -322,12 +293,16 @@ class _DrivingViewState extends State<DrivingView> {
         if (mounted) {
           setState(() {
             _saveBool('hasCalibrated', true);
+            _saveDouble('neutralRotX', faceDetectionService.neutralRotX);
+            _saveDouble('neutralRotY', faceDetectionService.neutralRotY);
+            _saveDouble('rotYLeftOffset', faceDetectionService.rotYLeftOffset);
+            _saveDouble(
+                'rotYRightOffset', faceDetectionService.rotYRightOffset);
             startCalibration = false;
           });
-          Navigator.of(context)
-              .pushReplacement(MaterialPageRoute(builder: (context) {
-            return const HomePage(title: globals.appName);
-          }));
+          showSnackBar(context, "Calibration complete!");
+          Navigator.of(context).pop(true);
+
           timer.cancel();
         }
       } else {
@@ -350,11 +325,6 @@ class _DrivingViewState extends State<DrivingView> {
                 faceDetectionService.neutralRotY <= 0 ? 25 : 20;
             faceDetectionService.rotYRightOffset =
                 faceDetectionService.neutralRotY <= 0 ? 20 : 25;
-            _saveDouble('neutralRotX', faceDetectionService.neutralRotX);
-            _saveDouble('neutralRotY', faceDetectionService.neutralRotY);
-            _saveDouble('rotYLeftOffset', faceDetectionService.rotYLeftOffset);
-            _saveDouble(
-                'rotYRightOffset', faceDetectionService.rotYRightOffset);
           });
         }
       }
@@ -516,434 +486,481 @@ class _DrivingViewState extends State<DrivingView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            globals.inCalibrationMode ? "Calibrate" : "Driving",
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(color: lightColorScheme.onPrimary),
-          ),
-          iconTheme: IconThemeData(color: lightColorScheme.onPrimary),
-          leading: !widget.calibrationMode
-              ? null
-              : IconButton(
-                  onPressed: () {
-                    Navigator.of(context)
-                        .pushReplacement(MaterialPageRoute(builder: (context) {
-                      return const HomePage(title: globals.appName);
-                    }));
-                  },
-                  icon: const Icon(Icons.arrow_back)),
-          centerTitle: true,
-          backgroundColor: lightColorScheme.primary,
-        ),
-        body: Stack(
-          children: [
-            CameraView(
-              customPaint: showCameraPreview ? _customPaint : null,
-              text: _text,
-              onImage: (inputImage) {
-                processImage(inputImage);
-              },
-              initialDirection: CameraLensDirection.front,
+    return WillPopScope(
+      onWillPop: () async {
+        if (widget.calibrationMode) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              globals.inCalibrationMode ? "Calibrate" : "Driving",
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(color: lightColorScheme.onPrimary),
             ),
-            if (globals.showDebug == true)
-              Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                    ),
-                    padding: const EdgeInsets.all(16.0),
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      shrinkWrap: true,
-                      children: [
-                        DataValueWidget(
-                            text: "rotX",
-                            doubleValue: faceDetectionService.rotX),
-                        DataValueWidget(
-                            text: "rotY",
-                            doubleValue: faceDetectionService.rotY),
-                        DataValueWidget(
-                            text: "neutralRotX",
-                            doubleValue: faceDetectionService.neutralRotX),
-                        DataValueWidget(
-                            text: "neutralRotY",
-                            doubleValue: faceDetectionService.neutralRotY),
-                        DataValueWidget(
-                            text: "leftEyeOpenProb",
-                            doubleValue: faceDetectionService.leftEyeOpenProb),
-                        DataValueWidget(
-                            text: "rightEyeOpenProb",
-                            doubleValue: faceDetectionService.rightEyeOpenProb),
-                        DataValueWidget(
-                            text: "hasFace",
-                            boolValue: faceDetectionService.hasFace),
-                        DataValueWidget(
-                            text: "reminderCount",
-                            intValue: faceDetectionService.reminderCount),
-                        DataValueWidget(
-                            text: "reminderType",
-                            stringValue: faceDetectionService.reminderType),
-                        DataValueWidget(
-                            text: "rotXDelay",
-                            intValue: faceDetectionService.rotXDelay),
-                        if (widget.accelerometerOn == true)
-                          Column(
-                            children: [
-                              DataValueWidget(
-                                  text: "carMoving", boolValue: carMoving),
-                              DataValueWidget(
-                                  text: "resultantAccel",
-                                  doubleValue: globals.resultantAccel),
-                              DataValueWidget(
-                                  text: "accelX", doubleValue: accelX),
-                              DataValueWidget(
-                                  text: "accelY", doubleValue: accelY),
-                              DataValueWidget(
-                                  text: "accelZ", doubleValue: accelZ),
-                            ],
-                          ),
-                        if (geolocationService.positionList.isNotEmpty)
-                          SizedBox(
-                            height: 150,
-                            child: ListView.builder(
-                              itemCount: geolocationService.positionList.length,
-                              itemBuilder: (context, index) {
-                                final positionItem =
-                                    geolocationService.positionList[
-                                        geolocationService.positionList.length -
-                                            1 -
-                                            index];
-                                return Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 4.0),
-                                  color: lightColorScheme.secondary,
-                                  alignment: Alignment.center,
-                                  child: Center(
+            iconTheme: IconThemeData(color: lightColorScheme.onPrimary),
+            automaticallyImplyLeading: false,
+            leading: !widget.calibrationMode
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                    icon: const Icon(Icons.arrow_back)),
+            centerTitle: true,
+            backgroundColor: lightColorScheme.primary,
+          ),
+          body: Stack(
+            children: [
+              CameraView(
+                customPaint: showCameraPreview ? _customPaint : null,
+                text: _text,
+                onImage: (inputImage) {
+                  processImage(inputImage);
+                },
+                initialDirection: CameraLensDirection.front,
+              ),
+              if (globals.showDebug == true)
+                Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      padding: const EdgeInsets.all(16.0),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        children: [
+                          DataValueWidget(
+                              text: "rotX",
+                              doubleValue: faceDetectionService.rotX),
+                          DataValueWidget(
+                              text: "rotY",
+                              doubleValue: faceDetectionService.rotY),
+                          DataValueWidget(
+                              text: "neutralRotX",
+                              doubleValue: faceDetectionService.neutralRotX),
+                          DataValueWidget(
+                              text: "neutralRotY",
+                              doubleValue: faceDetectionService.neutralRotY),
+                          DataValueWidget(
+                              text: "leftEyeOpenProb",
+                              doubleValue:
+                                  faceDetectionService.leftEyeOpenProb),
+                          DataValueWidget(
+                              text: "rightEyeOpenProb",
+                              doubleValue:
+                                  faceDetectionService.rightEyeOpenProb),
+                          DataValueWidget(
+                              text: "hasFace",
+                              boolValue: faceDetectionService.hasFace),
+                          DataValueWidget(
+                              text: "reminderCount",
+                              intValue: faceDetectionService.reminderCount),
+                          DataValueWidget(
+                              text: "reminderType",
+                              stringValue: faceDetectionService.reminderType),
+                          DataValueWidget(
+                              text: "carMoving", boolValue: carMoving),
+                          if (widget.accelerometerOn == true)
+                            Column(
+                              children: [
+                                DataValueWidget(
+                                    text: "resultantAccel",
+                                    doubleValue: globals.resultantAccel),
+                                DataValueWidget(
+                                    text: "accelX", doubleValue: accelX),
+                                DataValueWidget(
+                                    text: "accelY", doubleValue: accelY),
+                                DataValueWidget(
+                                    text: "accelZ", doubleValue: accelZ),
+                              ],
+                            ),
+                          if (geolocationService.positionList.isNotEmpty)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 150,
+                                    child: ListView.builder(
+                                      itemCount: geolocationService
+                                          .positionList.length,
+                                      itemBuilder: (context, index) {
+                                        final positionItem = geolocationService
+                                            .positionList[index];
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 4.0),
+                                          color: lightColorScheme.secondary,
+                                          alignment: Alignment.center,
+                                          child: Center(
+                                            child: SizedBox(
+                                              child: Wrap(
+                                                crossAxisAlignment:
+                                                    WrapCrossAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    positionItem.latitude
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 5,
+                                                  ),
+                                                  Text(
+                                                    positionItem.longitude
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 5,
+                                                  ),
+                                                  Text(
+                                                    positionItem.speed
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 5,
+                                                  ),
+                                                  Text(
+                                                    positionItem.timestamp
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      shrinkWrap: true,
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                if (geolocationService.speedList.isNotEmpty)
+                                  Expanded(
                                     child: SizedBox(
-                                      child: Wrap(
-                                        crossAxisAlignment:
-                                            WrapCrossAlignment.start,
-                                        children: [
-                                          Text(
-                                            positionItem.latitude.toString(),
-                                            style: const TextStyle(
-                                                color: Colors.white),
-                                          ),
-                                          const SizedBox(
-                                            width: 5,
-                                          ),
-                                          Text(
-                                            positionItem.longitude.toString(),
-                                            style: const TextStyle(
-                                                color: Colors.white),
-                                          ),
-                                          const SizedBox(
-                                            width: 5,
-                                          ),
-                                          Text(
-                                            positionItem.speed.toString(),
-                                            style: const TextStyle(
-                                                color: Colors.white),
-                                          ),
-                                          const SizedBox(
-                                            width: 5,
-                                          ),
-                                          Text(
-                                            positionItem.timestamp.toString(),
-                                            style: const TextStyle(
-                                                color: Colors.white),
-                                          ),
-                                        ],
+                                      height: 150,
+                                      child: ListView.builder(
+                                        itemCount:
+                                            geolocationService.speedList.length,
+                                        itemBuilder: (context, index) {
+                                          final speedItem = geolocationService
+                                              .speedList[index];
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4.0),
+                                            color: lightColorScheme.secondary,
+                                            alignment: Alignment.center,
+                                            child: Center(
+                                              child: SizedBox(
+                                                child: Wrap(
+                                                  crossAxisAlignment:
+                                                      WrapCrossAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      speedItem.toString(),
+                                                      style: const TextStyle(
+                                                          color: Colors.white),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        shrinkWrap: true,
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                              shrinkWrap: true,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                            ),
-                          )
-                        else if (geolocationService.positionList.isEmpty)
-                          SizedBox(
-                            height: 75,
-                            width: MediaQuery.of(context).size.width,
-                            child: Center(
-                              child: Text(
-                                "No positions",
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge
-                                    ?.copyWith(color: Colors.white),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          )
-                      ],
-                    ),
-                  ),
-                  // Container(
-                  //   height: 150,
-                  //   child: ListView.builder(
-                  //     shrinkWrap: true,
-                  //     itemCount: geolocationService.positionItems.length,
-                  //     itemBuilder: (context, index) {
-                  //       final positionItem =
-                  //           geolocationService.positionItems[index];
-
-                  //       if (positionItem.type == PositionItemType.log) {
-                  //         return SizedBox(
-                  //           height: 10,
-                  //         );
-                  //       } else {
-                  //         return Card(
-                  //           child: ListTile(
-                  //             tileColor: lightColorScheme.secondary,
-                  //             title: Text(
-                  //               positionItem.displayValue,
-                  //               style: const TextStyle(color: Colors.white),
-                  //             ),
-                  //           ),
-                  //         );
-                  //       }
-                  //     },
-                  //   ),
-                  // ),
-                  // if (geolocationService.positionItems.isEmpty)
-                  //   Container(
-                  //     height: 50,
-                  //     width: MediaQuery.of(context).size.width,
-                  //     color: lightColorScheme.secondary,
-                  //     child: Text(
-                  //       "No location detected",
-                  //       style: Theme.of(context)
-                  //           .textTheme
-                  //           .bodyLarge
-                  //           ?.copyWith(color: Colors.white),
-                  //     ),
-                  //   )
-                ],
-              ),
-            if (widget.calibrationMode == true)
-              Column(
-                children: [
-                  if (!globals.showDebug)
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: MediaQuery.of(context).size.width,
-                          color: Colors.black.withOpacity(0.5),
-                          padding: const EdgeInsets.all(30),
-                          child: Column(
-                            children: const [
-                              CalibrateInstruction(
-                                bullet: "1.",
-                                instruction:
-                                    "Secure your phone in the phone holder",
-                              ),
-                              SizedBox(height: 5),
-                              CalibrateInstruction(
-                                bullet: "2.",
-                                instruction:
-                                    "Make sure your head is visible in the camera preview",
-                              ),
-                              SizedBox(height: 5),
-                              CalibrateInstruction(
-                                bullet: "3.",
-                                instruction:
-                                    "Look forward towards the road (just like when you are driving attentively)",
-                              ),
-                              SizedBox(height: 5),
-                              CalibrateInstruction(
-                                bullet: "4.",
-                                instruction:
-                                    "Press 'Calibrate' and wait 3 seconds",
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (startCalibration == true)
-                          Container(
-                            width: MediaQuery.of(context).size.width,
-                            color: Colors.black.withOpacity(0.5),
-                            padding: const EdgeInsets.all(15),
-                            child: Text(
-                              caliSeconds < 1 ? "Complete!" : "$caliSeconds",
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayMedium
-                                  ?.copyWith(
-                                    color: lightColorScheme.onPrimary,
-                                  ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                      ],
-                    ),
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(16.0))),
-                            backgroundColor: lightColorScheme.primary,
-                            minimumSize: const Size.fromHeight(50),
-                          ),
-                          onPressed: () {
-                            if (startCalibration == false) {
-                              calibrationTimer();
-                            }
-                          },
-                          child: Text(
-                            "Calibrate",
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(color: lightColorScheme.onPrimary),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                ],
-              )
-            else if (widget.calibrationMode == false)
-              Stack(
-                children: [
-                  Column(
-                    children: [
-                      const Spacer(),
-                      if (!globals.showDebug)
-                        Center(
-                          child: Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  Icons.security,
-                                  size: 69,
-                                  color: showCameraPreview
-                                      ? lightColorScheme.onPrimary
-                                      : lightColorScheme.primary,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
+                              ],
+                            )
+                          else if (geolocationService.positionList.isEmpty)
+                            SizedBox(
+                              height: 75,
+                              width: MediaQuery.of(context).size.width,
+                              child: Center(
                                 child: Text(
-                                  "You are now protected!",
-                                  style: showCameraPreview
-                                      ? Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                              color: lightColorScheme.onPrimary)
-                                      : Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                child: Text(
-                                  "Drive Safely!",
-                                  style: showCameraPreview
-                                      ? Theme.of(context)
-                                          .textTheme
-                                          .displayMedium
-                                          ?.copyWith(
-                                              color: lightColorScheme.onPrimary)
-                                      : Theme.of(context)
-                                          .textTheme
-                                          .displayMedium,
+                                  "No positions",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.copyWith(color: Colors.white),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            ],
+                            )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              if (widget.calibrationMode == true)
+                Column(
+                  children: [
+                    if (!globals.showDebug)
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: MediaQuery.of(context).size.width,
+                            color: Colors.black.withOpacity(0.5),
+                            padding: const EdgeInsets.all(30),
+                            child: Column(
+                              children: const [
+                                CalibrateInstruction(
+                                  bullet: "1.",
+                                  instruction:
+                                      "Secure your phone in the phone holder",
+                                ),
+                                SizedBox(height: 5),
+                                CalibrateInstruction(
+                                  bullet: "2.",
+                                  instruction:
+                                      "Make sure your head is visible in the camera preview",
+                                ),
+                                SizedBox(height: 5),
+                                CalibrateInstruction(
+                                  bullet: "3.",
+                                  instruction:
+                                      "Look forward towards the road (just like when you are driving attentively)",
+                                ),
+                                SizedBox(height: 5),
+                                CalibrateInstruction(
+                                  bullet: "4.",
+                                  instruction:
+                                      "Press 'Calibrate' and wait 3 seconds",
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      const Spacer(),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                          if (startCalibration == true)
+                            Container(
+                              width: MediaQuery.of(context).size.width,
+                              color: Colors.black.withOpacity(0.5),
+                              padding: const EdgeInsets.all(15),
+                              child: Text(
+                                caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .displayMedium
+                                    ?.copyWith(
+                                      color: lightColorScheme.onPrimary,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                        ],
+                      ),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              if (startCalibration == false) {
+                                calibrationTimer();
+                              }
+                            },
+                            child: Text(
+                              "Calibrate",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 80),
+                  ],
+                )
+              else if (widget.calibrationMode == false)
+                Stack(
+                  children: [
+                    Column(
                       children: [
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(16.0))),
-                            backgroundColor: lightColorScheme.primary,
-                            minimumSize: const Size.fromHeight(50),
+                        const Spacer(),
+                        if (!globals.showDebug)
+                          Center(
+                            child: Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    Icons.security,
+                                    size: 69,
+                                    color: showCameraPreview
+                                        ? lightColorScheme.onPrimary
+                                        : lightColorScheme.primary,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    "You are now protected!",
+                                    style: showCameraPreview
+                                        ? Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                                color:
+                                                    lightColorScheme.onPrimary)
+                                        : Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                  ),
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                  child: Text(
+                                    "Drive Safely!",
+                                    style: showCameraPreview
+                                        ? Theme.of(context)
+                                            .textTheme
+                                            .displayMedium
+                                            ?.copyWith(
+                                                color:
+                                                    lightColorScheme.onPrimary)
+                                        : Theme.of(context)
+                                            .textTheme
+                                            .displayMedium,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          onPressed: () {
-                            if (mounted) {
-                              setState(() {
-                                geolocationService.stopGeolocationStream(
-                                    positionStreamSubscription);
-                              });
-                            }
-                            Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(builder: (context) {
-                              return const HomePage(title: globals.appName);
-                            }));
-                          },
-                          child: Text(
-                            "Stop driving",
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(color: lightColorScheme.onPrimary),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(16.0))),
-                            backgroundColor: lightColorScheme.primary,
-                            minimumSize: const Size.fromHeight(50),
-                          ),
-                          onPressed: () {
-                            geolocationService.getCurrentPosition();
-                          },
-                          child: Text(
-                            "Get Current Location",
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(color: lightColorScheme.onPrimary),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(height: 80),
+                        const Spacer(),
                       ],
                     ),
-                  ),
-                ],
-              ),
-          ],
-        ));
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).pop(true);
+                            },
+                            child: Text(
+                              "Stop driving",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              geolocationService.getCurrentPosition();
+                            },
+                            child: Text(
+                              "Get Current Location",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              geolocationService.getLastKnownPosition();
+                            },
+                            child: Text(
+                              "Get Last Known Location",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          if (!globals.showDebug) const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          )),
+    );
+  }
+
+  /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
+  /// OTHER UTILS
+  ///
+  /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
+  void showSnackBar(BuildContext context, String text) {
+    var snackBar = SnackBar(content: Text(text));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }
 

@@ -1,7 +1,6 @@
 import 'package:drive_fit/home/home_page.dart';
-import 'package:drive_fit/theme/color_schemes.g.dart';
-import 'package:drive_fit/unused/camera_logic.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../global_variables.dart' as globals;
@@ -15,13 +14,21 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  final _rotXController = TextEditingController();
+  final _rotYController = TextEditingController();
+  final _carVelocityController = TextEditingController();
+  final _statesController = MaterialStatesController();
   bool? enableGeolocation,
       showCameraPreview,
       useHighCameraResolution,
       showDebug,
       hasCalibrated;
+  bool isInvalid = true;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25;
+  double? carVelocityThreshold = 5.0;
+  double _double = 1.0;
+  int _value = 10;
 
   Future<void> _loadDefaultSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -37,6 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
         neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
         rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
         rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
+        carVelocityThreshold = (prefs.getDouble('carVelocityThreshold') ?? 5.0);
       });
     }
   }
@@ -59,6 +67,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _saveDouble(String key, double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        prefs.setDouble(key, value);
+      });
+    }
+  }
+
   Future<bool> _readBool(String key, bool defaultValue) async {
     final prefs = await SharedPreferences.getInstance();
     bool boolValue = prefs.getBool(key) ?? defaultValue;
@@ -74,6 +91,55 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadDefaultSettings();
+    _rotXController.addListener(() {
+      onFieldChanged(_rotXController, true);
+    });
+    _rotYController.addListener(() {
+      onFieldChanged(_rotYController, true);
+    });
+    _carVelocityController.addListener(() {
+      onFieldChanged(_carVelocityController, false);
+    });
+  }
+
+  void onFieldChanged(TextEditingController controller, bool convertDouble) {
+    if (mounted) {
+      setState(() {
+        if (controller.text.isEmpty ||
+            RegExp(r'^\d*(?:\.\d*){2,}$').hasMatch(controller.text)) {
+          isInvalid = true;
+        } else {
+          isInvalid = false;
+        }
+      });
+    }
+    if (isInvalid) {
+      _statesController.update(MaterialState.disabled, true);
+    } else if (!isInvalid) {
+      _statesController.update(MaterialState.disabled, false);
+      if (!convertDouble) {
+        if (mounted) {
+          setState(() {
+            _double = double.tryParse(controller.text) ?? 5.0;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _double = double.tryParse(controller.text) ?? 1.0;
+            _value = (_double * 10).round();
+          });
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _rotXController.dispose();
+    _rotYController.dispose();
+    _statesController.dispose();
+    super.dispose();
   }
 
   @override
@@ -122,6 +188,8 @@ class _SettingsPageState extends State<SettingsPage> {
             tiles: [
               SettingsTile.switchTile(
                 title: const Text("Show camera preview when driving"),
+                description: const Text(
+                    "See yourself in the driving page. Turn off if you think it's distracting."),
                 leading: const Icon(Icons.visibility_outlined),
                 initialValue: showCameraPreview,
                 onToggle: (value) {
@@ -149,82 +217,218 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               SettingsTile.navigation(
-                title: const Text(
-                    "Choose Vertical Head Movement Alert Sensitivity"),
-                description: Text(
-                    "The delay between head tilted down and issuing alert. (${rotXDelay! * 0.1} s)"),
-                leading: const Icon(Icons.timer_outlined),
-                onPressed: (context) async {
-                  switch (await showDialog<RotXDelayValue>(
+                  title: Text(
+                      "Choose Vertical Head Movement Alert Sensitivity \n(${(rotXDelay! * 0.1).toStringAsFixed(1)} s)"),
+                  description: const Text(
+                      "The delay between head tilted down and issuing alert."),
+                  leading: const Icon(Icons.timer_outlined),
+                  onPressed: (context) async {
+                    showDialog(
                       context: context,
-                      builder: (BuildContext context) {
-                        return SimpleDialog(
-                          title: const Text('Select assignment'),
-                          children: <Widget>[
-                            SimpleDialogOption(
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _rotXController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                isInvalid = true;
+                              } else {
+                                isInvalid = false;
+                              }
+                              return isInvalid ? 'Invalid value.' : null;
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Delay (in seconds)',
+                                hintText: 'e.g. 1.0'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                Navigator.pop(context, RotXDelayValue.short);
+                                showSnackBar(context, "Setting unchanged.");
+                                Navigator.of(context).pop();
                               },
-                              child: const Text('Short (0.5 s)'),
+                              child: const Text("Cancel"),
                             ),
-                            SimpleDialogOption(
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
                               onPressed: () {
-                                Navigator.pop(context, RotXDelayValue.normal);
+                                if (mounted) {
+                                  setState(() {
+                                    rotXDelay = _value;
+                                    _saveInt('rotXDelay', rotXDelay ?? _value);
+                                  });
+                                }
+                                showSnackBar(context, "Setting updated.");
+                                Navigator.of(context).pop();
                               },
-                              child: const Text('Normal (1.0 s)'),
-                            ),
-                            SimpleDialogOption(
-                              onPressed: () {
-                                Navigator.pop(context, RotXDelayValue.long);
-                              },
-                              child: const Text('Long (2.0 s)'),
-                            ),
-                            SimpleDialogOption(
-                              onPressed: () {
-                                Navigator.pop(context, RotXDelayValue.veryLong);
-                              },
-                              child: const Text('Very Long (3.0 s)'),
+                              child: const Text("Done"),
                             ),
                           ],
                         );
-                      })) {
-                    case RotXDelayValue.short:
-                      rotXDelay = 5;
-                      _saveInt('rotXDelay', rotXDelay ?? 5);
-                      const snackBar =
-                          SnackBar(content: Text("Setting updated."));
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      break;
-                    case RotXDelayValue.normal:
-                      rotXDelay = 10;
-                      _saveInt('rotXDelay', rotXDelay ?? 10);
-                      const snackBar =
-                          SnackBar(content: Text("Setting updated."));
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      break;
-                    case RotXDelayValue.long:
-                      rotXDelay = 20;
-                      _saveInt('rotXDelay', rotXDelay ?? 20);
-                      const snackBar =
-                          SnackBar(content: Text("Setting updated."));
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      break;
-                    case RotXDelayValue.veryLong:
-                      rotXDelay = 30;
-                      _saveInt('rotXDelay', rotXDelay ?? 30);
-                      const snackBar =
-                          SnackBar(content: Text("Setting updated."));
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      break;
-                    case null:
-                      rotXDelay = 10;
-                      const snackBar =
-                          SnackBar(content: Text("Setting unchanged."));
-                      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-                      break;
-                  }
-                },
-              ),
+                      },
+                    );
+                  }),
+              SettingsTile.navigation(
+                  title: Text(
+                      "Choose Horizontal Head Movement Alert Sensitivity \n(${(rotYDelay! * 0.1).toStringAsFixed(1)} s)"),
+                  description: const Text(
+                      "The delay between head rotated left/right and issuing alert."),
+                  leading: const Icon(Icons.timer_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _rotYController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                isInvalid = true;
+                              } else {
+                                isInvalid = false;
+                              }
+                              return isInvalid ? 'Invalid value.' : null;
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Delay (in seconds)',
+                                hintText: 'e.g. 2.5'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar(context, "Setting unchanged.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (mounted) {
+                                  setState(() {
+                                    rotYDelay = _value;
+                                    _saveInt('rotYDelay', rotYDelay ?? _value);
+                                  });
+                                }
+                                showSnackBar(context, "Setting updated.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Done"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
+              SettingsTile.navigation(
+                  title: Text(
+                      "Choose Car Velocity Threshold \n(${(carVelocityThreshold!).toStringAsFixed(1)} m/s)"),
+                  description: const Text(
+                      "The required speed before alerts would be given."),
+                  leading: const Icon(Icons.speed_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _carVelocityController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                isInvalid = true;
+                              } else {
+                                isInvalid = false;
+                              }
+                              return isInvalid ? 'Invalid value.' : null;
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Threshold (in m/s)',
+                                hintText: 'e.g. 5.0'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar(context, "Setting unchanged.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: !isInvalid
+                                  ? () {
+                                      if (mounted) {
+                                        setState(() {
+                                          carVelocityThreshold = _double;
+                                          _saveDouble('carVelocityThreshold',
+                                              carVelocityThreshold ?? _double);
+                                        });
+                                      }
+                                      showSnackBar(context, "Setting updated.");
+                                      Navigator.of(context).pop();
+                                    }
+                                  : null,
+                              child: const Text("Done"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
             ],
           ),
           SettingsSection(
@@ -294,20 +498,15 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ]));
   }
-}
 
-enum RotXDelayValue {
-  short(5),
-  normal(10),
-  long(20),
-  veryLong(30);
-
-  final int value;
-  const RotXDelayValue(this.value);
+  void showSnackBar(BuildContext context, String text) {
+    var snackBar = SnackBar(content: Text(text));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
 }
 
 enum RotYDelayValue {
-  short(15),
+  short(10),
   normal(25),
   long(40),
   veryLong(55);

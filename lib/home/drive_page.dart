@@ -326,7 +326,7 @@ class _DrivePageState extends State<DrivePage> {
                         : lightColorScheme.background,
                   ),
                   onPressed: () {
-                    Navigator.pushReplacement(
+                    Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (context) => const DrivingView(
@@ -370,7 +370,7 @@ class _DrivePageState extends State<DrivePage> {
                   ),
                   onPressed: () {
                     if (globals.hasCalibrated == true) {
-                      Navigator.pushReplacement(
+                      Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => DrivingView(
