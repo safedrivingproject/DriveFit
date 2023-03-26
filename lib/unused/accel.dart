@@ -1,3 +1,7 @@
+      // int accelMovingCounter = 0;
+      // int accelStoppedCounter = 0;
+      // var liveAccelList = List<double>.filled(10, 0);
+      // double maxAccel = 0;
       // if (widget.accelerometerOn) {
       //   liveAccelList.add(globals.resultantAccel);
       //   if (liveAccelList.length > 10) {

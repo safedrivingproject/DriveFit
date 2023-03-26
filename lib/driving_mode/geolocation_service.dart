@@ -29,6 +29,9 @@ class GeolocationService {
   //
   int speedCounter = 0;
   double carVelocityThreshold = 5.0;
+  //
+  int additionalDelay = 20;
+  bool stationaryAlertsDisabled = false;
 
   GeolocationService._internal() {
     hasPermission = false;
@@ -43,6 +46,8 @@ class GeolocationService {
     //
     speedCounter = 0;
     carVelocityThreshold = 5.0;
+    //
+    additionalDelay = 20;
     _initSettings();
   }
 

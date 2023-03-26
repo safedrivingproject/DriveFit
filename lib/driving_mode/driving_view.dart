@@ -57,7 +57,6 @@ class _DrivingViewState extends State<DrivingView> {
   CustomPaint? _customPaint;
   String? _text;
   bool showCameraPreview = true;
-
   double maxAccelThreshold = 1.0;
 
   bool _accelAvailable = false;
@@ -82,6 +81,10 @@ class _DrivingViewState extends State<DrivingView> {
     if (mounted) {
       setState(() {
         showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+        geolocationService.stationaryAlertsDisabled =
+            (prefs.getBool('stationaryAlertsDisabled') ?? false);
+        geolocationService.additionalDelay =
+            (prefs.getInt('additionalDelay') ?? 20);
         globals.showDebug = (prefs.getBool('showDebug') ?? false);
         globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
         faceDetectionService.neutralRotX =
@@ -211,10 +214,6 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void detectionTimer() {
-    // int accelMovingCounter = 0;
-    // int accelStoppedCounter = 0;
-    // var liveAccelList = List<double>.filled(10, 0);
-    // double maxAccel = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted) {
@@ -232,20 +231,37 @@ class _DrivingViewState extends State<DrivingView> {
         });
       }
 
-      if (mounted) {
-        setState(() {
-          carMoving = geolocationService.checkCarMoving();
-        });
+      if (widget.enableGeolocation) {
+        if (mounted) {
+          setState(() {
+            carMoving = geolocationService.checkCarMoving();
+          });
+        }
+      } else {
+        carMoving = true;
       }
-      if (!carMoving) return;
 
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkHeadUpDown(
-              faceDetectionService.rotXDelay + (!carMoving ? 10 : 0));
-          faceDetectionService.checkHeadLeftRight(
-              faceDetectionService.rotYDelay + (!carMoving ? 10 : 0));
-        });
+      if (geolocationService.stationaryAlertsDisabled) {
+        if (!carMoving) return;
+        if (mounted) {
+          setState(() {
+            faceDetectionService
+                .checkHeadUpDown(faceDetectionService.rotXDelay);
+            faceDetectionService
+                .checkHeadLeftRight(faceDetectionService.rotYDelay);
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            faceDetectionService.checkHeadUpDown(
+                faceDetectionService.rotXDelay +
+                    (!carMoving ? geolocationService.additionalDelay : 0));
+            faceDetectionService.checkHeadLeftRight(
+                faceDetectionService.rotYDelay +
+                    (!carMoving ? geolocationService.additionalDelay : 0));
+          });
+        }
       }
 
       if (faceDetectionService.reminderType == "Drowsy") {

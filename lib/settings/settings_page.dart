@@ -1,4 +1,5 @@
 import 'package:drive_fit/home/home_page.dart';
+import 'package:drive_fit/unused/camera_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
@@ -17,15 +18,17 @@ class _SettingsPageState extends State<SettingsPage> {
   final _rotXController = TextEditingController();
   final _rotYController = TextEditingController();
   final _carVelocityController = TextEditingController();
+  final _additionalDelayController = TextEditingController();
   final _statesController = MaterialStatesController();
   bool? enableGeolocation,
+      stationaryAlertsDisabled,
       showCameraPreview,
       useHighCameraResolution,
       showDebug,
       hasCalibrated;
   bool isInvalid = true;
   double? neutralRotX = 5, neutralRotY = -25;
-  int? rotXDelay = 10, rotYDelay = 25;
+  int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThreshold = 5.0;
   double _double = 1.0;
   int _value = 10;
@@ -35,6 +38,9 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       setState(() {
         enableGeolocation = (prefs.getBool('enableGeolocation') ?? true);
+        stationaryAlertsDisabled =
+            (prefs.getBool('stationaryAlertsDisabled') ?? false);
+        additionalDelay = (prefs.getInt('additionalDelay') ?? 20);
         showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
         useHighCameraResolution =
             (prefs.getBool('useHighCameraResolution') ?? false);
@@ -99,6 +105,9 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     _carVelocityController.addListener(() {
       onFieldChanged(_carVelocityController, false);
+    });
+    _additionalDelayController.addListener(() {
+      onFieldChanged(_additionalDelayController, true);
     });
   }
 
@@ -168,8 +177,8 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.switchTile(
                 title: const Text("Enable Geolocation"),
                 description:
-                    const Text("Only issue alerts when the car is moving."),
-                leading: const Icon(Icons.speed),
+                    const Text("Enables DriveFit to detect if car is moving."),
+                leading: const Icon(Icons.place_outlined),
                 initialValue: enableGeolocation,
                 onToggle: (value) {
                   if (mounted) {
@@ -180,10 +189,110 @@ class _SettingsPageState extends State<SettingsPage> {
                   }
                 },
               ),
+              SettingsTile.switchTile(
+                enabled: enableGeolocation == true,
+                title: const Text("Disable alerts when car is not moving"),
+                description:
+                    const Text("Disable alerts when car is not moving."),
+                leading: const Icon(Icons.notifications_off_outlined),
+                initialValue: stationaryAlertsDisabled,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      stationaryAlertsDisabled = value;
+                      _saveBool('stationaryAlertsDisabled', value);
+                    });
+                  }
+                },
+              ),
+              SettingsTile.navigation(
+                  enabled: enableGeolocation == true
+                      ? stationaryAlertsDisabled == false
+                          ? true
+                          : false
+                      : false,
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Choose Additional Delay when car is stationary",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("${(additionalDelay! * 0.1).toStringAsFixed(1)} s"),
+                    ],
+                  ),
+                  description: const Text(
+                      "The additional delay before alerts are issued when car is stationary."),
+                  leading: const Icon(Icons.timer_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _additionalDelayController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                isInvalid = true;
+                              } else {
+                                isInvalid = false;
+                              }
+                              return isInvalid ? 'Invalid value.' : null;
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Delay (in seconds)',
+                                hintText: 'e.g. 1.0'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar(context, "Setting unchanged.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (mounted) {
+                                  setState(() {
+                                    additionalDelay = _value;
+                                    _saveInt('additionalDelay',
+                                        additionalDelay ?? _value);
+                                  });
+                                }
+                                showSnackBar(context, "Setting updated.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Done"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
             ],
           ),
           SettingsSection(
-            margin: const EdgeInsetsDirectional.all(20),
             title: const Text("Driving"),
             tiles: [
               SettingsTile.switchTile(
@@ -217,10 +326,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               SettingsTile.navigation(
-                  title: Text(
-                      "Choose Vertical Head Movement Alert Sensitivity \n(${(rotXDelay! * 0.1).toStringAsFixed(1)} s)"),
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Choose Vertical Head Movement Alert Sensitivity",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("${(rotXDelay! * 0.1).toStringAsFixed(1)} s"),
+                    ],
+                  ),
                   description: const Text(
-                      "The delay between head tilted down and issuing alert."),
+                      "The delay between head tilted up/down and issuing alert."),
                   leading: const Icon(Icons.timer_outlined),
                   onPressed: (context) async {
                     showDialog(
@@ -287,8 +405,16 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   }),
               SettingsTile.navigation(
-                  title: Text(
-                      "Choose Horizontal Head Movement Alert Sensitivity \n(${(rotYDelay! * 0.1).toStringAsFixed(1)} s)"),
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                            "Choose Horizontal Head Movement Alert Sensitivity"),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("${(rotYDelay! * 0.1).toStringAsFixed(1)} s")
+                    ],
+                  ),
                   description: const Text(
                       "The delay between head rotated left/right and issuing alert."),
                   leading: const Icon(Icons.timer_outlined),
@@ -357,10 +483,19 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   }),
               SettingsTile.navigation(
-                  title: Text(
-                      "Choose Car Velocity Threshold \n(${(carVelocityThreshold!).toStringAsFixed(1)} m/s)"),
-                  description: const Text(
-                      "The required speed before alerts would be given."),
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Choose Car Velocity Threshold",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("${(carVelocityThreshold!).toStringAsFixed(1)} m/s"),
+                    ],
+                  ),
+                  description:
+                      const Text("The required speed for normal alerts."),
                   leading: const Icon(Icons.speed_outlined),
                   onPressed: (context) async {
                     showDialog(
