@@ -57,7 +57,7 @@ class GeolocationService {
         accuracy: LocationAccuracy.bestForNavigation,
         distanceFilter: 0,
         forceLocationManager: false,
-        intervalDuration: const Duration(seconds: 5),
+        intervalDuration: const Duration(seconds: 1),
       );
     } else if (Platform.isIOS || Platform.isMacOS) {
       _locationSettings = AppleSettings(
@@ -82,7 +82,7 @@ class GeolocationService {
   /// *******************************************
   /// *******************************************
 
-  void updatePositionList(Position position, double speed) {
+  void updatePositionList(Position position) {
     currentLatitude = position.latitude;
     currentLongitude = position.longitude;
     currentSpeed = position.speed;
@@ -101,17 +101,17 @@ class GeolocationService {
     if (!hasPermission) return;
     Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best);
-    updatePositionList(position, 0);
-    var speed = calculateSpeed();
-    updateSpeedList(speed);
+    updatePositionList(position);
+    var calcSpeed = calculateSpeed();
+    updateSpeedList(position.speed < calcSpeed ? position.speed : calcSpeed);
   }
 
   Future<void> getLastKnownPosition() async {
     if (!hasPermission) return;
     Position? position = await Geolocator.getLastKnownPosition();
-    if (position != null) updatePositionList(position, 0);
-    var speed = calculateSpeed();
-    updateSpeedList(speed);
+    if (position != null) updatePositionList(position);
+    var calcSpeed = calculateSpeed();
+    updateSpeedList(position?.speed ?? calcSpeed);
   }
 
   void startGeolocationStream() {
@@ -121,14 +121,14 @@ class GeolocationService {
         Geolocator.getPositionStream(locationSettings: _locationSettings)
             .listen((Position? position) {
       if (position != null) {
-        updatePositionList(position, 0);
+        updatePositionList(position);
+        print(
+            '${position.latitude.toString()}, ${position.longitude.toString()}');
+        var calcSpeed = calculateSpeed();
+        updateSpeedList(
+            position.speed < calcSpeed ? position.speed : calcSpeed);
+        print(calcSpeed);
       }
-      print(position == null
-          ? 'Unknown'
-          : '${position.latitude.toString()}, ${position.longitude.toString()}');
-      var speed = calculateSpeed();
-      updateSpeedList(speed);
-      print(speed);
     });
     positionStreamStarted = true;
   }
@@ -169,7 +169,7 @@ class GeolocationService {
     } else {
       speedCounter = 0;
     }
-    if (speedCounter > 50) {
+    if (speedCounter > 20) {
       return true;
     }
     return false;

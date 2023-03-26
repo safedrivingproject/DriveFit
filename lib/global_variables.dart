@@ -17,6 +17,7 @@ bool enableGeolocation = true;
 bool showDebug = false;
 bool showCameraPreview = true;
 bool useHighCameraResolution = false;
-String alarmAudioPath = "audio/car_horn_high.mp3";
+List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
+List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
 
 bool inCalibrationMode = true;

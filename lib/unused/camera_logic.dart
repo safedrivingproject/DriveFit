@@ -17,7 +17,6 @@ final FaceDetector _faceDetector = FaceDetector(
 );
 bool _canProcess = true;
 bool _isBusy = false;
-String? _text;
 double? rotX;
 double? rotY;
 double? rotZ;
@@ -143,14 +142,14 @@ Future<void> processImage(InputImage inputImage) async {
     leftEyeOpenProb = face.leftEyeOpenProbability;
     rightEyeOpenProb = face.rightEyeOpenProbability;
   }
-  if (inputImage.inputImageData?.size != null &&
-      inputImage.inputImageData?.imageRotation != null) {
-  } else {
-    String text = 'Faces found: ${faces.length}\n\n';
-    for (final face in faces) {
-      text += 'face: ${face.boundingBox}\n\n';
-    }
-    _text = text;
-  }
+  // if (inputImage.inputImageData?.size != null &&
+  //     inputImage.inputImageData?.imageRotation != null) {
+  // } else {
+  //   String text = 'Faces found: ${faces.length}\n\n';
+  //   for (final face in faces) {
+  //     text += 'face: ${face.boundingBox}\n\n';
+  //   }
+  //   _text = text;
+  // }
   _isBusy = false;
 }

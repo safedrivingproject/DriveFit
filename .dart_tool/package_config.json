@@ -182,6 +182,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "file_picker",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/file_picker-5.2.6",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
       "name": "flutter",
       "rootUri": "file:///C:/src/flutter/packages/flutter",
       "packageUri": "lib/",
@@ -560,7 +566,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-03-25T09:09:15.157407Z",
+  "generated": "2023-03-26T13:54:07.280961Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

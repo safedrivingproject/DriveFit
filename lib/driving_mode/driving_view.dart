@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 
-import '/home/home_page.dart';
 import 'camera_view.dart';
 import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
@@ -39,7 +38,7 @@ class _DrivingViewState extends State<DrivingView> {
   final FaceDetectionService faceDetectionService = FaceDetectionService();
   final GeolocationService geolocationService = GeolocationService();
 
-  final AudioPlayer sleepyAudioPlayer = AudioPlayer();
+  final AudioPlayer drowsyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
 
   final FaceDetector _faceDetector = FaceDetector(
@@ -99,8 +98,14 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
         geolocationService.carVelocityThreshold =
             (prefs.getDouble('carVelocityThreshold') ?? 5.0);
+        globals.drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
+            ["assets", "audio/car_horn_high.mp3"]);
+        globals.inattentiveAlarmValue =
+            (prefs.getStringList('inattentiveAlarm') ??
+                ["assets", "audio/double_beep.mp3"]);
       });
     }
+    initAudioPlayers();
   }
 
   Future<void> _saveBool(String key, bool value) async {
@@ -140,10 +145,18 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   void initAudioPlayers() {
-    sleepyAudioPlayer.setSource(AssetSource('audio/car_horn_high.mp3'));
-    sleepyAudioPlayer.setVolume(1.0);
-    sleepyAudioPlayer.setReleaseMode(ReleaseMode.stop);
-    inattentiveAudioPlayer.setSource(AssetSource('audio/double_beep.mp3'));
+    drowsyAudioPlayer.setSource(globals.drowsyAlarmValue[0] == "asset"
+        ? AssetSource(globals.drowsyAlarmValue[1])
+        : globals.drowsyAlarmValue[0] == "file"
+            ? DeviceFileSource(globals.drowsyAlarmValue[1])
+            : AssetSource("audio/car_horn_high.mp3"));
+    drowsyAudioPlayer.setVolume(1.0);
+    drowsyAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    inattentiveAudioPlayer.setSource(globals.inattentiveAlarmValue[0] == "asset"
+        ? AssetSource(globals.inattentiveAlarmValue[1])
+        : globals.inattentiveAlarmValue[0] == "file"
+            ? DeviceFileSource(globals.inattentiveAlarmValue[1])
+            : AssetSource("audio/double_beep.mp3"));
     inattentiveAudioPlayer.setVolume(1.0);
     inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
   }
@@ -153,10 +166,12 @@ class _DrivingViewState extends State<DrivingView> {
     super.initState();
     geolocationService.positionList.clear();
     geolocationService.speedList.clear();
-    initAudioPlayers();
+
     _loadSettings();
+
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
+
     if (widget.calibrationMode == true) {
       if (mounted) {
         setState(() {
@@ -175,7 +190,7 @@ class _DrivingViewState extends State<DrivingView> {
       carMoving = true;
     }
 
-    // Record initial position
+    // Record initial position?
   }
 
   @override
@@ -185,7 +200,7 @@ class _DrivingViewState extends State<DrivingView> {
     periodicCalibrationTimer?.cancel();
     geolocationService.stopGeolocationStream();
     globals.inCalibrationMode = false;
-    sleepyAudioPlayer.dispose();
+    drowsyAudioPlayer.dispose();
     inattentiveAudioPlayer.dispose();
     _faceDetector.close();
     _stopAccelerometer();
@@ -202,7 +217,7 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   void sendSleepyReminder() {
-    sleepyAudioPlayer.resume();
+    drowsyAudioPlayer.resume();
     NotificationController.dismissAlertNotifications();
     NotificationController.createSleepyNotification();
   }
@@ -242,14 +257,15 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       if (geolocationService.stationaryAlertsDisabled) {
-        if (!carMoving) return;
-        if (mounted) {
-          setState(() {
-            faceDetectionService
-                .checkHeadUpDown(faceDetectionService.rotXDelay);
-            faceDetectionService
-                .checkHeadLeftRight(faceDetectionService.rotYDelay);
-          });
+        if (carMoving) {
+          if (mounted) {
+            setState(() {
+              faceDetectionService
+                  .checkHeadUpDown(faceDetectionService.rotXDelay);
+              faceDetectionService
+                  .checkHeadLeftRight(faceDetectionService.rotYDelay);
+            });
+          }
         }
       } else {
         if (mounted) {
@@ -338,9 +354,9 @@ class _DrivingViewState extends State<DrivingView> {
             globals.neutralAccelY = _rawAccelY;
             globals.neutralAccelZ = _rawAccelZ;
             faceDetectionService.rotYLeftOffset =
-                faceDetectionService.neutralRotY <= 0 ? 25 : 20;
+                faceDetectionService.neutralRotY <= 0 ? 15 : 30;
             faceDetectionService.rotYRightOffset =
-                faceDetectionService.neutralRotY <= 0 ? 20 : 25;
+                faceDetectionService.neutralRotY <= 0 ? 30 : 15;
           });
         }
       }

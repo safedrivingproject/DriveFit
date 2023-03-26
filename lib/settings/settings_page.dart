@@ -1,9 +1,11 @@
+import 'dart:io';
+
 import 'package:drive_fit/home/home_page.dart';
-import 'package:drive_fit/unused/camera_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 import '../global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
@@ -30,6 +32,8 @@ class _SettingsPageState extends State<SettingsPage> {
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThreshold = 5.0;
+  List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
+  List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
   double _double = 1.0;
   int _value = 10;
 
@@ -51,6 +55,10 @@ class _SettingsPageState extends State<SettingsPage> {
         rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
         rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
         carVelocityThreshold = (prefs.getDouble('carVelocityThreshold') ?? 5.0);
+        drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
+            ["asset", "audio/car_horn_high.mp3"]);
+        inattentiveAlarmValue = (prefs.getStringList('inattentiveAlarm') ??
+            ["asset", "audio/double_beep.mp3"]);
       });
     }
   }
@@ -82,10 +90,13 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<bool> _readBool(String key, bool defaultValue) async {
+  Future<void> _saveStringList(String key, List<String> value) async {
     final prefs = await SharedPreferences.getInstance();
-    bool boolValue = prefs.getBool(key) ?? defaultValue;
-    return boolValue;
+    if (mounted) {
+      setState(() {
+        prefs.setStringList(key, value);
+      });
+    }
   }
 
   Future<void> _clearSPData() async {
@@ -193,7 +204,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 enabled: enableGeolocation == true,
                 title: const Text("Disable alerts when car is not moving"),
                 description:
-                    const Text("Disable alerts when car is not moving."),
+                    const Text("Note: Alerts for closed eyes persist."),
                 leading: const Icon(Icons.notifications_off_outlined),
                 initialValue: stationaryAlertsDisabled,
                 onToggle: (value) {
@@ -564,6 +575,164 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                     );
                   }),
+              SettingsTile.navigation(
+                title: const Text(
+                  "Select Drowsy Alert Alarm",
+                ),
+                leading: const Icon(Icons.edit_notifications_outlined),
+                description:
+                    const Text("Pick the desired sound for drowsy alarm."),
+                onPressed: (context) {
+                  showDialog(
+                      context: context,
+                      builder: (context) {
+                        return SimpleDialog(
+                          title: const Text("Select Alarm"),
+                          children: [
+                            SimpleDialogOption(
+                              child: const Text("High-pitched car horn"),
+                              onPressed: () {
+                                drowsyAlarmValue = [
+                                  "asset",
+                                  "audio/car_horn_high.mp3"
+                                ];
+                                _saveStringList(
+                                    'drowsyAlarm', drowsyAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Low-pitched car horn"),
+                              onPressed: () {
+                                drowsyAlarmValue = [
+                                  "asset",
+                                  "audio/car_horn_low.mp3"
+                                ];
+                                _saveStringList(
+                                    'drowsyAlarm', drowsyAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Beeps"),
+                              onPressed: () {
+                                drowsyAlarmValue = [
+                                  "asset",
+                                  "audio/double_beep.mp3"
+                                ];
+                                _saveStringList(
+                                    'drowsyAlarm', drowsyAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Choose from files"),
+                              onPressed: () async {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(type: FileType.audio);
+                                if (result != null) {
+                                  drowsyAlarmValue = [
+                                    "file",
+                                    result.files.first.path!
+                                  ];
+                                  _saveStringList(
+                                      'drowsyAlarm', drowsyAlarmValue);
+                                  // ignore: use_build_context_synchronously
+                                  showSnackBar(context, "Alarm updated.");
+                                } else {
+                                  // ignore: use_build_context_synchronously
+                                  showSnackBar(context, "Alarm unchanged.");
+                                }
+                              },
+                            ),
+                          ],
+                        );
+                      });
+                },
+              ),
+              SettingsTile.navigation(
+                title: const Text(
+                  "Select Inattentive Alert Alarm",
+                ),
+                leading: const Icon(Icons.edit_notifications_outlined),
+                description:
+                    const Text("Pick the desired sound for inattentive alarm."),
+                onPressed: (context) {
+                  showDialog(
+                      context: context,
+                      builder: (context) {
+                        return SimpleDialog(
+                          title: const Text("Select Alarm"),
+                          children: [
+                            SimpleDialogOption(
+                              child: const Text("High-pitched car horn"),
+                              onPressed: () {
+                                inattentiveAlarmValue = [
+                                  "asset",
+                                  "audio/car_horn_high.mp3"
+                                ];
+                                _saveStringList(
+                                    'inattentiveAlarm', inattentiveAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Low-pitched car horn"),
+                              onPressed: () {
+                                inattentiveAlarmValue = [
+                                  "asset",
+                                  "audio/car_horn_low.mp3"
+                                ];
+                                _saveStringList(
+                                    'inattentiveAlarm', inattentiveAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Beeps"),
+                              onPressed: () {
+                                inattentiveAlarmValue = [
+                                  "asset",
+                                  "audio/double_beep.mp3"
+                                ];
+                                _saveStringList(
+                                    'inattentiveAlarm', inattentiveAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Choose from files"),
+                              onPressed: () async {
+                                FilePickerResult? result = await FilePicker
+                                    .platform
+                                    .pickFiles(type: FileType.audio);
+                                if (result != null) {
+                                  inattentiveAlarmValue = [
+                                    "file",
+                                    result.files.first.path!
+                                  ];
+                                  _saveStringList('inattentiveAlarm',
+                                      inattentiveAlarmValue);
+                                  // ignore: use_build_context_synchronously
+                                  showSnackBar(context, "Alarm updated.");
+                                } else {
+                                  // ignore: use_build_context_synchronously
+                                  showSnackBar(context, "Alarm unchanged.");
+                                }
+                              },
+                            ),
+                          ],
+                        );
+                      });
+                },
+              ),
             ],
           ),
           SettingsSection(
@@ -618,6 +787,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   setState(() {
                                     _clearSPData();
                                     _loadDefaultSettings();
+                                    // TODO: Clear SQLite Data
                                   });
                                 }
                                 Navigator.of(context).pop();
@@ -640,14 +810,19 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-enum RotYDelayValue {
-  short(10),
-  normal(25),
-  long(40),
-  veryLong(55);
+enum AudioType {
+  asset,
+  file,
+}
 
-  final int value;
-  const RotYDelayValue(this.value);
+class AudioValue {
+  AudioType type;
+  String path;
+
+  AudioValue({
+    required this.type,
+    required this.path,
+  });
 }
 
 class SelectAlarmPage extends StatefulWidget {
