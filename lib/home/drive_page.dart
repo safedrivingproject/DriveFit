@@ -127,7 +127,6 @@ class _DrivePageState extends State<DrivePage> {
                 padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 0),
                 child: Container(
                   width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height * 0.2,
                   decoration: BoxDecoration(
                     color: lightColorScheme.onPrimary,
                     boxShadow: const [
@@ -149,75 +148,73 @@ class _DrivePageState extends State<DrivePage> {
                         child: Text(
                           'Road Conditions',
                           textAlign: TextAlign.start,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              16, 0, 16, 16),
-                          child: ListView(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            scrollDirection: Axis.vertical,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                    0, 8, 0, 0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              8, 0, 8, 0),
-                                      child: Icon(
-                                        Icons.cloud_queue,
-                                        color: lightColorScheme.onBackground,
-                                        size: 28,
-                                      ),
+                      Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          scrollDirection: Axis.vertical,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 8, 0, 0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            8, 0, 8, 0),
+                                    child: Icon(
+                                      Icons.cloud_queue,
+                                      color: lightColorScheme.onBackground,
+                                      size: 28,
                                     ),
-                                    Text(
-                                      'Slippery roads',
-                                      textAlign: TextAlign.start,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineMedium,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  Text(
+                                    'Slippery roads',
+                                    textAlign: TextAlign.start,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium,
+                                  ),
+                                ],
                               ),
-                              Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                    0, 8, 0, 0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              8, 0, 8, 0),
-                                      child: Icon(
-                                        Icons.waves,
-                                        color: lightColorScheme.onBackground,
-                                        size: 28,
-                                      ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 8, 0, 0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            8, 0, 8, 0),
+                                    child: Icon(
+                                      Icons.waves,
+                                      color: lightColorScheme.onBackground,
+                                      size: 28,
                                     ),
-                                    Text(
-                                      'Strong Wind',
-                                      textAlign: TextAlign.start,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineMedium,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  Text(
+                                    'Strong Wind',
+                                    textAlign: TextAlign.start,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -228,7 +225,6 @@ class _DrivePageState extends State<DrivePage> {
                 padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 0),
                 child: Container(
                   width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height * 0.2,
                   decoration: BoxDecoration(
                     color: lightColorScheme.onPrimary,
                     boxShadow: const [
@@ -250,55 +246,53 @@ class _DrivePageState extends State<DrivePage> {
                         child: Text(
                           'Caution',
                           textAlign: TextAlign.start,
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              16, 0, 16, 16),
-                          child: ListView(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            scrollDirection: Axis.vertical,
-                            physics: const NeverScrollableScrollPhysics(),
-                            children: [
-                              Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                    0, 8, 0, 0),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              8, 4, 8, 0),
-                                      child: Icon(
-                                        Icons.speed,
-                                        color: lightColorScheme.onBackground,
-                                        size: 28,
-                                      ),
+                      Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          scrollDirection: Axis.vertical,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 8, 0, 0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            8, 4, 8, 0),
+                                    child: Icon(
+                                      Icons.speed,
+                                      color: lightColorScheme.onBackground,
+                                      size: 28,
                                     ),
-                                    Text('Slow down',
-                                        textAlign: TextAlign.start,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineMedium),
-                                  ],
-                                ),
+                                  ),
+                                  Text('Slow down',
+                                      textAlign: TextAlign.start,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium),
+                                ],
                               ),
-                              Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                    8, 8, 0, 0),
-                                child: Text(
-                                    'The roads are especially slippery today \nfrom the rain.',
-                                    textAlign: TextAlign.start,
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium),
-                              ),
-                            ],
-                          ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  8, 8, 0, 0),
+                              child: Text(
+                                  'The roads are especially slippery today \nfrom the rain.',
+                                  textAlign: TextAlign.start,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium),
+                            ),
+                          ],
                         ),
                       ),
                     ],

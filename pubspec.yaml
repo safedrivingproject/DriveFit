@@ -50,6 +50,7 @@ dependencies:
   geolocator_android: ^4.1.7
   geolocator_apple: ^2.2.5
   file_picker: ^5.2.6
+  fl_chart: ^0.61.0
 
 dev_dependencies:
   flutter_test:

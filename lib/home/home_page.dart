@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../settings/settings_page.dart';
 import '/theme/color_schemes.g.dart';
 import 'drive_page.dart';
+import 'history_page.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -29,6 +30,8 @@ class _HomePageState extends State<HomePage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
       extendBodyBehindAppBar: true,
       bottomNavigationBar: NavigationBar(
@@ -63,20 +66,6 @@ class _HomePageState extends State<HomePage> {
         const AchievementsPage(),
       ][selectedPageIndex],
     );
-  }
-}
-
-class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
-
-  @override
-  State<HistoryPage> createState() => _HistoryPageState();
-}
-
-class _HistoryPageState extends State<HistoryPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Container();
   }
 }
 

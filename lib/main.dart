@@ -82,27 +82,27 @@ class _MyAppState extends State<MyApp> {
                 color: lightColorScheme.onBackground),
             displayMedium: GoogleFonts.outfit(
                 textStyle: textTheme.displayMedium,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 fontSize: 45,
                 color: lightColorScheme.onBackground),
             displaySmall: GoogleFonts.outfit(
                 textStyle: textTheme.displaySmall,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 fontSize: 35,
                 color: lightColorScheme.onBackground),
-            headlineLarge: GoogleFonts.outfit(
+            headlineLarge: GoogleFonts.interTight(
                 textStyle: textTheme.headlineLarge,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 fontSize: 32,
                 color: lightColorScheme.onBackground),
-            headlineMedium: GoogleFonts.outfit(
+            headlineMedium: GoogleFonts.interTight(
                 textStyle: textTheme.headlineMedium,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 fontSize: 28,
                 color: lightColorScheme.onBackground),
-            headlineSmall: GoogleFonts.outfit(
+            headlineSmall: GoogleFonts.interTight(
                 textStyle: textTheme.headlineSmall,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 fontSize: 24,
                 color: lightColorScheme.onBackground),
             titleLarge: GoogleFonts.outfit(
