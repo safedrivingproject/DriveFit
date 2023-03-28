@@ -363,9 +363,9 @@
     },
     {
       "name": "path_provider",
-      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider-2.0.13",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider-2.0.14",
       "packageUri": "lib/",
-      "languageVersion": "2.14"
+      "languageVersion": "2.17"
     },
     {
       "name": "path_provider_android",
@@ -494,6 +494,18 @@
       "languageVersion": "2.14"
     },
     {
+      "name": "sqflite",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/sqflite-2.2.6",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "sqflite_common",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/sqflite_common-2.4.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
       "name": "stack_trace",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/stack_trace-1.11.0",
       "packageUri": "lib/",
@@ -514,6 +526,12 @@
     {
       "name": "string_scanner",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/string_scanner-1.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "synchronized",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/synchronized-3.0.1",
       "packageUri": "lib/",
       "languageVersion": "2.18"
     },
@@ -578,7 +596,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-03-27T13:27:02.300021Z",
+  "generated": "2023-03-28T14:47:00.160053Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

@@ -20,4 +20,4 @@ bool useHighCameraResolution = false;
 List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
 List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
 
-bool inCalibrationMode = true;
+bool inCalibrationMode = false;

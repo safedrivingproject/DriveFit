@@ -8,8 +8,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:drive_fit/theme/color_schemes.g.dart';
+import 'package:intl/intl.dart';
 
+import '/theme/color_schemes.g.dart';
 import 'camera_view.dart';
 import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
@@ -65,6 +66,16 @@ class _DrivingViewState extends State<DrivingView> {
   double accelX = 0, accelY = 0, accelZ = 0;
 
   StreamSubscription<Position>? positionStreamSubscription;
+
+  String startTime = '';
+  String endTime = '';
+  int duration = 0;
+  Position? initialPos, finalPos;
+  double distance = 0.0;
+  int drowsyAlerts = 0;
+  int inattentiveAlerts = 0;
+  int score = 0;
+  DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
 
   /// *******************************************************
   /// *******************************************************
@@ -161,6 +172,28 @@ class _DrivingViewState extends State<DrivingView> {
     inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
   }
 
+  Future<void> saveCurrentPosition(Position? position) async {
+    if (!geolocationService.hasPermission) return;
+    position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation);
+  }
+
+  String saveCurrentTime() {
+    return noMillis.format(DateTime.now());
+  }
+
+  void _resetSessionData() {
+    startTime = '';
+    endTime = '';
+    duration = 0;
+    initialPos = null;
+    finalPos = null;
+    distance = 0.0;
+    drowsyAlerts = 0;
+    inattentiveAlerts = 0;
+    score = 0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -171,6 +204,8 @@ class _DrivingViewState extends State<DrivingView> {
 
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
+
+    _resetSessionData();
 
     if (widget.calibrationMode == true) {
       if (mounted) {
@@ -190,7 +225,8 @@ class _DrivingViewState extends State<DrivingView> {
       carMoving = true;
     }
 
-    // Record initial position?
+    saveCurrentPosition(initialPos);
+    startTime = saveCurrentTime();
   }
 
   @override
@@ -199,6 +235,8 @@ class _DrivingViewState extends State<DrivingView> {
     periodicDetectionTimer?.cancel();
     periodicCalibrationTimer?.cancel();
     geolocationService.stopGeolocationStream();
+    saveCurrentPosition(finalPos);
+    endTime = saveCurrentTime();
     globals.inCalibrationMode = false;
     drowsyAudioPlayer.dispose();
     inattentiveAudioPlayer.dispose();
@@ -353,14 +391,26 @@ class _DrivingViewState extends State<DrivingView> {
             globals.neutralAccelX = _rawAccelX;
             globals.neutralAccelY = _rawAccelY;
             globals.neutralAccelZ = _rawAccelZ;
-            faceDetectionService.rotYLeftOffset =
-                faceDetectionService.neutralRotY <= 0 ? 15 : 30;
-            faceDetectionService.rotYRightOffset =
-                faceDetectionService.neutralRotY <= 0 ? 30 : 15;
+            calcRotYOffsets();
           });
         }
       }
     });
+  }
+
+  void calcRotYOffsets() {
+    var neutralY = faceDetectionService.neutralRotY;
+    var leftOffset = 15.0;
+    var rightOffset = 15.0;
+    if (neutralY <= 0) {
+      leftOffset = 15 + (neutralY.abs() / 8);
+      rightOffset = 15 - (neutralY.abs() / 10);
+    } else if (neutralY > 0) {
+      leftOffset = 15 - (neutralY.abs() / 10);
+      rightOffset = 15 + (neutralY.abs() / 8);
+    }
+    faceDetectionService.rotYLeftOffset = leftOffset;
+    faceDetectionService.rotYRightOffset = rightOffset;
   }
 
   double average(List<double> list) {
@@ -529,7 +579,7 @@ class _DrivingViewState extends State<DrivingView> {
       child: Scaffold(
           appBar: AppBar(
             title: Text(
-              globals.inCalibrationMode ? "Calibrate" : "Driving",
+              widget.calibrationMode ? "Calibrate" : "Driving",
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -591,11 +641,12 @@ class _DrivingViewState extends State<DrivingView> {
                               doubleValue:
                                   faceDetectionService.rightEyeOpenProb),
                           DataValueWidget(
-                              text: "hasFace",
-                              boolValue: faceDetectionService.hasFace),
+                              text: "leftOffset",
+                              doubleValue: faceDetectionService.rotYLeftOffset),
                           DataValueWidget(
-                              text: "reminderCount",
-                              intValue: faceDetectionService.reminderCount),
+                              text: "rightOffset",
+                              doubleValue:
+                                  faceDetectionService.rotYRightOffset),
                           DataValueWidget(
                               text: "reminderType",
                               stringValue: faceDetectionService.reminderType),

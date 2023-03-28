@@ -19,20 +19,6 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     setState(() {});
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.settings),
-          color: lightColorScheme.background,
-          onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const SettingsPage(title: "Settings")));
-          },
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-      ),
       extendBodyBehindAppBar: true,
       bottomNavigationBar: NavigationBar(
         animationDuration: const Duration(milliseconds: 500),

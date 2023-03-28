@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
+
 import '/theme/color_schemes.g.dart';
+import '/settings/settings_page.dart';
+import 'database_service.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -11,340 +14,462 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  final ScrollController _scrollController =
+      ScrollController(keepScrollOffset: true);
+  Color _appBarBgColor = Colors.transparent;
+  double _scrollOffset = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      setState(() {
+        _scrollOffset = _scrollController.offset;
+      });
+    });
+  }
+
+  bool get _isSliverAppBarExpanded {
+    return _scrollController.hasClients &&
+        _scrollController.offset > (180 - kToolbarHeight);
+  }
+
+  double _getTitleOpacity() {
+    var opacity;
+    var threshold = 150 - kToolbarHeight;
+    if (_scrollOffset > (threshold + 50)) {
+      return 1.0;
+    } else if (_scrollOffset > threshold) {
+      opacity = (_scrollOffset - threshold) / 50;
+    } else {
+      return 0.0;
+    }
+    return opacity;
+  }
+
+  double _getAppBarOpacity() {
+    var opacity;
+    var threshold = 150 - kToolbarHeight;
+    if (_scrollOffset > (threshold + 50)) {
+      return 1.0;
+    } else if (_scrollOffset > threshold) {
+      opacity = (_scrollOffset - threshold) / 50;
+    } else {
+      return 0.0;
+    }
+    return opacity;
+  }
+
+  double _getLargeTitleOpacity() {
+    var opacity;
+    var threshold = 100 - kToolbarHeight;
+    if (_scrollOffset > (threshold + 50)) {
+      return 0.0;
+    } else if (_scrollOffset > threshold) {
+      opacity = 1 - ((_scrollOffset - threshold) / 50);
+    } else {
+      return 1.0;
+    }
+    return opacity;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Stack(
-        children: [
-          Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height * 0.3,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [lightColorScheme.primary, lcsPrimaryTransparent],
-                stops: const [0, 1],
-                begin: const AlignmentDirectional(0, -1),
-                end: const AlignmentDirectional(0, 1),
-              ),
+    return Stack(
+      children: [
+        Container(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [lightColorScheme.primary, lcsPrimaryTransparent],
+              stops: const [0.15, 1],
+              begin: const AlignmentDirectional(0, -1),
+              end: const AlignmentDirectional(0, 1),
             ),
           ),
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: MediaQuery.of(context).size.height * 0.08),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 0, 0, 28),
-                              child: Text(
-                                'Drive Summary',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displayLarge
-                                    ?.copyWith(height: 1),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        width: MediaQuery.of(context).size.width,
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
-                        decoration: BoxDecoration(
-                          color: lightColorScheme.background,
-                          boxShadow: const [
-                            BoxShadow(
-                              blurRadius: 4,
-                              color: Color(0x35000000),
-                              offset: Offset(0, 1),
-                            )
-                          ],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: lightColorScheme.background,
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'So far, you\'ve had',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyLarge
-                                  ?.copyWith(
-                                      color: lightColorScheme.inverseSurface),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.max,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('11',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .displayLarge),
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.fromSTEB(
-                                      4, 0, 0, 12),
-                                  child: Text('safe trips',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                              color: lightColorScheme
-                                                  .inverseSurface)),
-                                ),
-                                const SizedBox(width: 20),
-                                Text('23',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .displayLarge),
-                                Expanded(
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                            4, 0, 0, 12),
-                                    child: Text('potential accidents avoided',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                                color: lightColorScheme
-                                                    .inverseSurface)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 14),
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                      color: lightColorScheme.onSecondary,
-                      boxShadow: const [
-                        BoxShadow(
-                          blurRadius: 4,
-                          color: Color(0x35000000),
-                          offset: Offset(0, 1),
-                        )
-                      ],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: lightColorScheme.onPrimary,
-                        width: 1,
-                      ),
-                    ),
-                    child: Padding(
-                      padding:
-                          const EdgeInsetsDirectional.fromSTEB(8, 14, 8, 14),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsetsDirectional.fromSTEB(
-                                12, 0, 0, 0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Average Score',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: [
-                                    Padding(
+        ),
+        CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverAppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.settings),
+                color: lightColorScheme.background,
+                onPressed: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) =>
+                          const SettingsPage(title: "Settings")));
+                },
+              ),
+              title: Text('Drive Summary',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: lightColorScheme.onPrimary
+                          .withOpacity(_getTitleOpacity()))),
+              centerTitle: true,
+              pinned: true,
+              snap: false,
+              floating: false,
+              toolbarHeight: kToolbarHeight + 1.25,
+              backgroundColor:
+                  lightColorScheme.primary.withOpacity(_getAppBarOpacity()),
+              scrolledUnderElevation: 4,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+            ),
+            SliverToBoxAdapter(
+              child: Stack(
+                children: [
+                  SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              28, 14, 28, 14),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.max,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Expanded(
+                                    child: Padding(
                                       padding:
                                           const EdgeInsetsDirectional.fromSTEB(
-                                              0, 4, 0, 0),
+                                              0, 0, 0, 28),
                                       child: Text(
-                                        '4.2',
+                                        'Drive Summary',
                                         style: Theme.of(context)
                                             .textTheme
-                                            .displaySmall,
+                                            .displayLarge
+                                            ?.copyWith(
+                                                height: 1,
+                                                color: lightColorScheme
+                                                    .onPrimary
+                                                    .withOpacity(
+                                                        _getLargeTitleOpacity())),
+                                        textAlign: TextAlign.center,
                                       ),
                                     ),
-                                    const Padding(
-                                      padding: EdgeInsetsDirectional.fromSTEB(
-                                          0, 4, 0, 0),
-                                      child: Icon(
-                                        Icons.star_rounded,
-                                        color: Color(0xFFF6C91A),
-                                        size: 24,
-                                      ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                width: MediaQuery.of(context).size.width,
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    16, 16, 16, 8),
+                                decoration: BoxDecoration(
+                                  color: lightColorScheme.background,
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      blurRadius: 4,
+                                      color: Color(0x35000000),
+                                      offset: Offset(0, 1),
+                                    )
+                                  ],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: lightColorScheme.background,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.max,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'So far, you\'ve had',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                              color: lightColorScheme
+                                                  .inverseSurface),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.max,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text('11',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .displayLarge),
+                                        Padding(
+                                          padding: const EdgeInsetsDirectional
+                                              .fromSTEB(4, 0, 0, 12),
+                                          child: Text('safe trips',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                      color: lightColorScheme
+                                                          .inverseSurface)),
+                                        ),
+                                        const SizedBox(width: 20),
+                                        Text('23',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .displayLarge),
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsetsDirectional
+                                                .fromSTEB(4, 0, 0, 12),
+                                            child: Text(
+                                                'potential accidents avoided',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                        color: lightColorScheme
+                                                            .inverseSurface)),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              28, 0, 28, 14),
+                          child: Container(
+                            width: MediaQuery.of(context).size.width,
+                            decoration: BoxDecoration(
+                              color: lightColorScheme.onSecondary,
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 4,
+                                  color: Color(0x35000000),
+                                  offset: Offset(0, 1),
+                                )
+                              ],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: lightColorScheme.onPrimary,
+                                width: 1,
+                              ),
+                            ),
                             child: Padding(
                               padding: const EdgeInsetsDirectional.fromSTEB(
-                                  12, 0, 12, 0),
-                              child: Column(
+                                  8, 14, 8, 14),
+                              child: Row(
                                 mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Average Score (Last 7 days)',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.max,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsetsDirectional
-                                            .fromSTEB(0, 4, 0, 0),
-                                        child: Text(
-                                          '4.8',
+                                  Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            12, 0, 0, 0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.max,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Overall Avg. Score',
                                           style: Theme.of(context)
                                               .textTheme
-                                              .displaySmall,
+                                              .bodyMedium,
                                         ),
-                                      ),
-                                      const Padding(
-                                        padding: EdgeInsetsDirectional.fromSTEB(
-                                            0, 4, 0, 0),
-                                        child: Icon(
-                                          Icons.star_rounded,
-                                          color: Color(0xFFF6C91A),
-                                          size: 24,
+                                        Row(
+                                          mainAxisSize: MainAxisSize.max,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsetsDirectional
+                                                      .fromSTEB(0, 4, 0, 0),
+                                              child: Text(
+                                                '4.2/5',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .displaySmall,
+                                              ),
+                                            ),
+                                            const Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(0, 4, 0, 0),
+                                              child: Icon(
+                                                Icons.star_rounded,
+                                                color: Color(0xFFF6C91A),
+                                                size: 24,
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsetsDirectional.fromSTEB(
+                                              12, 0, 12, 0),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.max,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Avg. Score (Last 7 days)',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium,
+                                          ),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.max,
+                                            children: [
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsetsDirectional
+                                                        .fromSTEB(0, 4, 0, 0),
+                                                child: Text(
+                                                  '4.8/5',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .displaySmall,
+                                                ),
+                                              ),
+                                              const Padding(
+                                                padding: EdgeInsetsDirectional
+                                                    .fromSTEB(0, 4, 0, 0),
+                                                child: Icon(
+                                                  Icons.star_rounded,
+                                                  color: Color(0xFFF6C91A),
+                                                  size: 24,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 14),
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                      color: lightColorScheme.onSecondary,
-                      boxShadow: const [
-                        BoxShadow(
-                          blurRadius: 4,
-                          color: Color(0x35000000),
-                          offset: Offset(0, 1),
-                        )
-                      ],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Padding(
-                      padding:
-                          const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsetsDirectional.fromSTEB(
-                                0, 8, 0, 16),
-                            child: Text(
-                              'Trend of drowsy alerts',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              28, 0, 28, 14),
+                          child: Container(
+                            width: MediaQuery.of(context).size.width,
+                            decoration: BoxDecoration(
+                              color: lightColorScheme.onSecondary,
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 4,
+                                  color: Color(0x35000000),
+                                  offset: Offset(0, 1),
+                                )
+                              ],
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                          AspectRatio(
-                            aspectRatio: 1.2,
                             child: Padding(
                               padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 16, 16, 16),
-                              child: LineChart(drowsyCountData()),
+                                  16, 16, 16, 16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            0, 8, 0, 16),
+                                    child: Text(
+                                      'Trend of drowsy alerts',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                                  AspectRatio(
+                                    aspectRatio: 1.2,
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsetsDirectional.fromSTEB(
+                                              0, 16, 16, 16),
+                                      child: LineChart(drowsyCountData()),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 14),
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                      color: lightColorScheme.onSecondary,
-                      boxShadow: const [
-                        BoxShadow(
-                          blurRadius: 4,
-                          color: Color(0x35000000),
-                          offset: Offset(0, 1),
-                        )
-                      ],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Padding(
-                      padding:
-                          const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsetsDirectional.fromSTEB(
-                                0, 8, 0, 16),
-                            child: Text(
-                              'Trend of inattentive alerts',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              28, 0, 28, 14),
+                          child: Container(
+                            width: MediaQuery.of(context).size.width,
+                            decoration: BoxDecoration(
+                              color: lightColorScheme.onSecondary,
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 4,
+                                  color: Color(0x35000000),
+                                  offset: Offset(0, 1),
+                                )
+                              ],
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ),
-                          AspectRatio(
-                            aspectRatio: 1.2,
                             child: Padding(
                               padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 16, 16, 16),
-                              child: LineChart(inattentiveCountData()),
+                                  16, 16, 16, 16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            0, 8, 0, 16),
+                                    child: Text(
+                                      'Trend of inattentive alerts',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ),
+                                  AspectRatio(
+                                    aspectRatio: 1.2,
+                                    child: Padding(
+                                      padding:
+                                          const EdgeInsetsDirectional.fromSTEB(
+                                              0, 16, 16, 16),
+                                      child: LineChart(inattentiveCountData()),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                        SessionsList(),
+                      ],
+                    ), // Data Column
                   ),
-                ),
-              ],
-            ), // Data Column
-          ),
-        ],
-      ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -615,5 +740,50 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     return Text(text, style: style, textAlign: TextAlign.left);
+  }
+}
+
+class SessionsList extends StatefulWidget {
+  @override
+  _SessionsListState createState() => _SessionsListState();
+}
+
+class _SessionsListState extends State<SessionsList> {
+  List<SessionData> _sessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _getRecentSessions();
+  }
+
+  Future<void> _getRecentSessions() async {
+    DatabaseService databaseHelper = DatabaseService();
+    List<SessionData> sessions = await databaseHelper.getRecentSessions();
+    setState(() {
+      _sessions = sessions;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: _sessions.length,
+      shrinkWrap: true,
+      itemBuilder: (BuildContext context, int index) {
+        SessionData session = _sessions[index];
+        return ListTile(
+          title: Text('Session ${session.id}'),
+          subtitle: Text('Start Time: ${session.startTime}'),
+          trailing: Column(
+            children: [
+              Text('End Time: ${session.endTime}'),
+              Text('Drowsy Alert Count: ${session.drowsyAlerts}'),
+              Text('Inattentive Alert Count: ${session.inattentiveAlerts}'),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

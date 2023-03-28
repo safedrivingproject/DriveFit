@@ -1,11 +1,13 @@
 import 'dart:io';
 
-import 'package:drive_fit/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
+
+import '/home/home_page.dart';
+import '/home/database_service.dart';
 import '../global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
@@ -17,6 +19,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  DatabaseService databaseService = DatabaseService();
   final _rotXController = TextEditingController();
   final _rotYController = TextEditingController();
   final _carVelocityController = TextEditingController();
@@ -31,11 +34,12 @@ class _SettingsPageState extends State<SettingsPage> {
   bool isInvalid = true;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
-  double? carVelocityThreshold = 5.0;
+  double? carVelocityThresholdMS = 8.3, carVelocityThresholdKMH = 30.0;
   List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
   List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
-  double _double = 1.0;
-  int _value = 10;
+  double _doubleValue = 1.0;
+  int _intValue = 10;
+  double _speedValue = 0.0;
 
   Future<void> _loadDefaultSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -54,7 +58,8 @@ class _SettingsPageState extends State<SettingsPage> {
         neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
         rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
         rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
-        carVelocityThreshold = (prefs.getDouble('carVelocityThreshold') ?? 5.0);
+        carVelocityThresholdMS =
+            (prefs.getDouble('carVelocityThreshold') ?? 8.3);
         drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
             ["asset", "audio/car_horn_high.mp3"]);
         inattentiveAlarmValue = (prefs.getStringList('inattentiveAlarm') ??
@@ -109,20 +114,21 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadDefaultSettings();
     _rotXController.addListener(() {
-      onFieldChanged(_rotXController, true);
+      onFieldChanged(_rotXController, true, false);
     });
     _rotYController.addListener(() {
-      onFieldChanged(_rotYController, true);
+      onFieldChanged(_rotYController, true, false);
     });
     _carVelocityController.addListener(() {
-      onFieldChanged(_carVelocityController, false);
+      onFieldChanged(_carVelocityController, false, true);
     });
     _additionalDelayController.addListener(() {
-      onFieldChanged(_additionalDelayController, true);
+      onFieldChanged(_additionalDelayController, true, false);
     });
   }
 
-  void onFieldChanged(TextEditingController controller, bool convertDouble) {
+  void onFieldChanged(
+      TextEditingController controller, bool convertDelay, bool convertSpeed) {
     if (mounted) {
       setState(() {
         if (controller.text.isEmpty ||
@@ -137,17 +143,18 @@ class _SettingsPageState extends State<SettingsPage> {
       _statesController.update(MaterialState.disabled, true);
     } else if (!isInvalid) {
       _statesController.update(MaterialState.disabled, false);
-      if (!convertDouble) {
+      if (convertDelay) {
         if (mounted) {
           setState(() {
-            _double = double.tryParse(controller.text) ?? 5.0;
+            _doubleValue = double.tryParse(controller.text) ?? 1.0;
+            _intValue = (_doubleValue * 10).round();
           });
         }
-      } else {
+      } else if (convertSpeed) {
         if (mounted) {
           setState(() {
-            _double = double.tryParse(controller.text) ?? 1.0;
-            _value = (_double * 10).round();
+            _doubleValue = double.tryParse(controller.text) ?? 30.0;
+            _speedValue = (_doubleValue / 3.6);
           });
         }
       }
@@ -286,9 +293,9 @@ class _SettingsPageState extends State<SettingsPage> {
                               onPressed: () {
                                 if (mounted) {
                                   setState(() {
-                                    additionalDelay = _value;
+                                    additionalDelay = _intValue;
                                     _saveInt('additionalDelay',
-                                        additionalDelay ?? _value);
+                                        additionalDelay ?? _intValue);
                                   });
                                 }
                                 showSnackBar(context, "Setting updated.");
@@ -401,8 +408,9 @@ class _SettingsPageState extends State<SettingsPage> {
                               onPressed: () {
                                 if (mounted) {
                                   setState(() {
-                                    rotXDelay = _value;
-                                    _saveInt('rotXDelay', rotXDelay ?? _value);
+                                    rotXDelay = _intValue;
+                                    _saveInt(
+                                        'rotXDelay', rotXDelay ?? _intValue);
                                   });
                                 }
                                 showSnackBar(context, "Setting updated.");
@@ -479,8 +487,9 @@ class _SettingsPageState extends State<SettingsPage> {
                               onPressed: () {
                                 if (mounted) {
                                   setState(() {
-                                    rotYDelay = _value;
-                                    _saveInt('rotYDelay', rotYDelay ?? _value);
+                                    rotYDelay = _intValue;
+                                    _saveInt(
+                                        'rotYDelay', rotYDelay ?? _intValue);
                                   });
                                 }
                                 showSnackBar(context, "Setting updated.");
@@ -502,7 +511,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      Text("${(carVelocityThreshold!).toStringAsFixed(1)} m/s"),
+                      Text(
+                          "${(carVelocityThresholdKMH!).toStringAsFixed(1)} km/h"),
                     ],
                   ),
                   description:
@@ -536,8 +546,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             },
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
-                                labelText: 'Threshold (in m/s)',
-                                hintText: 'e.g. 5.0'),
+                                labelText: 'Threshold (in km/h)',
+                                hintText: 'e.g. 30.0'),
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -559,9 +569,13 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ? () {
                                       if (mounted) {
                                         setState(() {
-                                          carVelocityThreshold = _double;
-                                          _saveDouble('carVelocityThreshold',
-                                              carVelocityThreshold ?? _double);
+                                          carVelocityThresholdMS = _speedValue;
+                                          carVelocityThresholdKMH =
+                                              _doubleValue;
+                                          _saveDouble(
+                                              'carVelocityThreshold',
+                                              carVelocityThresholdMS ??
+                                                  _speedValue);
                                         });
                                       }
                                       showSnackBar(context, "Setting updated.");
@@ -787,7 +801,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   setState(() {
                                     _clearSPData();
                                     _loadDefaultSettings();
-                                    // TODO: Clear SQLite Data
+                                    databaseService.deleteData();
                                   });
                                 }
                                 Navigator.of(context).pop();

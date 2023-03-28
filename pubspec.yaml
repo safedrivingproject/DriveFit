@@ -51,6 +51,9 @@ dependencies:
   geolocator_apple: ^2.2.5
   file_picker: ^5.2.6
   fl_chart: ^0.61.0
+  sqflite: ^2.2.6
+  path_provider: ^2.0.14
+  intl: ^0.17.0
 
 dev_dependencies:
   flutter_test:
