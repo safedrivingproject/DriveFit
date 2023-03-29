@@ -1,8 +1,9 @@
-import 'package:drive_fit/driving_mode/geolocation_service.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
+
+import '/service/geolocation_service.dart';
 import '/driving_mode/driving_view.dart';
 import '/settings/settings_page.dart';
 import '../global_variables.dart' as globals;
@@ -129,7 +130,7 @@ class _DrivePageState extends State<DrivePage> {
               child: Stack(
                 alignment: Alignment.topCenter,
                 children: [
-                  Container(
+                  SizedBox(
                     height: MediaQuery.of(context).size.height -
                         kToolbarHeight -
                         kBottomNavigationBarHeight,

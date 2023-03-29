@@ -6,7 +6,8 @@ import 'history_page.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
-  const HomePage({super.key, required this.title});
+  final int? index;
+  const HomePage({super.key, required this.title, this.index});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -14,6 +15,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedPageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedPageIndex = widget.index ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {

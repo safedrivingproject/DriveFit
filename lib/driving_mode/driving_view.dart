@@ -15,8 +15,10 @@ import 'camera_view.dart';
 import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
-import 'face_detection_service.dart';
-import 'geolocation_service.dart';
+import '../service/face_detection_service.dart';
+import '../service/geolocation_service.dart';
+import '../service/database_service.dart';
+import 'drive_session_summary.dart';
 import '/global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
@@ -65,17 +67,19 @@ class _DrivingViewState extends State<DrivingView> {
   double _rawAccelX = 0, _rawAccelY = 9.8, _rawAccelZ = 0;
   double accelX = 0, accelY = 0, accelZ = 0;
 
-  StreamSubscription<Position>? positionStreamSubscription;
+  SessionData currentSession = SessionData(
+      id: 0,
+      startTime: "",
+      endTime: "",
+      duration: 0,
+      distance: 0.0,
+      drowsyAlerts: 0,
+      inattentiveAlerts: 0,
+      score: 0);
 
-  String startTime = '';
-  String endTime = '';
-  int duration = 0;
-  Position? initialPos, finalPos;
-  double distance = 0.0;
-  int drowsyAlerts = 0;
-  int inattentiveAlerts = 0;
-  int score = 0;
   DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
+  DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
+  DateFormat noYearsSeconds = DateFormat("MM-dd HH:mm");
 
   /// *******************************************************
   /// *******************************************************
@@ -102,9 +106,9 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.neutralRotY =
             (prefs.getDouble('neutralRotY') ?? -25.0);
         faceDetectionService.rotYLeftOffset =
-            (prefs.getDouble('rotYLeftOffset') ?? 25);
+            (prefs.getDouble('rotYLeftOffset') ?? 20);
         faceDetectionService.rotYRightOffset =
-            (prefs.getDouble('rotYRightOffset') ?? 20);
+            (prefs.getDouble('rotYRightOffset') ?? 10);
         faceDetectionService.rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
         faceDetectionService.rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
         geolocationService.carVelocityThreshold =
@@ -178,20 +182,37 @@ class _DrivingViewState extends State<DrivingView> {
         desiredAccuracy: LocationAccuracy.bestForNavigation);
   }
 
-  String saveCurrentTime() {
-    return noMillis.format(DateTime.now());
+  String saveCurrentTime(DateFormat format) {
+    return format.format(DateTime.now());
   }
 
-  void _resetSessionData() {
-    startTime = '';
-    endTime = '';
-    duration = 0;
-    initialPos = null;
-    finalPos = null;
-    distance = 0.0;
-    drowsyAlerts = 0;
-    inattentiveAlerts = 0;
-    score = 0;
+  void _initSessionData() {
+    if (mounted) {
+      setState(() {
+        geolocationService.accumulatedDistance = 0.0;
+        currentSession = SessionData(
+            id: DateTime.now().millisecondsSinceEpoch,
+            startTime: "",
+            endTime: "",
+            duration: 0,
+            distance: widget.enableGeolocation
+                ? geolocationService.accumulatedDistance
+                : -1.0,
+            drowsyAlerts: 0,
+            inattentiveAlerts: 0,
+            score: 0);
+        currentSession.startTime = saveCurrentTime(noMillis);
+      });
+    }
+  }
+
+  void _saveSessionData() {
+    currentSession.endTime = saveCurrentTime(noMillis);
+    currentSession.duration = DateTime.parse(currentSession.endTime)
+        .difference(DateTime.parse(currentSession.startTime))
+        .inSeconds;
+    currentSession.distance = geolocationService.accumulatedDistance;
+    currentSession.score = calcDrivingScore();
   }
 
   @override
@@ -205,7 +226,7 @@ class _DrivingViewState extends State<DrivingView> {
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
 
-    _resetSessionData();
+    _initSessionData();
 
     if (widget.calibrationMode == true) {
       if (mounted) {
@@ -224,9 +245,6 @@ class _DrivingViewState extends State<DrivingView> {
     } else {
       carMoving = true;
     }
-
-    saveCurrentPosition(initialPos);
-    startTime = saveCurrentTime();
   }
 
   @override
@@ -234,12 +252,13 @@ class _DrivingViewState extends State<DrivingView> {
     _canProcess = false;
     periodicDetectionTimer?.cancel();
     periodicCalibrationTimer?.cancel();
+
     geolocationService.stopGeolocationStream();
-    saveCurrentPosition(finalPos);
-    endTime = saveCurrentTime();
     globals.inCalibrationMode = false;
+
     drowsyAudioPlayer.dispose();
     inattentiveAudioPlayer.dispose();
+
     _faceDetector.close();
     _stopAccelerometer();
     super.dispose();
@@ -266,7 +285,8 @@ class _DrivingViewState extends State<DrivingView> {
     NotificationController.createDistractedNotification();
   }
 
-  void detectionTimer() {
+  void detectionTimer() async {
+    await Future.delayed(const Duration(seconds: 5));
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted) {
@@ -322,6 +342,10 @@ class _DrivingViewState extends State<DrivingView> {
         sendSleepyReminder();
         if (mounted) {
           setState(() {
+            if (faceDetectionService.hasReminded == false) {
+              currentSession.drowsyAlerts++;
+              faceDetectionService.hasReminded = true;
+            }
             faceDetectionService.reminderType = "None";
           });
         }
@@ -329,6 +353,10 @@ class _DrivingViewState extends State<DrivingView> {
         sendDistractedReminder();
         if (mounted) {
           setState(() {
+            if (faceDetectionService.hasReminded == false) {
+              currentSession.inattentiveAlerts++;
+              faceDetectionService.hasReminded = true;
+            }
             faceDetectionService.reminderType = "None";
           });
         }
@@ -498,7 +526,7 @@ class _DrivingViewState extends State<DrivingView> {
         _text = '';
       });
     }
-    // faces = await _faceDetector.processImage(inputImage);
+
     faceDetectionService.faces = await _faceDetector.processImage(inputImage);
     if (faceDetectionService.faces.isNotEmpty) {
       final face = faceDetectionService.faces[0];
@@ -650,6 +678,12 @@ class _DrivingViewState extends State<DrivingView> {
                           DataValueWidget(
                               text: "reminderType",
                               stringValue: faceDetectionService.reminderType),
+                          DataValueWidget(
+                              text: "drowsyAlertCount",
+                              intValue: currentSession.drowsyAlerts),
+                          DataValueWidget(
+                              text: "inattentiveAlertCount",
+                              intValue: currentSession.inattentiveAlerts),
                           DataValueWidget(
                               text: "carMoving", boolValue: carMoving),
                           if (widget.accelerometerOn == true)
@@ -963,7 +997,11 @@ class _DrivingViewState extends State<DrivingView> {
                               minimumSize: const Size.fromHeight(50),
                             ),
                             onPressed: () {
+                              _saveSessionData();
                               Navigator.of(context).pop(true);
+                              Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) => DriveSessionSummary(
+                                      session: currentSession)));
                             },
                             child: Text(
                               "Stop driving",
@@ -974,52 +1012,52 @@ class _DrivingViewState extends State<DrivingView> {
                               textAlign: TextAlign.center,
                             ),
                           ),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(16.0))),
-                              backgroundColor: lightColorScheme.primary,
-                              minimumSize: const Size.fromHeight(50),
-                            ),
-                            onPressed: () {
-                              geolocationService.getCurrentPosition();
-                            },
-                            child: Text(
-                              "Get Current Location",
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(color: lightColorScheme.onPrimary),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              shape: const RoundedRectangleBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(16.0))),
-                              backgroundColor: lightColorScheme.primary,
-                              minimumSize: const Size.fromHeight(50),
-                            ),
-                            onPressed: () {
-                              geolocationService.getLastKnownPosition();
-                            },
-                            child: Text(
-                              "Get Last Known Location",
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(color: lightColorScheme.onPrimary),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
+                          // const SizedBox(
+                          //   height: 10,
+                          // ),
+                          // FilledButton(
+                          //   style: FilledButton.styleFrom(
+                          //     shape: const RoundedRectangleBorder(
+                          //         borderRadius:
+                          //             BorderRadius.all(Radius.circular(16.0))),
+                          //     backgroundColor: lightColorScheme.primary,
+                          //     minimumSize: const Size.fromHeight(50),
+                          //   ),
+                          //   onPressed: () {
+                          //     geolocationService.getCurrentPosition();
+                          //   },
+                          //   child: Text(
+                          //     "Get Current Location",
+                          //     style: Theme.of(context)
+                          //         .textTheme
+                          //         .labelLarge
+                          //         ?.copyWith(color: lightColorScheme.onPrimary),
+                          //     textAlign: TextAlign.center,
+                          //   ),
+                          // ),
+                          // const SizedBox(
+                          //   height: 10,
+                          // ),
+                          // FilledButton(
+                          //   style: FilledButton.styleFrom(
+                          //     shape: const RoundedRectangleBorder(
+                          //         borderRadius:
+                          //             BorderRadius.all(Radius.circular(16.0))),
+                          //     backgroundColor: lightColorScheme.primary,
+                          //     minimumSize: const Size.fromHeight(50),
+                          //   ),
+                          //   onPressed: () {
+                          //     geolocationService.getLastKnownPosition();
+                          //   },
+                          //   child: Text(
+                          //     "Get Last Known Location",
+                          //     style: Theme.of(context)
+                          //         .textTheme
+                          //         .labelLarge
+                          //         ?.copyWith(color: lightColorScheme.onPrimary),
+                          //     textAlign: TextAlign.center,
+                          //   ),
+                          // ),
                           if (!globals.showDebug) const SizedBox(height: 80),
                         ],
                       ),
@@ -1044,6 +1082,36 @@ class _DrivingViewState extends State<DrivingView> {
   void showSnackBar(BuildContext context, String text) {
     var snackBar = SnackBar(content: Text(text));
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  int calcDrivingScore() {
+    if ((currentSession.drowsyAlerts / currentSession.duration) <= (1 / 600) &&
+        (currentSession.inattentiveAlerts / currentSession.duration) <=
+            (1 / 600)) {
+      return 5;
+    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+            (3 / 600) ||
+        (currentSession.inattentiveAlerts / currentSession.duration) <=
+            (3 / 600)) {
+      return 4;
+    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+            (5 / 600) &&
+        (currentSession.inattentiveAlerts / currentSession.duration) <=
+            (5 / 600)) {
+      return 3;
+    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+            (7 / 600) &&
+        (currentSession.inattentiveAlerts / currentSession.duration) <=
+            (7 / 600)) {
+      return 2;
+    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+            (9 / 600) &&
+        (currentSession.inattentiveAlerts / currentSession.duration) <=
+            (9 / 600)) {
+      return 1;
+    } else {
+      return 0;
+    }
   }
 }
 

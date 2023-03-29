@@ -24,7 +24,8 @@ class GeolocationService {
   double currentLatitude = 0.0,
       currentLongitude = 0.0,
       currentSpeed = 0.0,
-      currentCalculatedSpeed = 0.0;
+      currentCalculatedSpeed = 0.0,
+      accumulatedDistance = 0.0;
   DateTime currentTimeStamp = DateTime.now();
   //
   int speedCounter = 0;
@@ -43,6 +44,7 @@ class GeolocationService {
     currentSpeed = 0.0;
     currentTimeStamp = DateTime.now();
     currentCalculatedSpeed = 0.0;
+    accumulatedDistance = 0.0;
     //
     speedCounter = 0;
     carVelocityThreshold = 5.0;
@@ -87,6 +89,7 @@ class GeolocationService {
     currentLongitude = position.longitude;
     currentSpeed = position.speed;
     currentTimeStamp = position.timestamp ?? DateTime.now();
+    accumulatedDistance += calcDistanceDifference();
     positionList.insert(
         0,
         PositionValue(
@@ -141,16 +144,22 @@ class GeolocationService {
 
   double calculateSpeed() {
     if (positionList.length < 2) return 0.0;
-    var distanceDifference = Geolocator.distanceBetween(
-        positionList[1].latitude,
-        positionList[1].longitude,
-        positionList[0].latitude,
-        positionList[0].longitude);
+    var distanceDifference = calcDistanceDifference();
     var timeDifference =
         positionList[1].timestamp.difference(positionList[0].timestamp);
     return (distanceDifference /
             (timeDifference.inSeconds == 0 ? 1 : timeDifference.inSeconds))
         .abs();
+  }
+
+  double calcDistanceDifference() {
+    if (positionList.length < 2) return 0.0;
+    var distanceDifference = Geolocator.distanceBetween(
+        positionList[1].latitude,
+        positionList[1].longitude,
+        positionList[0].latitude,
+        positionList[0].longitude);
+    return distanceDifference;
   }
 
   void updateSpeedList(double speed) {

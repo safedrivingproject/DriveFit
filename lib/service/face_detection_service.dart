@@ -37,6 +37,7 @@ class FaceDetectionService {
     //
     reminderCount = 0;
     reminderType = "None";
+    hasReminded = false;
     //
     hasFace = false;
   }
@@ -45,15 +46,12 @@ class FaceDetectionService {
       neutralRotY = -25,
       //
       rotXOffset = 15,
-      rotYLeftOffset = 15,
-      rotYRightOffset = 15,
+      rotYLeftOffset = 20,
+      rotYRightOffset = 10,
       eyeProbThreshold = 0.3;
   //
   List<Face> faces = [];
-  double? rotX = 5,
-      rotY = -25,
-      leftEyeOpenProb = 1.0,
-      rightEyeOpenProb = 1.0;
+  double? rotX = 5, rotY = -25, leftEyeOpenProb = 1.0, rightEyeOpenProb = 1.0;
   //
   int hasFaceCounter = 0;
   int eyeCounter = 0;
@@ -64,6 +62,7 @@ class FaceDetectionService {
   //
   int reminderCount = 0;
   String reminderType = "None";
+  bool hasReminded = false;
   //
   bool hasFace = false;
 
@@ -91,8 +90,10 @@ class FaceDetectionService {
         eyeCounter++;
       } else {
         eyeCounter = 0;
+        hasReminded = false;
       }
       if (reminderCount >= 3) {
+        hasReminded = false;
         reminderType = "None";
         return;
       }
@@ -117,6 +118,7 @@ class FaceDetectionService {
           rightEyeOpenProb! > eyeProbThreshold) {
         reminderCount = 0;
         reminderType = "None";
+        hasReminded = false;
       }
     }
   }
@@ -127,11 +129,13 @@ class FaceDetectionService {
       rotXCounter++;
     } else {
       rotXCounter = 0;
+      hasReminded = false;
     }
     if (reminderCount >= 3) {
-        reminderType = "None";
-        return;
-      }
+      hasReminded = false;
+      reminderType = "None";
+      return;
+    }
     if (rotXCounter > delay) {
       reminderType = "Drowsy";
       reminderCount++;
@@ -145,11 +149,13 @@ class FaceDetectionService {
       rotYCounter++;
     } else {
       rotYCounter = 0;
+      hasReminded = false;
     }
     if (reminderCount >= 3) {
-        reminderType = "None";
-        return;
-      }
+      hasReminded = false;
+      reminderType = "None";
+      return;
+    }
     if (rotYCounter > delay) {
       reminderType = "Inattentive";
       reminderCount++;

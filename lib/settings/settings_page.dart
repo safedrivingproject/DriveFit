@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '/home/home_page.dart';
-import '/home/database_service.dart';
+import '../service/database_service.dart';
 import '../global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
@@ -31,7 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
       useHighCameraResolution,
       showDebug,
       hasCalibrated;
-  bool isInvalid = true;
+  bool isInvalid = false;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThresholdMS = 8.3, carVelocityThresholdKMH = 30.0;
@@ -165,6 +165,8 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _rotXController.dispose();
     _rotYController.dispose();
+    _carVelocityController.dispose();
+    _additionalDelayController.dispose();
     _statesController.dispose();
     super.dispose();
   }
@@ -183,7 +185,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () {
                 Navigator.of(context)
                     .pushReplacement(MaterialPageRoute(builder: (context) {
-                  return const HomePage(title: globals.appName);
+                  return const HomePage(title: globals.appName, index: 0);
                 }));
               },
             )),
@@ -565,23 +567,18 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               statesController: _statesController,
-                              onPressed: !isInvalid
-                                  ? () {
-                                      if (mounted) {
-                                        setState(() {
-                                          carVelocityThresholdMS = _speedValue;
-                                          carVelocityThresholdKMH =
-                                              _doubleValue;
-                                          _saveDouble(
-                                              'carVelocityThreshold',
-                                              carVelocityThresholdMS ??
-                                                  _speedValue);
-                                        });
-                                      }
-                                      showSnackBar(context, "Setting updated.");
-                                      Navigator.of(context).pop();
-                                    }
-                                  : null,
+                              onPressed: () {
+                                if (mounted) {
+                                  setState(() {
+                                    carVelocityThresholdMS = _speedValue;
+                                    carVelocityThresholdKMH = _doubleValue;
+                                    _saveDouble('carVelocityThreshold',
+                                        carVelocityThresholdMS ?? _speedValue);
+                                  });
+                                }
+                                showSnackBar(context, "Setting updated.");
+                                Navigator.of(context).pop();
+                              },
                               child: const Text("Done"),
                             ),
                           ],

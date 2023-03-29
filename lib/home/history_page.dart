@@ -4,7 +4,7 @@ import 'dart:math';
 
 import '/theme/color_schemes.g.dart';
 import '/settings/settings_page.dart';
-import 'database_service.dart';
+import '../service/database_service.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
