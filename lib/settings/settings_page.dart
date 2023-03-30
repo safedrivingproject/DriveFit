@@ -59,7 +59,9 @@ class _SettingsPageState extends State<SettingsPage> {
         rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
         rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
         carVelocityThresholdMS =
-            (prefs.getDouble('carVelocityThreshold') ?? 8.3);
+            (prefs.getDouble('carVelocityThreshold') ?? 8.33);
+        carVelocityThresholdKMH =
+            (carVelocityThresholdMS! * 3.6).roundToDouble();
         drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
             ["asset", "audio/car_horn_high.mp3"]);
         inattentiveAlarmValue = (prefs.getStringList('inattentiveAlarm') ??
@@ -803,7 +805,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 }
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Reset"),
+                              child: const Text("Clear"),
                             ),
                           ],
                         );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'dart:math';
+import 'package:intl/intl.dart';
 
 import '/theme/color_schemes.g.dart';
 import '/settings/settings_page.dart';
@@ -14,10 +14,14 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  final DatabaseService databaseService = DatabaseService();
   final ScrollController _scrollController =
       ScrollController(keepScrollOffset: true);
-  Color _appBarBgColor = Colors.transparent;
   double _scrollOffset = 0.0;
+
+  List<SessionData> driveSessionsList = [];
+  int rowCount = 0;
+  int totalAlerts = 0;
 
   @override
   void initState() {
@@ -27,15 +31,19 @@ class _HistoryPageState extends State<HistoryPage> {
         _scrollOffset = _scrollController.offset;
       });
     });
+    databaseService.getRecentSessions(driveSessionsList);
+    databaseService.getRowCount(rowCount);
+    databaseService.getTotalAlertCount(totalAlerts);
   }
 
+  // ignore: unused_element
   bool get _isSliverAppBarExpanded {
     return _scrollController.hasClients &&
         _scrollController.offset > (180 - kToolbarHeight);
   }
 
   double _getTitleOpacity() {
-    var opacity;
+    double opacity;
     var threshold = 150 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 1.0;
@@ -48,7 +56,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   double _getAppBarOpacity() {
-    var opacity;
+    double opacity;
     var threshold = 150 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 1.0;
@@ -61,7 +69,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   double _getLargeTitleOpacity() {
-    var opacity;
+    double opacity;
     var threshold = 100 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 0.0;
@@ -194,7 +202,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.end,
                                       children: [
-                                        Text('11',
+                                        Text(rowCount.toString(),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .displayLarge),
@@ -210,7 +218,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                                           .inverseSurface)),
                                         ),
                                         const SizedBox(width: 20),
-                                        Text('23',
+                                        Text(totalAlerts.toString(),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .displayLarge),
@@ -402,7 +410,23 @@ class _HistoryPageState extends State<HistoryPage> {
                                       padding:
                                           const EdgeInsetsDirectional.fromSTEB(
                                               0, 16, 16, 16),
-                                      child: LineChart(drowsyCountData()),
+                                      child: driveSessionsList.isNotEmpty
+                                          ? LineChart(drowsyCountData())
+                                          : SizedBox(
+                                              height: 75,
+                                              width: MediaQuery.of(context)
+                                                  .size
+                                                  .width,
+                                              child: Center(
+                                                child: Text(
+                                                  "No sessions yet :/\nStart driving to begin a session now :)",
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyLarge,
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -452,7 +476,23 @@ class _HistoryPageState extends State<HistoryPage> {
                                       padding:
                                           const EdgeInsetsDirectional.fromSTEB(
                                               0, 16, 16, 16),
-                                      child: LineChart(inattentiveCountData()),
+                                      child: driveSessionsList.isNotEmpty
+                                          ? LineChart(inattentiveCountData())
+                                          : SizedBox(
+                                              height: 75,
+                                              width: MediaQuery.of(context)
+                                                  .size
+                                                  .width,
+                                              child: Center(
+                                                child: Text(
+                                                  "No sessions yet :/\nStart driving to begin a session now :)",
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyLarge,
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -460,7 +500,9 @@ class _HistoryPageState extends State<HistoryPage> {
                             ),
                           ),
                         ),
-                        SessionsList(),
+                        SessionsList(
+                          sessionsList: driveSessionsList,
+                        ),
                       ],
                     ), // Data Column
                   ),
@@ -478,7 +520,7 @@ class _HistoryPageState extends State<HistoryPage> {
       gridData: FlGridData(
         show: true,
         drawVerticalLine: true,
-        horizontalInterval: getMaxY(getRecentDrowsyData())! > 25 ? 5 : 1,
+        horizontalInterval: getMaxY(getRecentDrowsyFlList())! > 25 ? 5 : 1,
         verticalInterval: 1,
         getDrawingHorizontalLine: (value) {
           return FlLine(
@@ -544,10 +586,10 @@ class _HistoryPageState extends State<HistoryPage> {
       minX: 0,
       maxX: 14,
       minY: 0,
-      maxY: (getMaxY(getRecentDrowsyData())! / 5).ceil() * 5,
+      maxY: (getMaxY(getRecentDrowsyFlList())! / 5).ceil() * 5,
       lineBarsData: [
         LineChartBarData(
-          spots: getRecentDrowsyData(),
+          spots: getRecentDrowsyFlList(),
           isCurved: false,
           color: lightColorScheme.primary,
           barWidth: 5,
@@ -563,12 +605,17 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  List<FlSpot> getRecentDrowsyData() {
-    var list = <FlSpot>[];
-    for (double i = 0; i <= 14; i++) {
-      list.add(FlSpot(i, 14 - i));
+  List<FlSpot> getRecentDrowsyFlList() {
+    var flSpotlist = <FlSpot>[];
+    var sessionsDrowsyListInt = driveSessionsList
+        .map((sessionData) => sessionData.drowsyAlertCount)
+        .toList();
+    var sessionsDrowsyListDouble =
+        sessionsDrowsyListInt.map((count) => count.toDouble()).toList();
+    for (int i = 0; i < sessionsDrowsyListInt.length; i++) {
+      flSpotlist.add(FlSpot((14.0 - i), sessionsDrowsyListDouble[i]));
     }
-    return list;
+    return flSpotlist;
   }
 
   LineChartData inattentiveCountData() {
@@ -576,7 +623,7 @@ class _HistoryPageState extends State<HistoryPage> {
       gridData: FlGridData(
         show: true,
         drawVerticalLine: true,
-        horizontalInterval: getMaxY(getRecentInattentiveData())! > 25 ? 5 : 1,
+        horizontalInterval: getMaxY(getRecentInattentiveFlList())! > 25 ? 5 : 1,
         verticalInterval: 1,
         getDrawingHorizontalLine: (value) {
           return FlLine(
@@ -642,10 +689,10 @@ class _HistoryPageState extends State<HistoryPage> {
       minX: 0,
       maxX: 14,
       minY: 0,
-      maxY: (getMaxY(getRecentInattentiveData())! / 5).ceil() * 5,
+      maxY: (getMaxY(getRecentInattentiveFlList())! / 5).ceil() * 5,
       lineBarsData: [
         LineChartBarData(
-          spots: getRecentInattentiveData(),
+          spots: getRecentInattentiveFlList(),
           isCurved: false,
           color: lightColorScheme.primary,
           barWidth: 5,
@@ -661,12 +708,17 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  List<FlSpot> getRecentInattentiveData() {
-    var list = <FlSpot>[];
-    for (double i = 0; i <= 14; i++) {
-      list.add(FlSpot(i, i + 4));
+  List<FlSpot> getRecentInattentiveFlList() {
+    var flSpotlist = <FlSpot>[];
+    var sessionsInattentiveListInt = driveSessionsList
+        .map((sessionData) => sessionData.inattentiveAlertCount)
+        .toList();
+    var sessionsInattentiveListDouble =
+        sessionsInattentiveListInt.map((count) => count.toDouble()).toList();
+    for (int i = 0; i < sessionsInattentiveListInt.length; i++) {
+      flSpotlist.add(FlSpot((14.0 - i), sessionsInattentiveListDouble[i]));
     }
-    return list;
+    return flSpotlist;
   }
 
   double? getMaxY(List<FlSpot> getList) {
@@ -707,83 +759,175 @@ class _HistoryPageState extends State<HistoryPage> {
       fontSize: 14,
     );
     String text;
-    switch (value.toInt()) {
-      case 0:
-        text = '0';
-        break;
-      case 5:
-        text = '5';
-        break;
-      case 10:
-        text = '10';
-        break;
-      case 15:
-        text = '15';
-        break;
-      case 20:
-        text = '20';
-        break;
-      case 25:
-        text = '25';
-        break;
-      case 30:
-        text = '30';
-        break;
-      case 35:
-        text = '35';
-        break;
-      case 40:
-        text = '40';
-        break;
-      default:
-        return Container();
+    if (value.toInt() % 5 == 0) {
+      text = value.toStringAsFixed(0);
+      return Text(text, style: style, textAlign: TextAlign.left);
+    } else {
+      return Container();
     }
-
-    return Text(text, style: style, textAlign: TextAlign.left);
   }
 }
 
 class SessionsList extends StatefulWidget {
+  final List<SessionData> sessionsList;
+  const SessionsList({
+    super.key,
+    required this.sessionsList,
+  });
+
   @override
   _SessionsListState createState() => _SessionsListState();
 }
 
 class _SessionsListState extends State<SessionsList> {
-  List<SessionData> _sessions = [];
+  DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
+  DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
+  DateFormat noYearsSeconds = DateFormat("MM-dd HH:mm");
 
-  @override
-  void initState() {
-    super.initState();
-    _getRecentSessions();
-  }
-
-  Future<void> _getRecentSessions() async {
-    DatabaseService databaseHelper = DatabaseService();
-    List<SessionData> sessions = await databaseHelper.getRecentSessions();
-    setState(() {
-      _sessions = sessions;
-    });
+  String formatTime(DateFormat format, String time) {
+    return format.format(DateTime.parse(time));
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      itemCount: _sessions.length,
-      shrinkWrap: true,
-      itemBuilder: (BuildContext context, int index) {
-        SessionData session = _sessions[index];
-        return ListTile(
-          title: Text('Session ${session.id}'),
-          subtitle: Text('Start Time: ${session.startTime}'),
-          trailing: Column(
-            children: [
-              Text('End Time: ${session.endTime}'),
-              Text('Drowsy Alert Count: ${session.drowsyAlerts}'),
-              Text('Inattentive Alert Count: ${session.inattentiveAlerts}'),
-            ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 0),
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 8),
+            decoration: BoxDecoration(
+              color: lightColorScheme.background,
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 4,
+                  color: Color(0x35000000),
+                  offset: Offset(0, 1),
+                )
+              ],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: lightColorScheme.background,
+                width: 1,
+              ),
+            ),
+            child: Text("Previous Sessions:",
+                style: Theme.of(context).textTheme.titleMedium),
           ),
-        );
-      },
+        ),
+        ListView.builder(
+          itemCount: widget.sessionsList.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (BuildContext context, int index) {
+            SessionData session = widget.sessionsList[index];
+            return Card(
+              margin: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 16),
+              child: Padding(
+                padding: const EdgeInsets.all(14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)}",
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        SessionDetailsModule(
+                          icon: const Icon(Icons.info_outline_rounded),
+                          label: "Drowsy:",
+                          value: session.drowsyAlertCount,
+                          trailing: " times",
+                        ),
+                        const SizedBox(width: 10),
+                        SessionDetailsModule(
+                          icon: const Icon(Icons.notifications_paused_outlined),
+                          label: "Inattentive:",
+                          value: session.inattentiveAlertCount,
+                          trailing: " times",
+                        ),
+                        const SizedBox(width: 10),
+                        SessionDetailsModule(
+                          icon: const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFF6C91A),
+                            size: 24,
+                          ),
+                          label: "Score:",
+                          value: session.score,
+                          trailing: "",
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        if (widget.sessionsList.isEmpty)
+          SizedBox(
+            height: 75,
+            width: MediaQuery.of(context).size.width,
+            child: Text(
+              "No sessions yet :/",
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class SessionDetailsModule extends StatelessWidget {
+  const SessionDetailsModule({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.trailing,
+  });
+
+  final Icon icon;
+  final String label;
+  final dynamic value;
+  final String trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        icon,
+        const SizedBox(width: 10),
+        Column(
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 0),
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(value.toString(),
+                    style: Theme.of(context).textTheme.titleMedium),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(0, 4, 0, 0),
+                  child: Text(trailing,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -185,7 +185,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                           Row(
                             children: [
                               Text(
-                                '${widget.session.drowsyAlerts}',
+                                '${widget.session.drowsyAlertCount}',
                                 style: Theme.of(context).textTheme.displaySmall,
                               ),
                               Text(
@@ -199,7 +199,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                           Row(
                             children: [
                               Text(
-                                '${widget.session.inattentiveAlerts}',
+                                '${widget.session.inattentiveAlertCount}',
                                 style: Theme.of(context).textTheme.displaySmall,
                               ),
                               Text(

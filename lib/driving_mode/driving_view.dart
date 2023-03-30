@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:core';
 import 'dart:math';
+import 'package:drive_fit/home/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -40,6 +41,7 @@ class DrivingView extends StatefulWidget {
 class _DrivingViewState extends State<DrivingView> {
   final FaceDetectionService faceDetectionService = FaceDetectionService();
   final GeolocationService geolocationService = GeolocationService();
+  final DatabaseService databaseService = DatabaseService();
 
   final AudioPlayer drowsyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
@@ -73,8 +75,8 @@ class _DrivingViewState extends State<DrivingView> {
       endTime: "",
       duration: 0,
       distance: 0.0,
-      drowsyAlerts: 0,
-      inattentiveAlerts: 0,
+      drowsyAlertCount: 0,
+      inattentiveAlertCount: 0,
       score: 0);
 
   DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
@@ -198,21 +200,26 @@ class _DrivingViewState extends State<DrivingView> {
             distance: widget.enableGeolocation
                 ? geolocationService.accumulatedDistance
                 : -1.0,
-            drowsyAlerts: 0,
-            inattentiveAlerts: 0,
+            drowsyAlertCount: 0,
+            inattentiveAlertCount: 0,
             score: 0);
         currentSession.startTime = saveCurrentTime(noMillis);
       });
     }
   }
 
-  void _saveSessionData() {
-    currentSession.endTime = saveCurrentTime(noMillis);
-    currentSession.duration = DateTime.parse(currentSession.endTime)
-        .difference(DateTime.parse(currentSession.startTime))
-        .inSeconds;
-    currentSession.distance = geolocationService.accumulatedDistance;
-    currentSession.score = calcDrivingScore();
+  Future<void> _saveSessionData() async {
+    if (mounted) {
+      setState(() {
+        currentSession.endTime = saveCurrentTime(noMillis);
+        currentSession.duration = DateTime.parse(currentSession.endTime)
+            .difference(DateTime.parse(currentSession.startTime))
+            .inSeconds;
+        currentSession.distance = geolocationService.accumulatedDistance;
+        currentSession.score = calcDrivingScore();
+      });
+    }
+    databaseService.saveSessionData(currentSession);
   }
 
   @override
@@ -343,7 +350,7 @@ class _DrivingViewState extends State<DrivingView> {
         if (mounted) {
           setState(() {
             if (faceDetectionService.hasReminded == false) {
-              currentSession.drowsyAlerts++;
+              currentSession.drowsyAlertCount++;
               faceDetectionService.hasReminded = true;
             }
             faceDetectionService.reminderType = "None";
@@ -354,7 +361,7 @@ class _DrivingViewState extends State<DrivingView> {
         if (mounted) {
           setState(() {
             if (faceDetectionService.hasReminded == false) {
-              currentSession.inattentiveAlerts++;
+              currentSession.inattentiveAlertCount++;
               faceDetectionService.hasReminded = true;
             }
             faceDetectionService.reminderType = "None";
@@ -399,7 +406,11 @@ class _DrivingViewState extends State<DrivingView> {
             startCalibration = false;
           });
           showSnackBar(context, "Calibration complete!");
-          Navigator.of(context).pop(true);
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const HomePage(
+                    title: globals.appName,
+                    index: 0,
+                  )));
 
           timer.cancel();
         }
@@ -680,10 +691,10 @@ class _DrivingViewState extends State<DrivingView> {
                               stringValue: faceDetectionService.reminderType),
                           DataValueWidget(
                               text: "drowsyAlertCount",
-                              intValue: currentSession.drowsyAlerts),
+                              intValue: currentSession.drowsyAlertCount),
                           DataValueWidget(
                               text: "inattentiveAlertCount",
-                              intValue: currentSession.inattentiveAlerts),
+                              intValue: currentSession.inattentiveAlertCount),
                           DataValueWidget(
                               text: "carMoving", boolValue: carMoving),
                           if (widget.accelerometerOn == true)
@@ -719,9 +730,9 @@ class _DrivingViewState extends State<DrivingView> {
                                           alignment: Alignment.center,
                                           child: Center(
                                             child: SizedBox(
-                                              child: Wrap(
+                                              child: Column(
                                                 crossAxisAlignment:
-                                                    WrapCrossAlignment.start,
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
                                                     positionItem.latitude
@@ -730,7 +741,7 @@ class _DrivingViewState extends State<DrivingView> {
                                                         color: Colors.white),
                                                   ),
                                                   const SizedBox(
-                                                    width: 5,
+                                                    width: 2,
                                                   ),
                                                   Text(
                                                     positionItem.longitude
@@ -739,7 +750,7 @@ class _DrivingViewState extends State<DrivingView> {
                                                         color: Colors.white),
                                                   ),
                                                   const SizedBox(
-                                                    width: 5,
+                                                    width: 2,
                                                   ),
                                                   Text(
                                                     positionItem.speed
@@ -748,7 +759,7 @@ class _DrivingViewState extends State<DrivingView> {
                                                         color: Colors.white),
                                                   ),
                                                   const SizedBox(
-                                                    width: 5,
+                                                    width: 2,
                                                   ),
                                                   Text(
                                                     positionItem.timestamp
@@ -833,60 +844,9 @@ class _DrivingViewState extends State<DrivingView> {
                 Column(
                   children: [
                     if (!globals.showDebug)
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: MediaQuery.of(context).size.width,
-                            color: Colors.black.withOpacity(0.5),
-                            padding: const EdgeInsets.all(30),
-                            child: Column(
-                              children: const [
-                                CalibrateInstruction(
-                                  bullet: "1.",
-                                  instruction:
-                                      "Secure your phone in the phone holder",
-                                ),
-                                SizedBox(height: 5),
-                                CalibrateInstruction(
-                                  bullet: "2.",
-                                  instruction:
-                                      "Make sure your head is visible in the camera preview",
-                                ),
-                                SizedBox(height: 5),
-                                CalibrateInstruction(
-                                  bullet: "3.",
-                                  instruction:
-                                      "Look forward towards the road (just like when you are driving attentively)",
-                                ),
-                                SizedBox(height: 5),
-                                CalibrateInstruction(
-                                  bullet: "4.",
-                                  instruction:
-                                      "Press 'Calibrate' and wait 3 seconds",
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (startCalibration == true)
-                            Container(
-                              width: MediaQuery.of(context).size.width,
-                              color: Colors.black.withOpacity(0.5),
-                              padding: const EdgeInsets.all(15),
-                              child: Text(
-                                caliSeconds < 1 ? "Complete!" : "$caliSeconds",
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .displayMedium
-                                    ?.copyWith(
-                                      color: lightColorScheme.onPrimary,
-                                    ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                        ],
-                      ),
+                      CalibrateInstructionList(
+                          startCalibration: startCalibration,
+                          caliSeconds: caliSeconds),
                     const Spacer(),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -929,56 +889,7 @@ class _DrivingViewState extends State<DrivingView> {
                       children: [
                         const Spacer(),
                         if (!globals.showDebug)
-                          Center(
-                            child: Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Icon(
-                                    Icons.security,
-                                    size: 69,
-                                    color: showCameraPreview
-                                        ? lightColorScheme.onPrimary
-                                        : lightColorScheme.primary,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Text(
-                                    "You are now protected!",
-                                    style: showCameraPreview
-                                        ? Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                                color:
-                                                    lightColorScheme.onPrimary)
-                                        : Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
-                                  ),
-                                ),
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                  child: Text(
-                                    "Drive Safely!",
-                                    style: showCameraPreview
-                                        ? Theme.of(context)
-                                            .textTheme
-                                            .displayMedium
-                                            ?.copyWith(
-                                                color:
-                                                    lightColorScheme.onPrimary)
-                                        : Theme.of(context)
-                                            .textTheme
-                                            .displayMedium,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          PageCenterText(showCameraPreview: showCameraPreview),
                         const Spacer(),
                       ],
                     ),
@@ -1012,52 +923,6 @@ class _DrivingViewState extends State<DrivingView> {
                               textAlign: TextAlign.center,
                             ),
                           ),
-                          // const SizedBox(
-                          //   height: 10,
-                          // ),
-                          // FilledButton(
-                          //   style: FilledButton.styleFrom(
-                          //     shape: const RoundedRectangleBorder(
-                          //         borderRadius:
-                          //             BorderRadius.all(Radius.circular(16.0))),
-                          //     backgroundColor: lightColorScheme.primary,
-                          //     minimumSize: const Size.fromHeight(50),
-                          //   ),
-                          //   onPressed: () {
-                          //     geolocationService.getCurrentPosition();
-                          //   },
-                          //   child: Text(
-                          //     "Get Current Location",
-                          //     style: Theme.of(context)
-                          //         .textTheme
-                          //         .labelLarge
-                          //         ?.copyWith(color: lightColorScheme.onPrimary),
-                          //     textAlign: TextAlign.center,
-                          //   ),
-                          // ),
-                          // const SizedBox(
-                          //   height: 10,
-                          // ),
-                          // FilledButton(
-                          //   style: FilledButton.styleFrom(
-                          //     shape: const RoundedRectangleBorder(
-                          //         borderRadius:
-                          //             BorderRadius.all(Radius.circular(16.0))),
-                          //     backgroundColor: lightColorScheme.primary,
-                          //     minimumSize: const Size.fromHeight(50),
-                          //   ),
-                          //   onPressed: () {
-                          //     geolocationService.getLastKnownPosition();
-                          //   },
-                          //   child: Text(
-                          //     "Get Last Known Location",
-                          //     style: Theme.of(context)
-                          //         .textTheme
-                          //         .labelLarge
-                          //         ?.copyWith(color: lightColorScheme.onPrimary),
-                          //     textAlign: TextAlign.center,
-                          //   ),
-                          // ),
                           if (!globals.showDebug) const SizedBox(height: 80),
                         ],
                       ),
@@ -1085,33 +950,152 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   int calcDrivingScore() {
-    if ((currentSession.drowsyAlerts / currentSession.duration) <= (1 / 600) &&
-        (currentSession.inattentiveAlerts / currentSession.duration) <=
+    if ((currentSession.drowsyAlertCount / currentSession.duration) <=
+            (1 / 600) &&
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
             (1 / 600)) {
       return 5;
-    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
             (3 / 600) ||
-        (currentSession.inattentiveAlerts / currentSession.duration) <=
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
             (3 / 600)) {
       return 4;
-    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
             (5 / 600) &&
-        (currentSession.inattentiveAlerts / currentSession.duration) <=
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
             (5 / 600)) {
       return 3;
-    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
             (7 / 600) &&
-        (currentSession.inattentiveAlerts / currentSession.duration) <=
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
             (7 / 600)) {
       return 2;
-    } else if ((currentSession.drowsyAlerts / currentSession.duration) <=
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
             (9 / 600) &&
-        (currentSession.inattentiveAlerts / currentSession.duration) <=
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
             (9 / 600)) {
       return 1;
     } else {
       return 0;
     }
+  }
+}
+
+class PageCenterText extends StatelessWidget {
+  const PageCenterText({
+    super.key,
+    required this.showCameraPreview,
+  });
+
+  final bool showCameraPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Icon(
+              Icons.security,
+              size: 69,
+              color: showCameraPreview
+                  ? lightColorScheme.onPrimary
+                  : lightColorScheme.primary,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              "You are now protected!",
+              style: showCameraPreview
+                  ? Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: lightColorScheme.onPrimary)
+                  : Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              "Drive Safely!",
+              style: showCameraPreview
+                  ? Theme.of(context)
+                      .textTheme
+                      .displayMedium
+                      ?.copyWith(color: lightColorScheme.onPrimary)
+                  : Theme.of(context).textTheme.displayMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CalibrateInstructionList extends StatelessWidget {
+  const CalibrateInstructionList({
+    super.key,
+    required this.startCalibration,
+    required this.caliSeconds,
+  });
+
+  final bool startCalibration;
+  final int caliSeconds;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: MediaQuery.of(context).size.width,
+          color: Colors.black.withOpacity(0.5),
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            children: const [
+              CalibrateInstruction(
+                bullet: "1.",
+                instruction: "Secure your phone in the phone holder",
+              ),
+              SizedBox(height: 5),
+              CalibrateInstruction(
+                bullet: "2.",
+                instruction:
+                    "Make sure your head is visible in the camera preview",
+              ),
+              SizedBox(height: 5),
+              CalibrateInstruction(
+                bullet: "3.",
+                instruction:
+                    "Look forward towards the road (just like when you are driving attentively)",
+              ),
+              SizedBox(height: 5),
+              CalibrateInstruction(
+                bullet: "4.",
+                instruction: "Press 'Calibrate' and wait 3 seconds",
+              ),
+            ],
+          ),
+        ),
+        if (startCalibration == true)
+          Container(
+            width: MediaQuery.of(context).size.width,
+            color: Colors.black.withOpacity(0.5),
+            padding: const EdgeInsets.all(15),
+            child: Text(
+              caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    color: lightColorScheme.onPrimary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
   }
 }
 

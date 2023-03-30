@@ -17,6 +17,7 @@ class DrivePage extends StatefulWidget {
 
 class _DrivePageState extends State<DrivePage> {
   GeolocationService geolocationService = GeolocationService();
+  final MaterialStatesController _statesController = MaterialStatesController();
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,6 +28,10 @@ class _DrivePageState extends State<DrivePage> {
         globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
       });
     }
+
+    setState(() {
+      _statesController.update(MaterialState.disabled, !globals.hasCalibrated);
+    });
   }
 
   Future<void> _checkPermissions() async {
@@ -397,33 +402,24 @@ class _DrivePageState extends State<DrivePage> {
                                 shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.all(
                                         Radius.circular(16.0))),
-                                backgroundColor: globals.hasCalibrated
-                                    ? lightColorScheme.primary
-                                    : lightColorScheme.surfaceVariant,
                                 minimumSize: const Size.fromHeight(50.0),
                                 padding: const EdgeInsetsDirectional.fromSTEB(
                                     16, 0, 16, 0)),
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.directions_car_outlined,
-                              color: globals.hasCalibrated
-                                  ? lightColorScheme.background
-                                  : lightColorScheme.outline,
                             ),
+                            statesController: _statesController,
                             onPressed: () {
-                              if (globals.hasCalibrated == true) {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => DrivingView(
-                                              calibrationMode: false,
-                                              enableGeolocation:
-                                                  globals.enableGeolocation
-                                                      ? true
-                                                      : false,
-                                            )));
-                              } else if (globals.hasCalibrated == false) {
-                                null;
-                              }
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => DrivingView(
+                                            calibrationMode: false,
+                                            enableGeolocation:
+                                                globals.enableGeolocation
+                                                    ? true
+                                                    : false,
+                                          )));
                             },
                             label: Text(
                               "Start Driving",

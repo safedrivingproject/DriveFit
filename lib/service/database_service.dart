@@ -8,6 +8,7 @@ class DatabaseService {
   static final DatabaseService _instance = DatabaseService.internal();
   factory DatabaseService() => _instance;
   static Database? _db;
+  static const _databaseVersion = 2;
 
   Future<Database?> get db async {
     if (_db != null) return _db;
@@ -20,27 +21,56 @@ class DatabaseService {
   Future<Database> initDb() async {
     io.Directory documentsDirectory = await getApplicationDocumentsDirectory();
     String path = join(documentsDirectory.path, "driving_sessions.db");
-    var db = await openDatabase(path, version: 1, onCreate: _onCreate);
+    var db = await openDatabase(
+      path,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
     return db;
   }
 
   void _onCreate(Database db, int version) async {
     await db.execute(
-        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL)");
+        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL)");
   }
 
-  Future<int> saveSession(SessionData session) async {
+  void _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db
+          .execute("ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL");
+    }
+  }
+
+  Future<int> saveSessionData(SessionData session) async {
     var dbClient = await db;
     if (dbClient == null) return 0;
-    int res = await dbClient.insert("sessions", session.toMap());
-    return res;
+    int id = await dbClient.insert("sessions", session.toMap());
+    return id;
   }
 
-  Future<List<SessionData>> getRecentSessions() async {
+  Future<int> getRowCount(int count) async {
+    var dbClient = await db;
+    if (dbClient == null) return 0;
+    var result = await dbClient.rawQuery('SELECT COUNT(*) FROM sessions');
+    count = Sqflite.firstIntValue(result) ?? 0;
+    return count;
+  }
+
+  Future<int> getTotalAlertCount(int count) async {
+    var dbClient = await db;
+    if (dbClient == null) return 0;
+    var result = await dbClient.rawQuery(
+        'SELECT SUM(drowsy_alerts + inattentive_alerts) FROM sessions');
+    count = Sqflite.firstIntValue(result) ?? 0;
+    return count;
+  }
+
+  Future<List<SessionData>> getRecentSessions(
+      List<SessionData> sessions) async {
     var dbClient = await db;
     List<Map> list = await dbClient!
         .rawQuery('SELECT * FROM sessions ORDER BY id DESC LIMIT 14');
-    List<SessionData> sessions = [];
     for (int i = 0; i < list.length; i++) {
       sessions.add(SessionData.fromMap(list[i] as Map<String, dynamic>));
     }
@@ -59,8 +89,8 @@ class SessionData {
   String endTime = '';
   int duration = 0;
   double distance = 0.0;
-  int drowsyAlerts = 0;
-  int inattentiveAlerts = 0;
+  int drowsyAlertCount = 0;
+  int inattentiveAlertCount = 0;
   int score = 0;
 
   SessionData({
@@ -69,24 +99,22 @@ class SessionData {
     required this.endTime,
     required this.duration,
     required this.distance,
-    required this.drowsyAlerts,
-    required this.inattentiveAlerts,
+    required this.drowsyAlertCount,
+    required this.inattentiveAlertCount,
     required this.score,
   });
 
   Map<String, dynamic> toMap() {
     var map = <String, dynamic>{
+      'id': id,
       'start_time': startTime,
       'end_time': endTime,
       'duration': duration,
       'distance': distance,
-      'drowsy_alerts': drowsyAlerts,
-      'inattentive_alerts': inattentiveAlerts,
+      'drowsy_alerts': drowsyAlertCount,
+      'inattentive_alerts': inattentiveAlertCount,
       'score': score,
     };
-    if (id != null) {
-      map['id'] = id;
-    }
     return map;
   }
 
@@ -96,8 +124,13 @@ class SessionData {
     endTime = map['end_time'];
     duration = map['duration'];
     distance = map['distance'];
-    drowsyAlerts = map['drowsy_alerts'];
-    inattentiveAlerts = map['inattentive_alerts'];
+    drowsyAlertCount = map['drowsy_alerts'];
+    inattentiveAlertCount = map['inattentive_alerts'];
     score = map['score'];
+  }
+
+  @override
+  String toString() {
+    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, score: $score}';
   }
 }
