@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' as io;
+import 'package:collection/collection.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
@@ -49,28 +50,53 @@ class DatabaseService {
     return id;
   }
 
-  Future<int> getRowCount(int count) async {
+  Future<int> getRowCount() async {
     var dbClient = await db;
     if (dbClient == null) return 0;
-    var result = await dbClient.rawQuery('SELECT COUNT(*) FROM sessions');
-    count = Sqflite.firstIntValue(result) ?? 0;
+    int count = Sqflite.firstIntValue(
+            await dbClient.rawQuery('SELECT COUNT(*) FROM sessions')) ??
+        0;
     return count;
   }
 
-  Future<int> getTotalAlertCount(int count) async {
+  Future<int> getTotalAlertCount() async {
     var dbClient = await db;
     if (dbClient == null) return 0;
-    var result = await dbClient.rawQuery(
-        'SELECT SUM(drowsy_alerts + inattentive_alerts) FROM sessions');
-    count = Sqflite.firstIntValue(result) ?? 0;
+    int count = Sqflite.firstIntValue(await dbClient.rawQuery(
+            'SELECT SUM(drowsy_alerts + inattentive_alerts) FROM sessions')) ??
+        0;
     return count;
   }
 
-  Future<List<SessionData>> getRecentSessions(
-      List<SessionData> sessions) async {
+  Future<double> getOverallAverageScore() async {
+    var dbClient = await db;
+    if (dbClient == null) return 0.0;
+    var result =
+        await dbClient.rawQuery('SELECT ROUND(AVG(score), 1) FROM sessions');
+    double average =
+        result.isNotEmpty ? (result.first.values.first as num).toDouble() : 0.0;
+    return average;
+  }
+
+  Future<double> getRecentAverageScore() async {
+    var dbClient = await db;
+    if (dbClient == null) return 0.0;
+    var result = await dbClient
+        .rawQuery('SELECT score FROM sessions ORDER BY id DESC LIMIT 7');
+    List<int> scoreList = [];
+    for (int i = 0; i < result.length; i++) {
+      scoreList.add(result[i]['score'] as int);
+    }
+    double average =
+        scoreList.average;
+    return average;
+  }
+
+  Future<List<SessionData>> getRecentSessions() async {
     var dbClient = await db;
     List<Map> list = await dbClient!
         .rawQuery('SELECT * FROM sessions ORDER BY id DESC LIMIT 14');
+    List<SessionData> sessions = [];
     for (int i = 0; i < list.length; i++) {
       sessions.add(SessionData.fromMap(list[i] as Map<String, dynamic>));
     }

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 import '/theme/color_schemes.g.dart';
+import '/theme/custom_color.g.dart';
 import '/settings/settings_page.dart';
 import '../service/database_service.dart';
 
@@ -22,24 +23,31 @@ class _HistoryPageState extends State<HistoryPage> {
   List<SessionData> driveSessionsList = [];
   int rowCount = 0;
   int totalAlerts = 0;
+  double overallAvgScore = 0.0;
+  double recentAvgScore = 0.0;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      setState(() {
-        _scrollOffset = _scrollController.offset;
-      });
+      if (mounted) {
+        setState(() {
+          _scrollOffset = _scrollController.offset;
+        });
+      }
     });
-    databaseService.getRecentSessions(driveSessionsList);
-    databaseService.getRowCount(rowCount);
-    databaseService.getTotalAlertCount(totalAlerts);
+    getSessionData();
   }
 
-  // ignore: unused_element
-  bool get _isSliverAppBarExpanded {
-    return _scrollController.hasClients &&
-        _scrollController.offset > (180 - kToolbarHeight);
+  Future<void> getSessionData() async {
+    driveSessionsList = await databaseService.getRecentSessions();
+    rowCount = await databaseService.getRowCount();
+    totalAlerts = await databaseService.getTotalAlertCount();
+    overallAvgScore = await databaseService.getOverallAverageScore();
+    recentAvgScore = await databaseService.getRecentAverageScore();
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   double _getTitleOpacity() {
@@ -83,6 +91,9 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final sourceXanthous =
+        Theme.of(context).extension<CustomColors>()!.sourceXanthous;
+
     return Stack(
       children: [
         Container(
@@ -226,11 +237,10 @@ class _HistoryPageState extends State<HistoryPage> {
                                           child: Padding(
                                             padding: const EdgeInsetsDirectional
                                                 .fromSTEB(4, 0, 0, 12),
-                                            child: Text(
-                                                'potential accidents avoided',
+                                            child: Text('reminders',
                                                 style: Theme.of(context)
                                                     .textTheme
-                                                    .bodySmall
+                                                    .bodyMedium
                                                     ?.copyWith(
                                                         color: lightColorScheme
                                                             .inverseSurface)),
@@ -282,7 +292,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Overall Avg. Score',
+                                          'Avg. Score \n(Overall)',
                                           style: Theme.of(context)
                                               .textTheme
                                               .bodyMedium,
@@ -295,18 +305,19 @@ class _HistoryPageState extends State<HistoryPage> {
                                                   const EdgeInsetsDirectional
                                                       .fromSTEB(0, 4, 0, 0),
                                               child: Text(
-                                                '4.2/5',
+                                                '$overallAvgScore/5',
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .displaySmall,
                                               ),
                                             ),
-                                            const Padding(
-                                              padding: EdgeInsetsDirectional
-                                                  .fromSTEB(0, 4, 0, 0),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsetsDirectional
+                                                      .fromSTEB(0, 4, 0, 0),
                                               child: Icon(
                                                 Icons.star_rounded,
-                                                color: Color(0xFFF6C91A),
+                                                color: sourceXanthous,
                                                 size: 24,
                                               ),
                                             ),
@@ -329,7 +340,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Avg. Score (Last 7 days)',
+                                            'Avg. Score \n(Last 7 sessions)',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyMedium,
@@ -342,18 +353,19 @@ class _HistoryPageState extends State<HistoryPage> {
                                                     const EdgeInsetsDirectional
                                                         .fromSTEB(0, 4, 0, 0),
                                                 child: Text(
-                                                  '4.8/5',
+                                                  '${recentAvgScore.toStringAsFixed(1)}/5',
                                                   style: Theme.of(context)
                                                       .textTheme
                                                       .displaySmall,
                                                 ),
                                               ),
-                                              const Padding(
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(0, 4, 0, 0),
+                                              Padding(
+                                                padding:
+                                                    const EdgeInsetsDirectional
+                                                        .fromSTEB(0, 4, 0, 0),
                                                 child: Icon(
                                                   Icons.star_rounded,
-                                                  color: Color(0xFFF6C91A),
+                                                  color: sourceXanthous,
                                                   size: 24,
                                                 ),
                                               ),
@@ -776,10 +788,10 @@ class SessionsList extends StatefulWidget {
   });
 
   @override
-  _SessionsListState createState() => _SessionsListState();
+  SessionsListState createState() => SessionsListState();
 }
 
-class _SessionsListState extends State<SessionsList> {
+class SessionsListState extends State<SessionsList> {
   DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
   DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
   DateFormat noYearsSeconds = DateFormat("MM-dd HH:mm");
@@ -830,7 +842,11 @@ class _SessionsListState extends State<SessionsList> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)}",
+                      "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    Text(
+                      formatTime(DateFormat.ms(), session.endTime),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 10),
@@ -840,14 +856,16 @@ class _SessionsListState extends State<SessionsList> {
                           icon: const Icon(Icons.info_outline_rounded),
                           label: "Drowsy:",
                           value: session.drowsyAlertCount,
-                          trailing: " times",
+                          trailing:
+                              " time${session.drowsyAlertCount == 1 ? "" : "s"}",
                         ),
                         const SizedBox(width: 10),
                         SessionDetailsModule(
                           icon: const Icon(Icons.notifications_paused_outlined),
                           label: "Inattentive:",
                           value: session.inattentiveAlertCount,
-                          trailing: " times",
+                          trailing:
+                              " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
                         ),
                         const SizedBox(width: 10),
                         SessionDetailsModule(

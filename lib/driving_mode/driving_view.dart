@@ -53,6 +53,8 @@ class _DrivingViewState extends State<DrivingView> {
     ),
   );
 
+  final MaterialStatesController _statesController = MaterialStatesController();
+
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool carMoving = true;
@@ -78,6 +80,7 @@ class _DrivingViewState extends State<DrivingView> {
       drowsyAlertCount: 0,
       inattentiveAlertCount: 0,
       score: 0);
+  bool isValidSession = false;
 
   DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
   DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
@@ -208,23 +211,10 @@ class _DrivingViewState extends State<DrivingView> {
     }
   }
 
-  Future<void> _saveSessionData() async {
-    if (mounted) {
-      setState(() {
-        currentSession.endTime = saveCurrentTime(noMillis);
-        currentSession.duration = DateTime.parse(currentSession.endTime)
-            .difference(DateTime.parse(currentSession.startTime))
-            .inSeconds;
-        currentSession.distance = geolocationService.accumulatedDistance;
-        currentSession.score = calcDrivingScore();
-      });
-    }
-    databaseService.saveSessionData(currentSession);
-  }
-
   @override
   void initState() {
     super.initState();
+
     geolocationService.positionList.clear();
     geolocationService.speedList.clear();
 
@@ -234,6 +224,12 @@ class _DrivingViewState extends State<DrivingView> {
     periodicDetectionTimer?.cancel();
 
     _initSessionData();
+
+    _statesController.addListener(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    });
 
     if (widget.calibrationMode == true) {
       if (mounted) {
@@ -266,6 +262,8 @@ class _DrivingViewState extends State<DrivingView> {
     drowsyAudioPlayer.dispose();
     inattentiveAudioPlayer.dispose();
 
+    _statesController.dispose();
+
     _faceDetector.close();
     _stopAccelerometer();
     super.dispose();
@@ -293,7 +291,13 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void detectionTimer() async {
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      _statesController.update(MaterialState.disabled, true);
+    });
     await Future.delayed(const Duration(seconds: 5));
+    if (mounted) {
+      _statesController.update(MaterialState.disabled, false);
+    }
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted) {
@@ -834,7 +838,31 @@ class _DrivingViewState extends State<DrivingView> {
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            )
+                            ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() {
+                                  currentSession.distance += 1000;
+                                });
+                              }
+                            },
+                            child: Text(
+                              "Add distance (debug only)",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -907,12 +935,19 @@ class _DrivingViewState extends State<DrivingView> {
                               backgroundColor: lightColorScheme.primary,
                               minimumSize: const Size.fromHeight(50),
                             ),
+                            statesController: _statesController,
                             onPressed: () {
                               _saveSessionData();
+                              isValidSession = _validateSession();
+                              if (isValidSession) {
+                                databaseService.saveSessionData(currentSession);
+                              }
                               Navigator.of(context).pop(true);
                               Navigator.of(context).push(MaterialPageRoute(
                                   builder: (context) => DriveSessionSummary(
-                                      session: currentSession)));
+                                        session: currentSession,
+                                        isValidSession: isValidSession,
+                                      )));
                             },
                             child: Text(
                               "Stop driving",
@@ -978,6 +1013,26 @@ class _DrivingViewState extends State<DrivingView> {
     } else {
       return 0;
     }
+  }
+
+  Future<void> _saveSessionData() async {
+    if (mounted) {
+      setState(() {
+        currentSession.endTime = saveCurrentTime(noMillis);
+        currentSession.duration = DateTime.parse(currentSession.endTime)
+            .difference(DateTime.parse(currentSession.startTime))
+            .inSeconds;
+        currentSession.distance += geolocationService.accumulatedDistance;
+        currentSession.score = calcDrivingScore();
+      });
+    }
+  }
+
+  bool _validateSession() {
+    if (currentSession.distance < 500 || currentSession.duration < 60) {
+      return false;
+    }
+    return true;
   }
 }
 

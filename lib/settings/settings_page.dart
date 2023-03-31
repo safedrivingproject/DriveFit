@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
@@ -31,7 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
       useHighCameraResolution,
       showDebug,
       hasCalibrated;
-  bool isInvalid = false;
+  bool isInvalid = true;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThresholdMS = 8.3, carVelocityThresholdKMH = 30.0;
@@ -155,7 +153,7 @@ class _SettingsPageState extends State<SettingsPage> {
       } else if (convertSpeed) {
         if (mounted) {
           setState(() {
-            _doubleValue = double.tryParse(controller.text) ?? 30.0;
+            _doubleValue = double.tryParse(controller.text) ?? 30.0 - 5;
             _speedValue = (_doubleValue / 3.6);
           });
         }
@@ -294,17 +292,19 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               statesController: _statesController,
-                              onPressed: () {
-                                if (mounted) {
-                                  setState(() {
-                                    additionalDelay = _intValue;
-                                    _saveInt('additionalDelay',
-                                        additionalDelay ?? _intValue);
-                                  });
-                                }
-                                showSnackBar(context, "Setting updated.");
-                                Navigator.of(context).pop();
-                              },
+                              onPressed: !isInvalid
+                                  ? () {
+                                      if (mounted) {
+                                        setState(() {
+                                          additionalDelay = _intValue;
+                                          _saveInt('additionalDelay',
+                                              additionalDelay ?? _intValue);
+                                        });
+                                      }
+                                      showSnackBar(context, "Setting updated.");
+                                      Navigator.of(context).pop();
+                                    }
+                                  : null,
                               child: const Text("Done"),
                             ),
                           ],
@@ -629,7 +629,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Beeps"),
+                              child: const Text("Double Beep"),
                               onPressed: () {
                                 drowsyAlarmValue = [
                                   "asset",
@@ -642,7 +642,20 @@ class _SettingsPageState extends State<SettingsPage> {
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Choose from files"),
+                              child: const Text("Soft Beep"),
+                              onPressed: () {
+                                drowsyAlarmValue = [
+                                  "asset",
+                                  "audio/soft_beep.mp3"
+                                ];
+                                _saveStringList(
+                                    'drowsyAlarm', drowsyAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Choose sound from files"),
                               onPressed: () async {
                                 FilePickerResult? result = await FilePicker
                                     .platform
@@ -708,7 +721,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Beeps"),
+                              child: const Text("Double Beep"),
                               onPressed: () {
                                 inattentiveAlarmValue = [
                                   "asset",
@@ -716,6 +729,19 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ];
                                 _saveStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
+                                Navigator.of(context).pop();
+                                showSnackBar(context, "Alarm updated.");
+                              },
+                            ),
+                            SimpleDialogOption(
+                              child: const Text("Soft Beep"),
+                              onPressed: () {
+                                drowsyAlarmValue = [
+                                  "asset",
+                                  "audio/soft_beep.mp3"
+                                ];
+                                _saveStringList(
+                                    'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
                                 showSnackBar(context, "Alarm updated.");
                               },
@@ -803,6 +829,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     databaseService.deleteData();
                                   });
                                 }
+                                showSnackBar(context, "Data Cleared!");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Clear"),

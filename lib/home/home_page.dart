@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../settings/settings_page.dart';
-import '/theme/color_schemes.g.dart';
 import 'drive_page.dart';
 import 'history_page.dart';
 
