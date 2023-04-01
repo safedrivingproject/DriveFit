@@ -29,7 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
       useHighCameraResolution,
       showDebug,
       hasCalibrated;
-  bool isInvalid = true;
+  bool isInvalid = false;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThresholdMS = 8.3, carVelocityThresholdKMH = 30.0;
@@ -265,11 +265,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                isInvalid = true;
+                                return 'Invalid value.';
                               } else {
-                                isInvalid = false;
+                                return null;
                               }
-                              return isInvalid ? 'Invalid value.' : null;
                             },
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
@@ -292,20 +291,23 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               statesController: _statesController,
-                              onPressed: !isInvalid
-                                  ? () {
-                                      if (mounted) {
-                                        setState(() {
-                                          additionalDelay = _intValue;
-                                          _saveInt('additionalDelay',
-                                              additionalDelay ?? _intValue);
-                                        });
-                                      }
-                                      showSnackBar(context, "Setting updated.");
-                                      Navigator.of(context).pop();
-                                    }
-                                  : null,
-                              child: const Text("Done"),
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar(context, "Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    additionalDelay = _intValue;
+                                    _saveInt('additionalDelay',
+                                        additionalDelay ?? _intValue);
+                                  });
+                                }
+                                showSnackBar(context, "Setting updated.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Save"),
                             ),
                           ],
                         );
@@ -382,11 +384,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                isInvalid = true;
+                                return 'Invalid value.';
                               } else {
-                                isInvalid = false;
+                                return null;
                               }
-                              return isInvalid ? 'Invalid value.' : null;
                             },
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
@@ -410,6 +411,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                       Theme.of(context).textTheme.labelLarge),
                               statesController: _statesController,
                               onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar(context, "Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
                                 if (mounted) {
                                   setState(() {
                                     rotXDelay = _intValue;
@@ -420,7 +426,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 showSnackBar(context, "Setting updated.");
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Done"),
+                              child: const Text("Save"),
                             ),
                           ],
                         );
@@ -461,11 +467,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                isInvalid = true;
+                                return 'Invalid value.';
                               } else {
-                                isInvalid = false;
+                                return null;
                               }
-                              return isInvalid ? 'Invalid value.' : null;
                             },
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
@@ -489,6 +494,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                       Theme.of(context).textTheme.labelLarge),
                               statesController: _statesController,
                               onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar(context, "Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
                                 if (mounted) {
                                   setState(() {
                                     rotYDelay = _intValue;
@@ -499,7 +509,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 showSnackBar(context, "Setting updated.");
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Done"),
+                              child: const Text("Save"),
                             ),
                           ],
                         );
@@ -542,11 +552,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                isInvalid = true;
+                                return 'Invalid value.';
                               } else {
-                                isInvalid = false;
+                                return null;
                               }
-                              return isInvalid ? 'Invalid value.' : null;
                             },
                             decoration: const InputDecoration(
                                 border: OutlineInputBorder(),
@@ -570,6 +579,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                       Theme.of(context).textTheme.labelLarge),
                               statesController: _statesController,
                               onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar(context, "Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
                                 if (mounted) {
                                   setState(() {
                                     carVelocityThresholdMS = _speedValue;
@@ -581,7 +595,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 showSnackBar(context, "Setting updated.");
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Done"),
+                              child: const Text("Save"),
                             ),
                           ],
                         );
@@ -845,7 +859,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void showSnackBar(BuildContext context, String text) {
-    var snackBar = SnackBar(content: Text(text));
+    var snackBar = SnackBar(
+      content: Text(text),
+      duration: const Duration(seconds: 1),
+    );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }

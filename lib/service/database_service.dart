@@ -71,6 +71,10 @@ class DatabaseService {
   Future<double> getOverallAverageScore() async {
     var dbClient = await db;
     if (dbClient == null) return 0.0;
+    var count = Sqflite.firstIntValue(
+            await dbClient.rawQuery('SELECT COUNT(*) FROM sessions')) ??
+        0;
+    if (count == 0) return 0.0;
     var result =
         await dbClient.rawQuery('SELECT ROUND(AVG(score), 1) FROM sessions');
     double average =
@@ -81,14 +85,17 @@ class DatabaseService {
   Future<double> getRecentAverageScore() async {
     var dbClient = await db;
     if (dbClient == null) return 0.0;
+    var count = Sqflite.firstIntValue(
+            await dbClient.rawQuery('SELECT COUNT(*) FROM sessions')) ??
+        0;
+    if (count == 0) return 0.0;
     var result = await dbClient
         .rawQuery('SELECT score FROM sessions ORDER BY id DESC LIMIT 7');
     List<int> scoreList = [];
     for (int i = 0; i < result.length; i++) {
       scoreList.add(result[i]['score'] as int);
     }
-    double average =
-        scoreList.average;
+    double average = scoreList.average;
     return average;
   }
 

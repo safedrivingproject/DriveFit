@@ -596,7 +596,9 @@ class _HistoryPageState extends State<HistoryPage> {
             Border.all(color: lightColorScheme.onBackground.withOpacity(0.2)),
       ),
       minX: 0,
-      maxX: 14,
+      maxX: driveSessionsList.length > 14
+          ? 14.0
+          : driveSessionsList.length.toDouble(),
       minY: 0,
       maxY: (getMaxY(getRecentDrowsyFlList())! / 5).ceil() * 5,
       lineBarsData: [
@@ -625,7 +627,12 @@ class _HistoryPageState extends State<HistoryPage> {
     var sessionsDrowsyListDouble =
         sessionsDrowsyListInt.map((count) => count.toDouble()).toList();
     for (int i = 0; i < sessionsDrowsyListInt.length; i++) {
-      flSpotlist.add(FlSpot((14.0 - i), sessionsDrowsyListDouble[i]));
+      flSpotlist.add(FlSpot(
+          ((driveSessionsList.length > 14
+                  ? 14.0
+                  : driveSessionsList.length.toDouble()) -
+              i),
+          sessionsDrowsyListDouble[i]));
     }
     return flSpotlist;
   }
@@ -699,7 +706,9 @@ class _HistoryPageState extends State<HistoryPage> {
             Border.all(color: lightColorScheme.onBackground.withOpacity(0.2)),
       ),
       minX: 0,
-      maxX: 14,
+      maxX: driveSessionsList.length > 14
+          ? 14.0
+          : driveSessionsList.length.toDouble(),
       minY: 0,
       maxY: (getMaxY(getRecentInattentiveFlList())! / 5).ceil() * 5,
       lineBarsData: [
@@ -728,7 +737,12 @@ class _HistoryPageState extends State<HistoryPage> {
     var sessionsInattentiveListDouble =
         sessionsInattentiveListInt.map((count) => count.toDouble()).toList();
     for (int i = 0; i < sessionsInattentiveListInt.length; i++) {
-      flSpotlist.add(FlSpot((14.0 - i), sessionsInattentiveListDouble[i]));
+      flSpotlist.add(FlSpot(
+          ((driveSessionsList.length > 14
+                  ? 14.0
+                  : driveSessionsList.length.toDouble()) -
+              i),
+          sessionsInattentiveListDouble[i]));
     }
     return flSpotlist;
   }
@@ -747,18 +761,22 @@ class _HistoryPageState extends State<HistoryPage> {
       fontSize: 14,
     );
     Widget text;
-    switch (value.toInt()) {
-      case 0:
-        text = const Text('Past', style: style);
-        break;
-      case 14:
-        text = const Text('Recent', style: style);
-        break;
-      default:
-        text = const Text('', style: style);
-        break;
+    if (value.toInt() == 0) {
+      text = const Text('Past', style: style);
+      return SideTitleWidget(
+        axisSide: meta.axisSide,
+        child: text,
+      );
     }
-
+    if (value.toInt() ==
+        (driveSessionsList.length > 14 ? 14 : driveSessionsList.length)) {
+      text = const Text('Recent', style: style);
+      return SideTitleWidget(
+        axisSide: meta.axisSide,
+        child: text,
+      );
+    }
+    text = const Text('', style: style);
     return SideTitleWidget(
       axisSide: meta.axisSide,
       child: text,
@@ -802,6 +820,9 @@ class SessionsListState extends State<SessionsList> {
 
   @override
   Widget build(BuildContext context) {
+    final sourceXanthous =
+        Theme.of(context).extension<CustomColors>()!.sourceXanthous;
+
     return Column(
       children: [
         Padding(
@@ -828,72 +849,81 @@ class SessionsListState extends State<SessionsList> {
                 style: Theme.of(context).textTheme.titleMedium),
           ),
         ),
-        ListView.builder(
-          itemCount: widget.sessionsList.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemBuilder: (BuildContext context, int index) {
-            SessionData session = widget.sessionsList[index];
-            return Card(
-              margin: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 16),
-              child: Padding(
-                padding: const EdgeInsets.all(14.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      formatTime(DateFormat.ms(), session.endTime),
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
+        if (widget.sessionsList.isNotEmpty)
+          ConstrainedBox(
+            constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.5),
+            child: ListView.builder(
+              itemCount: widget.sessionsList.length,
+              shrinkWrap: true,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemBuilder: (BuildContext context, int index) {
+                SessionData session = widget.sessionsList[index];
+                return Card(
+                  margin: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SessionDetailsModule(
-                          icon: const Icon(Icons.info_outline_rounded),
-                          label: "Drowsy:",
-                          value: session.drowsyAlertCount,
-                          trailing:
-                              " time${session.drowsyAlertCount == 1 ? "" : "s"}",
+                        Text(
+                          "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
+                          style: Theme.of(context).textTheme.titleSmall,
                         ),
-                        const SizedBox(width: 10),
-                        SessionDetailsModule(
-                          icon: const Icon(Icons.notifications_paused_outlined),
-                          label: "Inattentive:",
-                          value: session.inattentiveAlertCount,
-                          trailing:
-                              " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
+                        Text(
+                          formatTime(DateFormat.ms(), session.endTime),
+                          style: Theme.of(context).textTheme.titleSmall,
                         ),
-                        const SizedBox(width: 10),
-                        SessionDetailsModule(
-                          icon: const Icon(
-                            Icons.star_rounded,
-                            color: Color(0xFFF6C91A),
-                            size: 24,
-                          ),
-                          label: "Score:",
-                          value: session.score,
-                          trailing: "",
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            SessionDetailsModule(
+                              icon: const Icon(Icons.info_outline_rounded),
+                              label: "Drowsy:",
+                              value: session.drowsyAlertCount,
+                              trailing:
+                                  " time${session.drowsyAlertCount == 1 ? "" : "s"}",
+                            ),
+                            const SizedBox(width: 10),
+                            SessionDetailsModule(
+                              icon: const Icon(
+                                  Icons.notifications_paused_outlined),
+                              label: "Inattentive:",
+                              value: session.inattentiveAlertCount,
+                              trailing:
+                                  " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
+                            ),
+                            const SizedBox(width: 10),
+                            SessionDetailsModule(
+                              icon: Icon(
+                                Icons.star_rounded,
+                                color: sourceXanthous,
+                                size: 24,
+                              ),
+                              label: "Score:",
+                              value: session.score,
+                              trailing: "",
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                );
+              },
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 14, 0, 0),
+            child: SizedBox(
+              height: 75,
+              width: MediaQuery.of(context).size.width,
+              child: Text(
+                "No sessions yet :/",
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
               ),
-            );
-          },
-        ),
-        if (widget.sessionsList.isEmpty)
-          SizedBox(
-            height: 75,
-            width: MediaQuery.of(context).size.width,
-            child: Text(
-              "No sessions yet :/",
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
             ),
           ),
       ],

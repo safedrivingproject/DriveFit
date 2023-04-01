@@ -145,7 +145,7 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     final camera = cameras[_cameraIndex];
     _controller = CameraController(
       camera,
-      useHighCameraResolution ? ResolutionPreset.medium : ResolutionPreset.low,
+      useHighCameraResolution ? ResolutionPreset.high : ResolutionPreset.low,
       enableAudio: false,
     );
     try {
@@ -193,6 +193,10 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     //_controller?.getMaxExposureOffset().then((value) {
     //  _maxAvailableExposureOffset = value;
     //});
+    _controller?.startImageStream(_processCameraImage);
+    setState(() {});
+
+    await Future.delayed(const Duration(seconds: 1));
     exposureTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       try {
         if (mounted) {
@@ -204,8 +208,6 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
         log("$e");
       }
     });
-    _controller?.startImageStream(_processCameraImage);
-    setState(() {});
   }
 
   Future _stopLiveFeed() async {

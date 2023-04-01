@@ -81,6 +81,7 @@ class _DrivingViewState extends State<DrivingView> {
       inattentiveAlertCount: 0,
       score: 0);
   bool isValidSession = false;
+  bool canExit = false;
 
   DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
   DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
@@ -225,11 +226,11 @@ class _DrivingViewState extends State<DrivingView> {
 
     _initSessionData();
 
-    _statesController.addListener(() {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() {});
-      });
-    });
+    // _statesController.addListener(() {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     if (mounted) setState(() {});
+    //   });
+    // });
 
     if (widget.calibrationMode == true) {
       if (mounted) {
@@ -291,13 +292,17 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void detectionTimer() async {
+    canExit = false;
     WidgetsBinding.instance.scheduleFrameCallback((_) {
       _statesController.update(MaterialState.disabled, true);
     });
-    await Future.delayed(const Duration(seconds: 5));
+    await Future.delayed(const Duration(seconds: 1));
+    canExit = true;
     if (mounted) {
       _statesController.update(MaterialState.disabled, false);
     }
+    await Future.delayed(const Duration(seconds: 4));
+    
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted) {
@@ -937,7 +942,8 @@ class _DrivingViewState extends State<DrivingView> {
                             ),
                             statesController: _statesController,
                             onPressed: () {
-                              _saveSessionData();
+                              if (!canExit) return;
+                              _updateSessionData();
                               isValidSession = _validateSession();
                               if (isValidSession) {
                                 databaseService.saveSessionData(currentSession);
@@ -1015,7 +1021,7 @@ class _DrivingViewState extends State<DrivingView> {
     }
   }
 
-  Future<void> _saveSessionData() async {
+  Future<void> _updateSessionData() async {
     if (mounted) {
       setState(() {
         currentSession.endTime = saveCurrentTime(noMillis);
