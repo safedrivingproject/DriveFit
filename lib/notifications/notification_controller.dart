@@ -21,7 +21,19 @@ class NotificationController {
               importance: NotificationImportance.Max,
               defaultPrivacy: NotificationPrivacy.Public,
               defaultColor: lightColorScheme.primary,
-              ledColor: Colors.red)
+              ledColor: Colors.red),
+          NotificationChannel(
+              channelKey: 'foreground_service',
+              channelName: 'DriveFit Service',
+              channelDescription:
+                  'Notification channel for the foreground services.',
+              playSound: true,
+              groupAlertBehavior: GroupAlertBehavior.All,
+              importance: NotificationImportance.Default,
+              defaultPrivacy: NotificationPrivacy.Public,
+              defaultColor: lightColorScheme.primary,
+              ledColor: Colors.blue,
+              locked: true)
         ],
         debug: true);
 

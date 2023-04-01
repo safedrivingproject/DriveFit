@@ -16,6 +16,23 @@ class DrivePage extends StatefulWidget {
 }
 
 class _DrivePageState extends State<DrivePage> {
+  List<String> drowsyTipsList = [
+    "Get a good night's sleep zZZ"
+        "Have you gotten 7-8 hours of sleep? zZZ"
+        "Don't stay in the car, get some fresh air ~~"
+        "Take a break, stretch your legs :)"
+        "Get comfortable before you drive Orz"
+        "Why not turn on the radio? :)"
+  ];
+  List<String> inattentiveTipsList = [
+    "Hands on steering wheel, am I right? ;)"
+        "Eyes always on the phone? Now the road's your new phone ;)"
+        "Meerkats are always alert, you can too ;)"
+        "Set your phone to silent before you start driving :)"
+        "Don't multitask, your only task is to drive safely :)"
+        "Take your time, better safe than sorry :)"
+  ];
+
   GeolocationService geolocationService = GeolocationService();
   final MaterialStatesController _statesController = MaterialStatesController();
 
@@ -341,6 +358,71 @@ class _DrivePageState extends State<DrivePage> {
                                                 .bodyMedium),
                                       ),
                                     ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              28, 14, 28, 0),
+                          child: Container(
+                            width: MediaQuery.of(context).size.width,
+                            decoration: BoxDecoration(
+                              color: lightColorScheme.onPrimary,
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 4,
+                                  color: Color(0x33000000),
+                                  offset: Offset(0, 2),
+                                )
+                              ],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.max,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                      16, 16, 0, 0),
+                                  child: Text(
+                                    'Driving tips',
+                                    textAlign: TextAlign.start,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                      16, 0, 16, 16),
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                            0, 8, 0, 0),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.max,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsetsDirectional
+                                              .fromSTEB(8, 4, 8, 0),
+                                          child: Icon(
+                                            Icons.speed,
+                                            color:
+                                                lightColorScheme.onBackground,
+                                            size: 28,
+                                          ),
+                                        ),
+                                        Text('Slow down',
+                                            textAlign: TextAlign.start,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],

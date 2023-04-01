@@ -87,6 +87,8 @@ class _DrivingViewState extends State<DrivingView> {
   DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
   DateFormat noYearsSeconds = DateFormat("MM-dd HH:mm");
 
+  String text = "Stop service";
+
   /// *******************************************************
   /// *******************************************************
   /// *******************************************************
@@ -302,7 +304,7 @@ class _DrivingViewState extends State<DrivingView> {
       _statesController.update(MaterialState.disabled, false);
     }
     await Future.delayed(const Duration(seconds: 4));
-    
+
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted) {
@@ -941,7 +943,7 @@ class _DrivingViewState extends State<DrivingView> {
                               minimumSize: const Size.fromHeight(50),
                             ),
                             statesController: _statesController,
-                            onPressed: () {
+                            onPressed: () async {
                               if (!canExit) return;
                               _updateSessionData();
                               isValidSession = _validateSession();
