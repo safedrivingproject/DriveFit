@@ -949,6 +949,7 @@ class _DrivingViewState extends State<DrivingView> {
                               isValidSession = _validateSession();
                               if (isValidSession) {
                                 databaseService.saveSessionData(currentSession);
+                                databaseService.needSessionDataUpdate = true;
                               }
                               Navigator.of(context).pop(true);
                               Navigator.of(context).push(MaterialPageRoute(
@@ -1037,7 +1038,7 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   bool _validateSession() {
-    if (currentSession.distance < 500 || currentSession.duration < 60) {
+    if (currentSession.distance < 500 || currentSession.duration < 10) {
       return false;
     }
     return true;

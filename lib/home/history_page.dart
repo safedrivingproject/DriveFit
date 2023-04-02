@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:skeleton_loader/skeleton_loader.dart';
 
 import '/theme/color_schemes.g.dart';
 import '/theme/custom_color.g.dart';
@@ -19,32 +20,52 @@ class _HistoryPageState extends State<HistoryPage> {
   final ScrollController _scrollController =
       ScrollController(keepScrollOffset: true);
   double _scrollOffset = 0.0;
+  bool isAtEndOfPage = false;
 
   List<SessionData> driveSessionsList = [];
-  int rowCount = 0;
-  int totalAlerts = 0;
-  double overallAvgScore = 0.0;
-  double recentAvgScore = 0.0;
+  int rowCount = 0, totalAlerts = 0;
+  double overallAvgScore = 0.0, recentAvgScore = 0.0;
+
+  bool _isloading = true, _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (mounted) {
-        setState(() {
-          _scrollOffset = _scrollController.offset;
-        });
+      _scrollOffset = _scrollController.offset;
+      if (_scrollController.position.atEdge) {
+        isAtEndOfPage = _scrollController.position.pixels != 0;
       }
+      if (mounted) {
+        setState(() {});
+      }
+      print(isAtEndOfPage);
     });
+    if (!_isInitialized) {
+      _loadData();
+    }
+    _isInitialized = true;
+
     getSessionData();
   }
 
+  Future _loadData() async {
+    await getSessionData();
+    if (mounted) {
+      setState(() {
+        _isloading = false;
+      });
+    }
+  }
+
   Future<void> getSessionData() async {
-    driveSessionsList = await databaseService.getRecentSessions();
-    rowCount = await databaseService.getRowCount();
-    totalAlerts = await databaseService.getTotalAlertCount();
-    overallAvgScore = await databaseService.getOverallAverageScore();
-    recentAvgScore = await databaseService.getRecentAverageScore();
+    driveSessionsList = await databaseService.getAllSessions();
+    rowCount = databaseService.getRowCount(driveSessionsList);
+    totalAlerts = databaseService.getDrowsyAlertCount(driveSessionsList) +
+        databaseService.getInattentiveAlertCount(driveSessionsList);
+    overallAvgScore = databaseService.getOverallAverageScore(driveSessionsList);
+    recentAvgScore =
+        databaseService.getRecentAverageScore(driveSessionsList, 7);
     if (mounted) {
       setState(() {});
     }
@@ -89,11 +110,360 @@ class _HistoryPageState extends State<HistoryPage> {
     return opacity;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _body() {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
+    if (_isloading) {
+      return ListView.separated(
+        shrinkWrap: true,
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return Container(
+            padding: const EdgeInsets.all(14.0),
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: lightColorScheme.background),
+            child: SkeletonLoader(
+              builder: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(0, 14, 0, 14),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.03,
+                      width: MediaQuery.of(context).size.width * 0.5,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: lightColorScheme.background),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.03,
+                      width: MediaQuery.of(context).size.width,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: lightColorScheme.background),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+        separatorBuilder: (context, index) {
+          return const SizedBox(height: 28);
+        },
+      );
+    } else {
+      return ListView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+              decoration: BoxDecoration(
+                color: lightColorScheme.background,
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Color(0x35000000),
+                    offset: Offset(0, 1),
+                  )
+                ],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: lightColorScheme.background,
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'So far, you\'ve had',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(color: lightColorScheme.inverseSurface),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(rowCount.toString(),
+                          style: Theme.of(context).textTheme.displayLarge),
+                      Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
+                        child: Text('safe trips',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                    color: lightColorScheme.inverseSurface)),
+                      ),
+                      const SizedBox(width: 20),
+                      Text(totalAlerts.toString(),
+                          style: Theme.of(context).textTheme.displayLarge),
+                      Expanded(
+                        child: Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
+                          child: Text('reminders',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                      color: lightColorScheme.inverseSurface)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                color: lightColorScheme.onSecondary,
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Color(0x35000000),
+                    offset: Offset(0, 1),
+                  )
+                ],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: lightColorScheme.onPrimary,
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(8, 14, 8, 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  children: [
+                    Padding(
+                      padding:
+                          const EdgeInsetsDirectional.fromSTEB(12, 0, 0, 0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Avg. Score \n(Overall)',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 4, 0, 0),
+                                child: Text(
+                                  '${overallAvgScore.toStringAsFixed(1)}/5',
+                                  style:
+                                      Theme.of(context).textTheme.displaySmall,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 4, 0, 0),
+                                child: Icon(
+                                  Icons.star_rounded,
+                                  color: sourceXanthous,
+                                  size: 24,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Avg. Score \n(Last 7 sessions)',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                      0, 4, 0, 0),
+                                  child: Text(
+                                    '${recentAvgScore.toStringAsFixed(1)}/5',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displaySmall,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                      0, 4, 0, 0),
+                                  child: Icon(
+                                    Icons.star_rounded,
+                                    color: sourceXanthous,
+                                    size: 24,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                color: lightColorScheme.onSecondary,
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Color(0x35000000),
+                    offset: Offset(0, 1),
+                  )
+                ],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding:
+                          const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
+                      child: Text(
+                        'Trend of drowsy alerts',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    AspectRatio(
+                      aspectRatio: 1.2,
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(0, 16, 16, 16),
+                        child: driveSessionsList.isNotEmpty
+                            ? LineChart(drowsyCountData())
+                            : SizedBox(
+                                height: 75,
+                                width: MediaQuery.of(context).size.width,
+                                child: Center(
+                                  child: Text(
+                                    "No sessions yet :/\nStart driving to begin a session now :)",
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                color: lightColorScheme.onSecondary,
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Color(0x35000000),
+                    offset: Offset(0, 1),
+                  )
+                ],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding:
+                          const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
+                      child: Text(
+                        'Trend of inattentive alerts',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    AspectRatio(
+                      aspectRatio: 1.2,
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(0, 16, 16, 16),
+                        child: driveSessionsList.isNotEmpty
+                            ? LineChart(inattentiveCountData())
+                            : SizedBox(
+                                height: 75,
+                                width: MediaQuery.of(context).size.width,
+                                child: Center(
+                                  child: Text(
+                                    "No sessions yet :/\nStart driving to begin a session now :)",
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SessionsList(
+            sessionsList: driveSessionsList,
+            isAtEndOfPage: isAtEndOfPage,
+          ),
+        ],
+      );
+    }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
         Container(
@@ -137,388 +507,28 @@ class _HistoryPageState extends State<HistoryPage> {
               surfaceTintColor: Colors.transparent,
             ),
             SliverToBoxAdapter(
-              child: Stack(
-                children: [
-                  SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              28, 14, 28, 14),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.max,
-                                children: [
-                                  Expanded(
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              0, 0, 0, 28),
-                                      child: Text(
-                                        'Drive Summary',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .displayLarge
-                                            ?.copyWith(
-                                                height: 1,
-                                                color: lightColorScheme
-                                                    .onPrimary
-                                                    .withOpacity(
-                                                        _getLargeTitleOpacity())),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                width: MediaQuery.of(context).size.width,
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                    16, 16, 16, 8),
-                                decoration: BoxDecoration(
-                                  color: lightColorScheme.background,
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      blurRadius: 4,
-                                      color: Color(0x35000000),
-                                      offset: Offset(0, 1),
-                                    )
-                                  ],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: lightColorScheme.background,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'So far, you\'ve had',
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge
-                                          ?.copyWith(
-                                              color: lightColorScheme
-                                                  .inverseSurface),
-                                    ),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.max,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(rowCount.toString(),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .displayLarge),
-                                        Padding(
-                                          padding: const EdgeInsetsDirectional
-                                              .fromSTEB(4, 0, 0, 12),
-                                          child: Text('safe trips',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.copyWith(
-                                                      color: lightColorScheme
-                                                          .inverseSurface)),
-                                        ),
-                                        const SizedBox(width: 20),
-                                        Text(totalAlerts.toString(),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .displayLarge),
-                                        Expanded(
-                                          child: Padding(
-                                            padding: const EdgeInsetsDirectional
-                                                .fromSTEB(4, 0, 0, 12),
-                                            child: Text('reminders',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(
-                                                        color: lightColorScheme
-                                                            .inverseSurface)),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              28, 0, 28, 14),
-                          child: Container(
-                            width: MediaQuery.of(context).size.width,
-                            decoration: BoxDecoration(
-                              color: lightColorScheme.onSecondary,
-                              boxShadow: const [
-                                BoxShadow(
-                                  blurRadius: 4,
-                                  color: Color(0x35000000),
-                                  offset: Offset(0, 1),
-                                )
-                              ],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: lightColorScheme.onPrimary,
-                                width: 1,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  8, 14, 8, 14),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.max,
-                                children: [
-                                  Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                            12, 0, 0, 0),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.max,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Avg. Score \n(Overall)',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
-                                        ),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.max,
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsetsDirectional
-                                                      .fromSTEB(0, 4, 0, 0),
-                                              child: Text(
-                                                '$overallAvgScore/5',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .displaySmall,
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsetsDirectional
-                                                      .fromSTEB(0, 4, 0, 0),
-                                              child: Icon(
-                                                Icons.star_rounded,
-                                                color: sourceXanthous,
-                                                size: 24,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              12, 0, 12, 0),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.max,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Avg. Score \n(Last 7 sessions)',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium,
-                                          ),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.max,
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsetsDirectional
-                                                        .fromSTEB(0, 4, 0, 0),
-                                                child: Text(
-                                                  '${recentAvgScore.toStringAsFixed(1)}/5',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .displaySmall,
-                                                ),
-                                              ),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsetsDirectional
-                                                        .fromSTEB(0, 4, 0, 0),
-                                                child: Icon(
-                                                  Icons.star_rounded,
-                                                  color: sourceXanthous,
-                                                  size: 24,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              28, 0, 28, 14),
-                          child: Container(
-                            width: MediaQuery.of(context).size.width,
-                            decoration: BoxDecoration(
-                              color: lightColorScheme.onSecondary,
-                              boxShadow: const [
-                                BoxShadow(
-                                  blurRadius: 4,
-                                  color: Color(0x35000000),
-                                  offset: Offset(0, 1),
-                                )
-                              ],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  16, 16, 16, 16),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                            0, 8, 0, 16),
-                                    child: Text(
-                                      'Trend of drowsy alerts',
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                  AspectRatio(
-                                    aspectRatio: 1.2,
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              0, 16, 16, 16),
-                                      child: driveSessionsList.isNotEmpty
-                                          ? LineChart(drowsyCountData())
-                                          : SizedBox(
-                                              height: 75,
-                                              width: MediaQuery.of(context)
-                                                  .size
-                                                  .width,
-                                              child: Center(
-                                                child: Text(
-                                                  "No sessions yet :/\nStart driving to begin a session now :)",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyLarge,
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsetsDirectional.fromSTEB(
-                              28, 0, 28, 14),
-                          child: Container(
-                            width: MediaQuery.of(context).size.width,
-                            decoration: BoxDecoration(
-                              color: lightColorScheme.onSecondary,
-                              boxShadow: const [
-                                BoxShadow(
-                                  blurRadius: 4,
-                                  color: Color(0x35000000),
-                                  offset: Offset(0, 1),
-                                )
-                              ],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  16, 16, 16, 16),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                            0, 8, 0, 16),
-                                    child: Text(
-                                      'Trend of inattentive alerts',
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ),
-                                  AspectRatio(
-                                    aspectRatio: 1.2,
-                                    child: Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              0, 16, 16, 16),
-                                      child: driveSessionsList.isNotEmpty
-                                          ? LineChart(inattentiveCountData())
-                                          : SizedBox(
-                                              height: 75,
-                                              width: MediaQuery.of(context)
-                                                  .size
-                                                  .width,
-                                              child: Center(
-                                                child: Text(
-                                                  "No sessions yet :/\nStart driving to begin a session now :)",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyLarge,
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        SessionsList(
-                          sessionsList: driveSessionsList,
-                        ),
-                      ],
-                    ), // Data Column
-                  ),
-                ],
+              child: SingleChildScrollView(
+                padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Drive Summary',
+                        style: Theme.of(context)
+                            .textTheme
+                            .displayLarge
+                            ?.copyWith(
+                                height: 1,
+                                color: lightColorScheme.onPrimary
+                                    .withOpacity(_getLargeTitleOpacity())),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _body(),
+                  ],
+                ), // Data Column
               ),
             ),
           ],
@@ -597,8 +607,8 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       minX: 0,
       maxX: driveSessionsList.length > 14
-          ? 14.0
-          : driveSessionsList.length.toDouble(),
+          ? 13.0
+          : driveSessionsList.length.toDouble() - 1,
       minY: 0,
       maxY: (getMaxY(getRecentDrowsyFlList())! / 5).ceil() * 5,
       lineBarsData: [
@@ -629,9 +639,10 @@ class _HistoryPageState extends State<HistoryPage> {
     for (int i = 0; i < sessionsDrowsyListInt.length; i++) {
       flSpotlist.add(FlSpot(
           ((driveSessionsList.length > 14
-                  ? 14.0
+                  ? 13.0
                   : driveSessionsList.length.toDouble()) -
-              i),
+              i -
+              1),
           sessionsDrowsyListDouble[i]));
     }
     return flSpotlist;
@@ -707,8 +718,8 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       minX: 0,
       maxX: driveSessionsList.length > 14
-          ? 14.0
-          : driveSessionsList.length.toDouble(),
+          ? 13.0
+          : driveSessionsList.length.toDouble() - 1,
       minY: 0,
       maxY: (getMaxY(getRecentInattentiveFlList())! / 5).ceil() * 5,
       lineBarsData: [
@@ -739,9 +750,10 @@ class _HistoryPageState extends State<HistoryPage> {
     for (int i = 0; i < sessionsInattentiveListInt.length; i++) {
       flSpotlist.add(FlSpot(
           ((driveSessionsList.length > 14
-                  ? 14.0
+                  ? 13.0
                   : driveSessionsList.length.toDouble()) -
-              i),
+              i -
+              1),
           sessionsInattentiveListDouble[i]));
     }
     return flSpotlist;
@@ -769,7 +781,7 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }
     if (value.toInt() ==
-        (driveSessionsList.length > 14 ? 14 : driveSessionsList.length)) {
+        (driveSessionsList.length > 14 ? 13 : driveSessionsList.length - 1)) {
       text = const Text('Recent', style: style);
       return SideTitleWidget(
         axisSide: meta.axisSide,
@@ -800,9 +812,11 @@ class _HistoryPageState extends State<HistoryPage> {
 
 class SessionsList extends StatefulWidget {
   final List<SessionData> sessionsList;
+  final bool isAtEndOfPage;
   const SessionsList({
     super.key,
     required this.sessionsList,
+    required this.isAtEndOfPage,
   });
 
   @override
@@ -825,29 +839,27 @@ class SessionsListState extends State<SessionsList> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 0),
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 8),
-            decoration: BoxDecoration(
+        Container(
+          width: MediaQuery.of(context).size.width,
+          margin: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 16),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 8),
+          decoration: BoxDecoration(
+            color: lightColorScheme.background,
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 4,
+                color: Color(0x35000000),
+                offset: Offset(0, 1),
+              )
+            ],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
               color: lightColorScheme.background,
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 4,
-                  color: Color(0x35000000),
-                  offset: Offset(0, 1),
-                )
-              ],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: lightColorScheme.background,
-                width: 1,
-              ),
+              width: 1,
             ),
-            child: Text("Previous Sessions:",
-                style: Theme.of(context).textTheme.titleMedium),
           ),
+          child: Text("Previous Sessions:",
+              style: Theme.of(context).textTheme.titleMedium),
         ),
         if (widget.sessionsList.isNotEmpty)
           ConstrainedBox(
@@ -856,11 +868,13 @@ class SessionsListState extends State<SessionsList> {
             child: ListView.builder(
               itemCount: widget.sessionsList.length,
               shrinkWrap: true,
-              physics: const AlwaysScrollableScrollPhysics(),
+              physics: widget.isAtEndOfPage
+                  ? const AlwaysScrollableScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
               itemBuilder: (BuildContext context, int index) {
                 SessionData session = widget.sessionsList[index];
                 return Card(
-                  margin: const EdgeInsetsDirectional.fromSTEB(28, 0, 28, 16),
+                  margin: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 16),
                   child: Padding(
                     padding: const EdgeInsets.all(14.0),
                     child: Column(
@@ -870,9 +884,34 @@ class SessionsListState extends State<SessionsList> {
                           "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
-                        Text(
-                          formatTime(DateFormat.ms(), session.endTime),
-                          style: Theme.of(context).textTheme.titleSmall,
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.end,
+                          children: [
+                            Text(
+                              '${Duration(seconds: session.duration).inMinutes}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 0, 0, 2),
+                              child: Text(
+                                ' min ',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            Text(
+                              '${Duration(seconds: session.duration).inSeconds - (Duration(seconds: session.duration).inMinutes * 60)}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 0, 0, 2),
+                              child: Text(
+                                ' seconds ',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Row(
@@ -915,7 +954,7 @@ class SessionsListState extends State<SessionsList> {
           )
         else
           Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(0, 14, 0, 0),
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
             child: SizedBox(
               height: 75,
               width: MediaQuery.of(context).size.width,

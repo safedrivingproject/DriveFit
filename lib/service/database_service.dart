@@ -10,6 +10,10 @@ class DatabaseService {
   factory DatabaseService() => _instance;
   static Database? _db;
   static const _databaseVersion = 2;
+  List<SessionData> sessionsCache = [];
+  bool needSessionDataUpdate = true;
+  int currentDrivingTipIndex = 0;
+  bool needIndexUpdate = true;
 
   Future<Database?> get db async {
     if (_db != null) return _db;
@@ -17,7 +21,12 @@ class DatabaseService {
     return _db;
   }
 
-  DatabaseService.internal();
+  DatabaseService.internal() {
+    sessionsCache = [];
+    needSessionDataUpdate = true;
+    currentDrivingTipIndex = 0;
+    needIndexUpdate = true;
+  }
 
   Future<Database> initDb() async {
     io.Directory documentsDirectory = await getApplicationDocumentsDirectory();
@@ -50,64 +59,60 @@ class DatabaseService {
     return id;
   }
 
-  Future<int> getRowCount() async {
-    var dbClient = await db;
-    if (dbClient == null) return 0;
-    int count = Sqflite.firstIntValue(
-            await dbClient.rawQuery('SELECT COUNT(*) FROM sessions')) ??
-        0;
-    return count;
+  int getRowCount(List<SessionData> sessions) {
+    if (sessions.isEmpty) return 0;
+    return sessions.length;
   }
 
-  Future<int> getTotalAlertCount() async {
-    var dbClient = await db;
-    if (dbClient == null) return 0;
-    int count = Sqflite.firstIntValue(await dbClient.rawQuery(
-            'SELECT SUM(drowsy_alerts + inattentive_alerts) FROM sessions')) ??
-        0;
-    return count;
+  int getDrowsyAlertCount(List<SessionData> sessions) {
+    if (sessions.isEmpty) return 0;
+    List<int> drowsyList =
+        sessions.map((sessionData) => sessionData.drowsyAlertCount).toList();
+    return drowsyList.sum;
   }
 
-  Future<double> getOverallAverageScore() async {
-    var dbClient = await db;
-    if (dbClient == null) return 0.0;
-    var count = Sqflite.firstIntValue(
-            await dbClient.rawQuery('SELECT COUNT(*) FROM sessions')) ??
-        0;
-    if (count == 0) return 0.0;
-    var result =
-        await dbClient.rawQuery('SELECT ROUND(AVG(score), 1) FROM sessions');
-    double average =
-        result.isNotEmpty ? (result.first.values.first as num).toDouble() : 0.0;
-    return average;
+  int getInattentiveAlertCount(List<SessionData> sessions) {
+    if (sessions.isEmpty) return 0;
+    List<int> inattentiveList = sessions
+        .map((sessionData) => sessionData.inattentiveAlertCount)
+        .toList();
+    return inattentiveList.sum;
   }
 
-  Future<double> getRecentAverageScore() async {
-    var dbClient = await db;
-    if (dbClient == null) return 0.0;
-    var count = Sqflite.firstIntValue(
-            await dbClient.rawQuery('SELECT COUNT(*) FROM sessions')) ??
-        0;
-    if (count == 0) return 0.0;
-    var result = await dbClient
-        .rawQuery('SELECT score FROM sessions ORDER BY id DESC LIMIT 7');
-    List<int> scoreList = [];
-    for (int i = 0; i < result.length; i++) {
-      scoreList.add(result[i]['score'] as int);
-    }
+  double getOverallAverageScore(List<SessionData> sessions) {
+    if (sessions.isEmpty) return 0.0;
+    List<int> scoreList =
+        sessions.map((sessionData) => sessionData.score).toList();
     double average = scoreList.average;
     return average;
   }
 
-  Future<List<SessionData>> getRecentSessions() async {
-    var dbClient = await db;
-    List<Map> list = await dbClient!
-        .rawQuery('SELECT * FROM sessions ORDER BY id DESC LIMIT 14');
-    List<SessionData> sessions = [];
-    for (int i = 0; i < list.length; i++) {
-      sessions.add(SessionData.fromMap(list[i] as Map<String, dynamic>));
+  double getRecentAverageScore(List<SessionData> sessions, int days) {
+    if (sessions.isEmpty) return 0.0;
+    List<int> scoreList =
+        sessions.map((sessionData) => sessionData.score).toList();
+    var sum = 0;
+    for (int i = 0; i < days; i++) {
+      if (i > scoreList.length - 1) break;
+      sum += scoreList[i];
     }
-    return sessions;
+    double average = sum / scoreList.length;
+    return average;
+  }
+
+  Future<List<SessionData>> getAllSessions() async {
+    if (!needSessionDataUpdate) {
+      return sessionsCache;
+    }
+    sessionsCache = [];
+    var dbClient = await db;
+    List<Map> list =
+        await dbClient!.rawQuery('SELECT * FROM sessions ORDER BY id DESC');
+    for (int i = 0; i < list.length; i++) {
+      sessionsCache.add(SessionData.fromMap(list[i] as Map<String, dynamic>));
+    }
+    needSessionDataUpdate = false;
+    return sessionsCache;
   }
 
   Future<void> deleteData() async {

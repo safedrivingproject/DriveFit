@@ -841,6 +841,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                     _clearSPData();
                                     _loadDefaultSettings();
                                     databaseService.deleteData();
+                                    databaseService.needSessionDataUpdate =
+                                        true;
                                   });
                                 }
                                 showSnackBar(context, "Data Cleared!");

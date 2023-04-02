@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '/service/database_service.dart';
 import 'drive_page.dart';
 import 'history_page.dart';
 
 class HomePage extends StatefulWidget {
-  final String title;
+  final String? title;
   final int? index;
-  const HomePage({super.key, required this.title, this.index});
+  const HomePage({super.key, this.title, this.index});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -13,6 +14,16 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedPageIndex = 0;
+
+  final DatabaseService databaseService = DatabaseService();
+  List<SessionData> driveSessionsList = [];
+
+  Future<void> getSessionData() async {
+    driveSessionsList = await databaseService.getAllSessions();
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   void initState() {
@@ -52,8 +63,8 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: [
-        const DrivePage(),
-        const HistoryPage(),
+        DrivePage(),
+        HistoryPage(),
         const AchievementsPage(),
       ][selectedPageIndex],
     );
@@ -70,6 +81,15 @@ class AchievementsPage extends StatefulWidget {
 class _AchievementsPageState extends State<AchievementsPage> {
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28.0),
+        child: Text(
+          "In development, please check back soon!",
+          style: Theme.of(context).textTheme.displaySmall,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
   }
 }
