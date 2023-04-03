@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'main.dart';
+import '/main.dart';
+import '/theme/color_schemes.g.dart';
 
 class NotificationController {
   static ReceivedAction? initialAction;
@@ -8,18 +9,31 @@ class NotificationController {
   //Initializations
   static Future<void> initializeLocalNotifications() async {
     await AwesomeNotifications().initialize(
-        'resource://drawable/res_leaf',
+        'resource://drawable/res_logo_transparent_dark',
         [
           NotificationChannel(
-              channelKey: 'alerts',
-              channelName: 'Driving Reminders',
-              channelDescription: 'Notification channel for driving reminders',
+              channelKey: 'drivefit_alerts',
+              channelName: 'DriveFit Alerts',
+              channelDescription:
+                  'Notification channel for driving alerts from DriveFit',
               playSound: true,
-              groupAlertBehavior: GroupAlertBehavior.Children,
+              groupAlertBehavior: GroupAlertBehavior.All,
               importance: NotificationImportance.Max,
               defaultPrivacy: NotificationPrivacy.Public,
-              defaultColor: Colors.red,
-              ledColor: Colors.red)
+              defaultColor: lightColorScheme.primary,
+              ledColor: Colors.red),
+          NotificationChannel(
+              channelKey: 'foreground_service',
+              channelName: 'DriveFit Service',
+              channelDescription:
+                  'Notification channel for the foreground services.',
+              playSound: true,
+              groupAlertBehavior: GroupAlertBehavior.All,
+              importance: NotificationImportance.Default,
+              defaultPrivacy: NotificationPrivacy.Public,
+              defaultColor: lightColorScheme.primary,
+              ledColor: Colors.blue,
+              locked: true)
         ],
         debug: true);
 
@@ -109,22 +123,18 @@ class NotificationController {
   ///
   static Future<void> createSleepyNotification() async {
     bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
-    if (!isAllowed) isAllowed = await displayNotificationRationale();
-    if (!isAllowed) return;
+    if (!isAllowed) {
+      AwesomeNotifications().requestPermissionToSendNotifications();
+      return;
+    }
 
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: -1, // -1 is replaced by a random number
-        channelKey: 'alerts',
+        id: -1,
+        channelKey: 'drivefit_alerts',
         title: 'Drive Safely!',
         body: "Wanna park and take a nap?",
-        bigPicture:
-            'https://storage.googleapis.com/cms-storage-bucket/d406c736e7c4c57f5f61.png',
-        largeIcon:
-            'https://storage.googleapis.com/cms-storage-bucket/0dbfcc7a59cd1cf16282.png',
-        //'asset://assets/images/balloons-in-sky.jpg',
-        notificationLayout: NotificationLayout.BigPicture,
-        payload: {'notificationId': '1234567890'},
+        notificationLayout: NotificationLayout.Default,
         wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
@@ -140,17 +150,11 @@ class NotificationController {
 
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: -1, // -1 is replaced by a random number
-        channelKey: 'alerts',
+        id: -1,
+        channelKey: 'drivefit_alerts',
         title: 'Drive Safely!',
         body: "Keep your eyes on the road!",
-        bigPicture:
-            'https://storage.googleapis.com/cms-storage-bucket/d406c736e7c4c57f5f61.png',
-        largeIcon:
-            'https://storage.googleapis.com/cms-storage-bucket/0dbfcc7a59cd1cf16282.png',
-        //'asset://assets/images/balloons-in-sky.jpg',
-        notificationLayout: NotificationLayout.BigPicture,
-        payload: {'notificationId': '1234567890'},
+        notificationLayout: NotificationLayout.Default,
         wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
@@ -164,6 +168,7 @@ class NotificationController {
   }
 
   static Future<void> dismissAlertNotifications() async {
-    await AwesomeNotifications().dismissNotificationsByChannelKey('alerts');
+    await AwesomeNotifications()
+        .dismissNotificationsByChannelKey('drivefit_alerts');
   }
 }

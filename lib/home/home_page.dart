@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '/settings_page.dart';
-import '/theme/color_schemes.g.dart';
+import '/service/database_service.dart';
 import 'drive_page.dart';
+import 'history_page.dart';
 
 class HomePage extends StatefulWidget {
-  final String title;
-  const HomePage({super.key, required this.title});
+  final String? title;
+  final int? index;
+  const HomePage({super.key, this.title, this.index});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -15,21 +16,15 @@ class _HomePageState extends State<HomePage> {
   int selectedPageIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    selectedPageIndex = widget.index ?? 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     setState(() {});
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.settings),
-          color: lightColorScheme.background,
-          onPressed: () {
-            Navigator.of(context).pushReplacement(MaterialPageRoute(
-                builder: (context) => const SettingsPage(title: "Settings")));
-          },
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       extendBodyBehindAppBar: true,
       bottomNavigationBar: NavigationBar(
         animationDuration: const Duration(milliseconds: 500),
@@ -58,25 +53,11 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: [
-        const DrivePage(),
-        const HistoryPage(),
+        DrivePage(),
+        HistoryPage(),
         const AchievementsPage(),
       ][selectedPageIndex],
     );
-  }
-}
-
-class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
-
-  @override
-  State<HistoryPage> createState() => _HistoryPageState();
-}
-
-class _HistoryPageState extends State<HistoryPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Container();
   }
 }
 
@@ -90,6 +71,15 @@ class AchievementsPage extends StatefulWidget {
 class _AchievementsPageState extends State<AchievementsPage> {
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28.0),
+        child: Text(
+          "In development, please check back soon!",
+          style: Theme.of(context).textTheme.displaySmall,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
   }
 }

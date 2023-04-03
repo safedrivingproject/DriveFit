@@ -1,39 +1,50 @@
 import 'dart:async';
 import 'dart:core';
 import 'dart:math';
+import 'package:drive_fit/home/home_page.dart';
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:drive_fit/theme/color_schemes.g.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 
-import '/home/home_page.dart';
+import '/theme/color_schemes.g.dart';
 import 'camera_view.dart';
-import '/notification_controller.dart';
+import '../notifications/notification_controller.dart';
 import 'face_detector_painter.dart';
 import 'coordinates_translator.dart';
+import '../service/face_detection_service.dart';
+import '../service/geolocation_service.dart';
+import '../service/database_service.dart';
+import 'drive_session_summary.dart';
 import '/global_variables.dart' as globals;
 
 class DrivingView extends StatefulWidget {
   const DrivingView({
     Key? key,
     required this.calibrationMode,
-    required this.accelerometerOn,
+    this.accelerometerOn = false,
+    required this.enableGeolocation,
   }) : super(key: key);
 
   final bool calibrationMode;
   final bool accelerometerOn;
+  final bool enableGeolocation;
 
   @override
   State<DrivingView> createState() => _DrivingViewState();
 }
 
 class _DrivingViewState extends State<DrivingView> {
-  final AudioPlayer audioPlayer = AudioPlayer();
-  // StreamSubscription? audioSubscription;
+  final FaceDetectionService faceDetectionService = FaceDetectionService();
+  final GeolocationService geolocationService = GeolocationService();
+  final DatabaseService databaseService = DatabaseService();
+
+  final AudioPlayer drowsyAudioPlayer = AudioPlayer();
+  final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
 
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
@@ -42,26 +53,17 @@ class _DrivingViewState extends State<DrivingView> {
     ),
   );
 
+  final MaterialStatesController _statesController = MaterialStatesController();
+
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
-  bool cancelTimer = false;
-  bool carMoving = false;
-
+  bool carMoving = true;
+  bool startCalibration = false;
   bool _canProcess = true, _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
-
-  double? rotX = globals.neutralRotX,
-      rotY = globals.neutralRotY,
-      rotZ = 0,
-      leftEyeOpenProb = 1.0,
-      rightEyeOpenProb = 1.0;
-  double neutralRotX = 5, neutralRotY = -25;
+  bool showCameraPreview = true;
   double maxAccelThreshold = 1.0;
-  List<Face> faces = [];
-
-  bool startCalibration = false;
-  bool hasFace = true;
 
   bool _accelAvailable = false;
   List<double> accelData = List.filled(3, 0.0);
@@ -69,24 +71,64 @@ class _DrivingViewState extends State<DrivingView> {
   double _rawAccelX = 0, _rawAccelY = 9.8, _rawAccelZ = 0;
   double accelX = 0, accelY = 0, accelZ = 0;
 
+  SessionData currentSession = SessionData(
+      id: 0,
+      startTime: "",
+      endTime: "",
+      duration: 0,
+      distance: 0.0,
+      drowsyAlertCount: 0,
+      inattentiveAlertCount: 0,
+      score: 0);
+  bool isValidSession = false;
+  bool canExit = false;
+
+  DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
+  DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
+  DateFormat noYearsSeconds = DateFormat("MM-dd HH:mm");
+
+  String text = "Stop service";
+
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// SHARED PREFERENCES
+  ///
+  /// *******************************************************
+  /// *******************************************************
   /// *******************************************************
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        globals.useAccelerometer = (prefs.getBool('useAccelerometer') ?? false);
-        globals.showCameraPreview =
-            (prefs.getBool('showCameraPreview') ?? true);
-        globals.useHighCameraResolution =
-            (prefs.getBool('useHighCameraResolution') ?? false);
+        showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+        geolocationService.stationaryAlertsDisabled =
+            (prefs.getBool('stationaryAlertsDisabled') ?? false);
+        geolocationService.additionalDelay =
+            (prefs.getInt('additionalDelay') ?? 20);
         globals.showDebug = (prefs.getBool('showDebug') ?? false);
         globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
-        neutralRotX = (prefs.getDouble('neutralRotX') ?? 5.0);
-        neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
+        faceDetectionService.neutralRotX =
+            (prefs.getDouble('neutralRotX') ?? 5.0);
+        faceDetectionService.neutralRotY =
+            (prefs.getDouble('neutralRotY') ?? -25.0);
+        faceDetectionService.rotYLeftOffset =
+            (prefs.getDouble('rotYLeftOffset') ?? 20);
+        faceDetectionService.rotYRightOffset =
+            (prefs.getDouble('rotYRightOffset') ?? 10);
+        faceDetectionService.rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
+        faceDetectionService.rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
+        geolocationService.carVelocityThreshold =
+            (prefs.getDouble('carVelocityThreshold') ?? 5.0);
+        globals.drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
+            ["assets", "audio/car_horn_high.mp3"]);
+        globals.inattentiveAlarmValue =
+            (prefs.getStringList('inattentiveAlarm') ??
+                ["assets", "audio/double_beep.mp3"]);
       });
     }
+    initAudioPlayers();
   }
 
   Future<void> _saveBool(String key, bool value) async {
@@ -107,18 +149,91 @@ class _DrivingViewState extends State<DrivingView> {
     }
   }
 
+  Future<void> _saveInt(String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        prefs.setInt(key, value);
+      });
+    }
+  }
+
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// INIT & DISPOSE
+  ///
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  void initAudioPlayers() {
+    drowsyAudioPlayer.setSource(globals.drowsyAlarmValue[0] == "asset"
+        ? AssetSource(globals.drowsyAlarmValue[1])
+        : globals.drowsyAlarmValue[0] == "file"
+            ? DeviceFileSource(globals.drowsyAlarmValue[1])
+            : AssetSource("audio/car_horn_high.mp3"));
+    drowsyAudioPlayer.setVolume(1.0);
+    drowsyAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    inattentiveAudioPlayer.setSource(globals.inattentiveAlarmValue[0] == "asset"
+        ? AssetSource(globals.inattentiveAlarmValue[1])
+        : globals.inattentiveAlarmValue[0] == "file"
+            ? DeviceFileSource(globals.inattentiveAlarmValue[1])
+            : AssetSource("audio/double_beep.mp3"));
+    inattentiveAudioPlayer.setVolume(1.0);
+    inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
+  }
+
+  Future<void> saveCurrentPosition(Position? position) async {
+    if (!geolocationService.hasPermission) return;
+    position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation);
+  }
+
+  String saveCurrentTime(DateFormat format) {
+    return format.format(DateTime.now());
+  }
+
+  void _initSessionData() {
+    if (mounted) {
+      setState(() {
+        geolocationService.accumulatedDistance = 0.0;
+        currentSession = SessionData(
+            id: DateTime.now().millisecondsSinceEpoch,
+            startTime: "",
+            endTime: "",
+            duration: 0,
+            distance: widget.enableGeolocation
+                ? geolocationService.accumulatedDistance
+                : -1.0,
+            drowsyAlertCount: 0,
+            inattentiveAlertCount: 0,
+            score: 0);
+        currentSession.startTime = saveCurrentTime(noMillis);
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    audioPlayer.setSource(AssetSource('audio/car_horn_high.mp3'));
-    audioPlayer.setVolume(1.0);
-    audioPlayer.setReleaseMode(ReleaseMode.stop);
+
+    geolocationService.positionList.clear();
+    geolocationService.speedList.clear();
+
     _loadSettings();
+
     periodicCalibrationTimer?.cancel();
     periodicDetectionTimer?.cancel();
+
+    _initSessionData();
+
+    // _statesController.addListener(() {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     if (mounted) setState(() {});
+    //   });
+    // });
+
     if (widget.calibrationMode == true) {
       if (mounted) {
         setState(() {
@@ -131,188 +246,150 @@ class _DrivingViewState extends State<DrivingView> {
     if (widget.accelerometerOn) {
       _initAccelerometer();
     }
-
-    // audioSubscription = audioPlayer.onPlayerComplete.listen((event) {
-    //   setState(() {
-    //     audioPlayer.stop();
-    //   });
-    // });
+    if (widget.enableGeolocation) {
+      geolocationService.startGeolocationStream();
+    } else {
+      carMoving = true;
+    }
   }
 
   @override
   void dispose() {
     _canProcess = false;
-    cancelTimer = true;
+    periodicDetectionTimer?.cancel();
+    periodicCalibrationTimer?.cancel();
+
+    geolocationService.stopGeolocationStream();
     globals.inCalibrationMode = false;
-    // audioSubscription?.cancel();
-    audioPlayer.dispose();
+
+    drowsyAudioPlayer.dispose();
+    inattentiveAudioPlayer.dispose();
+
+    _statesController.dispose();
+
     _faceDetector.close();
     _stopAccelerometer();
     super.dispose();
   }
 
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// INATTENTIVENESS DETECTION
+  ///
+  /// *******************************************************
+  /// *******************************************************
   /// *******************************************************
   void sendSleepyReminder() {
-    audioPlayer.resume();
+    drowsyAudioPlayer.resume();
     NotificationController.dismissAlertNotifications();
     NotificationController.createSleepyNotification();
   }
 
   void sendDistractedReminder() {
-    audioPlayer.resume();
+    inattentiveAudioPlayer.resume();
     NotificationController.dismissAlertNotifications();
     NotificationController.createDistractedNotification();
   }
 
-  void detectionTimer() {
-    int rotXTimerCounter = 0;
-    int rotYCounter = 0;
-    int eyeCounter = 0;
-    int accelMovingCounter = 0;
-    int accelStoppedCounter = 0;
-    int faceEmptyCounter = 0;
+  void detectionTimer() async {
+    canExit = false;
+    WidgetsBinding.instance.scheduleFrameCallback((_) {
+      _statesController.update(MaterialState.disabled, true);
+    });
+    await Future.delayed(const Duration(seconds: 1));
+    canExit = true;
+    if (mounted) {
+      _statesController.update(MaterialState.disabled, false);
+    }
+    await Future.delayed(const Duration(seconds: 4));
 
-    int needReminderType = 0;
-    var liveAccelList = List<double>.filled(10, 0);
-    // ReminderType => 0: No need reminder, 1: Sleepy (Eyes Closed), 2: Distracted(Head rotation)
-    double maxAccel = 0;
-    int reminderCount = 0;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      //if (faces.isEmpty) return; (will lead to inaccurate detection)
-      if (faces.isEmpty) {
-        faceEmptyCounter++;
-      } else {
-        faceEmptyCounter = 0;
-        if (mounted) {
-          setState(() {
-            hasFace = true;
-          });
-        }
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkHasFace();
+        });
       }
-      if (faceEmptyCounter > 30) {
-        if (mounted) {
-          setState(() {
-            hasFace = false;
-          });
-        }
-      }
-      if (!hasFace) return;
 
-      ///TODO: replace with GPS
-      if (widget.accelerometerOn) {
-        liveAccelList.add(globals.resultantAccel);
-        if (liveAccelList.length > 10) {
-          liveAccelList.removeAt(0);
-        }
-        maxAccel = liveAccelList.fold<double>(0, max);
-        if (maxAccel > maxAccelThreshold) {
-          accelMovingCounter++;
-        } else {
-          accelMovingCounter = 0;
-        }
-        if (accelMovingCounter > 20) {
-          if (mounted) {
-            setState(() {
-              carMoving = true;
-            });
-          }
-        }
-        if (maxAccel <= maxAccelThreshold) {
-          accelStoppedCounter++;
-        } else {
-          accelStoppedCounter = 0;
-        }
-        if (accelStoppedCounter > 20) {
-          if (mounted) {
-            setState(() {
-              carMoving = false;
-            });
-          }
+      if (!faceDetectionService.hasFace) return;
+
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkEyesClosed();
+          faceDetectionService.checkNormalPosition();
+        });
+      }
+
+      if (widget.enableGeolocation) {
+        if (mounted) {
+          setState(() {
+            carMoving = geolocationService.checkCarMoving();
+          });
         }
       } else {
         carMoving = true;
       }
 
-      /// Eyes Closed
-      if (leftEyeOpenProb != null && rightEyeOpenProb != null) {
-        if (leftEyeOpenProb! < globals.eyeProbThreshold &&
-            rightEyeOpenProb! < globals.eyeProbThreshold) {
-          eyeCounter++;
-        } else {
-          eyeCounter = 0;
-        }
-        if (reminderCount < 3) {
-          if (eyeCounter > 10) {
-            needReminderType = 1;
-            reminderCount++;
-            eyeCounter = 0;
+      if (geolocationService.stationaryAlertsDisabled) {
+        if (carMoving) {
+          if (mounted) {
+            setState(() {
+              faceDetectionService
+                  .checkHeadUpDown(faceDetectionService.rotXDelay);
+              faceDetectionService
+                  .checkHeadLeftRight(faceDetectionService.rotYDelay);
+            });
           }
         }
-      }
-
-      /// Restored normal position
-      if (rotX! > (globals.neutralRotX - globals.rotXOffset) &&
-          rotX! < (globals.neutralRotX + globals.rotXOffset) &&
-          rotY! > (globals.neutralRotY - globals.rotYRightOffset) &&
-          rotY! < (globals.neutralRotY + globals.rotYLeftOffset) &&
-          leftEyeOpenProb! > globals.eyeProbThreshold &&
-          rightEyeOpenProb! > globals.eyeProbThreshold) {
-        reminderCount = 0;
-      }
-
-      if (cancelTimer == true) {
-        cancelTimer = false;
-        timer.cancel();
-      }
-
-      if (!carMoving) return;
-
-      /// Head up or down
-      if (rotX! < (globals.neutralRotX - globals.rotXOffset) ||
-          rotX! > (globals.neutralRotX + globals.rotXOffset)) {
-        rotXTimerCounter++;
       } else {
-        rotXTimerCounter = 0;
-      }
-      if (reminderCount < 3) {
-        if (rotXTimerCounter > 10) {
-          needReminderType = 2;
-          reminderCount++;
-          rotXTimerCounter = 0;
+        if (mounted) {
+          setState(() {
+            faceDetectionService.checkHeadUpDown(
+                faceDetectionService.rotXDelay +
+                    (!carMoving ? geolocationService.additionalDelay : 0));
+            faceDetectionService.checkHeadLeftRight(
+                faceDetectionService.rotYDelay +
+                    (!carMoving ? geolocationService.additionalDelay : 0));
+          });
         }
       }
 
-      /// Head Left or Right
-      if (rotY! > (globals.neutralRotY + globals.rotYLeftOffset) ||
-          rotY! < (globals.neutralRotY - globals.rotYRightOffset)) {
-        rotYCounter++;
-      } else {
-        rotYCounter = 0;
-      }
-      if (reminderCount < 3) {
-        if (rotYCounter > 25) {
-          needReminderType = 2;
-          reminderCount++;
-          rotYCounter = 0;
+      if (faceDetectionService.reminderType == "Drowsy") {
+        sendSleepyReminder();
+        if (mounted) {
+          setState(() {
+            if (faceDetectionService.hasReminded == false) {
+              currentSession.drowsyAlertCount++;
+              faceDetectionService.hasReminded = true;
+            }
+            faceDetectionService.reminderType = "None";
+          });
         }
-      }
-
-      if (needReminderType > 0) {
-        if (needReminderType == 1) {
-          sendSleepyReminder();
-        } else if (needReminderType == 2) {
-          sendDistractedReminder();
+      } else if (faceDetectionService.reminderType == "Inattentive") {
+        sendDistractedReminder();
+        if (mounted) {
+          setState(() {
+            if (faceDetectionService.hasReminded == false) {
+              currentSession.inattentiveAlertCount++;
+              faceDetectionService.hasReminded = true;
+            }
+            faceDetectionService.reminderType = "None";
+          });
         }
-        needReminderType = 0;
       }
     });
   }
 
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// CALIBRATION
+  ///
+  /// *******************************************************
+  /// *******************************************************
   /// *******************************************************
   void calibrationTimer() {
     var liveRotXList = <double>[], liveRotYList = <double>[];
@@ -332,43 +409,62 @@ class _DrivingViewState extends State<DrivingView> {
         if (mounted) {
           setState(() {
             _saveBool('hasCalibrated', true);
+            _saveDouble('neutralRotX', faceDetectionService.neutralRotX);
+            _saveDouble('neutralRotY', faceDetectionService.neutralRotY);
+            _saveDouble('rotYLeftOffset', faceDetectionService.rotYLeftOffset);
+            _saveDouble(
+                'rotYRightOffset', faceDetectionService.rotYRightOffset);
             startCalibration = false;
           });
-          Navigator.of(context)
-              .pushReplacement(MaterialPageRoute(builder: (context) {
-            return const HomePage(title: globals.appName);
-          }));
+          showSnackBar(context, "Calibration complete!");
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const HomePage(
+                    title: globals.appName,
+                    index: 0,
+                  )));
+
           timer.cancel();
         }
       } else {
-        liveRotXList.add(rotX ?? 5);
+        liveRotXList.add(faceDetectionService.rotX ?? 5);
         if (liveRotXList.length > 10) {
           liveRotXList.removeAt(0);
         }
-        liveRotYList.add(rotY ?? 5);
+        liveRotYList.add(faceDetectionService.rotY ?? -25);
         if (liveRotYList.length > 10) {
           liveRotYList.removeAt(0);
         }
         if (mounted) {
           setState(() {
-            neutralRotX = average(liveRotXList);
-            neutralRotY = average(liveRotYList);
+            faceDetectionService.neutralRotX = average(liveRotXList);
+            faceDetectionService.neutralRotY = average(liveRotYList);
             globals.neutralAccelX = _rawAccelX;
             globals.neutralAccelY = _rawAccelY;
             globals.neutralAccelZ = _rawAccelZ;
-            if (globals.neutralRotY <= 0) {
-              globals.rotYLeftOffset = 25;
-              globals.rotYRightOffset = 20;
-            } else if (globals.neutralRotY > 0) {
-              globals.rotYLeftOffset = 20;
-              globals.rotYRightOffset = 25;
-            }
-            _saveDouble('neutralRotX', neutralRotX);
-            _saveDouble('neutralRotY', neutralRotY);
+            calcRotYOffsets();
           });
         }
       }
     });
+  }
+
+  void calcRotYOffsets() {
+    var neutralY = faceDetectionService.neutralRotY;
+    var leftOffset = 15.0;
+    var rightOffset = 15.0;
+    if (neutralY <= 0) {
+      leftOffset = 20 + (neutralY.abs() / 10);
+      if (neutralY > -25) {
+        rightOffset = 20 + (neutralY.abs() / 2);
+      } else {
+        rightOffset = 20 + (neutralY.abs() / 6);
+      }
+    } else if (neutralY > 0) {
+      leftOffset = 15 + (neutralY.abs() / 8);
+      rightOffset = 15 + (neutralY.abs() / 8);
+    }
+    faceDetectionService.rotYLeftOffset = leftOffset;
+    faceDetectionService.rotYRightOffset = rightOffset;
   }
 
   double average(List<double> list) {
@@ -383,7 +479,13 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// ACCELEROMETER STUFF
+  ///
+  /// *******************************************************
+  /// *******************************************************
   /// *******************************************************
   void _initAccelerometer() async {
     await SensorManager()
@@ -433,7 +535,13 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// FACE DETECTION
+  ///
+  /// *******************************************************
+  /// *******************************************************
   /// *******************************************************
   Future<void> processImage(InputImage inputImage) async {
     if (!_canProcess) return;
@@ -444,14 +552,17 @@ class _DrivingViewState extends State<DrivingView> {
         _text = '';
       });
     }
-    faces = await _faceDetector.processImage(inputImage);
-    if (faces.isNotEmpty) {
-      final face = faces[0];
-      rotX = face.headEulerAngleX; // up and down rotX degrees
-      rotY = face.headEulerAngleY; // right and left rotY degrees
-      rotZ = face.headEulerAngleZ; // sideways rotZ degrees
-      leftEyeOpenProb = face.leftEyeOpenProbability;
-      rightEyeOpenProb = face.rightEyeOpenProbability;
+
+    faceDetectionService.faces = await _faceDetector.processImage(inputImage);
+    if (faceDetectionService.faces.isNotEmpty) {
+      final face = faceDetectionService.faces[0];
+      faceDetectionService.rotX =
+          face.headEulerAngleX; // up and down rotX degrees
+      faceDetectionService.rotY =
+          face.headEulerAngleY; // right and left rotY degrees
+      // rotZ = face.headEulerAngleZ; // sideways rotZ degrees
+      faceDetectionService.leftEyeOpenProb = face.leftEyeOpenProbability;
+      faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
       Size size = const Size(1.0, 1.0);
       if (inputImage.inputImageData?.size != null &&
@@ -479,13 +590,13 @@ class _DrivingViewState extends State<DrivingView> {
                 size,
                 inputImage.inputImageData!.size));
         final painter = FaceDetectorPainter(
-            faces,
+            faceDetectionService.faces,
             inputImage.inputImageData!.size,
             inputImage.inputImageData!.imageRotation);
         _customPaint = CustomPaint(painter: painter);
       } else {
-        String text = 'Faces found: ${faces.length}\n\n';
-        for (final face in faces) {
+        String text = 'Faces found: ${faceDetectionService.faces.length}\n\n';
+        for (final face in faceDetectionService.faces) {
           text += 'face: ${face.boundingBox}\n\n';
         }
         _text = text;
@@ -500,227 +611,562 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
   /// WIDGET BUILD
+  ///
+  /// *******************************************************
+  /// *******************************************************
   /// *******************************************************
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(
-            globals.inCalibrationMode ? "Calibrate" : "Driving",
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(color: lightColorScheme.onPrimary),
+    return WillPopScope(
+      onWillPop: () async {
+        if (widget.calibrationMode) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              widget.calibrationMode ? "Calibrate" : "Driving",
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(color: lightColorScheme.onPrimary),
+            ),
+            iconTheme: IconThemeData(color: lightColorScheme.onPrimary),
+            automaticallyImplyLeading: false,
+            leading: !widget.calibrationMode
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                    icon: const Icon(Icons.arrow_back)),
+            centerTitle: true,
+            backgroundColor: lightColorScheme.primary,
           ),
-          iconTheme: IconThemeData(color: lightColorScheme.onPrimary),
-          leading: !widget.calibrationMode
-              ? null
-              : IconButton(
-                  onPressed: () {
-                    Navigator.of(context)
-                        .pushReplacement(MaterialPageRoute(builder: (context) {
-                      return const HomePage(title: globals.appName);
-                    }));
-                  },
-                  icon: const Icon(Icons.arrow_back)),
-          centerTitle: true,
-          backgroundColor: lightColorScheme.primary,
-        ),
-        body: Stack(
-          children: [
-            CameraView(
-              customPaint: _customPaint,
-              text: _text,
-              onImage: (inputImage) {
-                processImage(inputImage);
-              },
-              initialDirection: CameraLensDirection.front,
-            ),
-            Column(
-              children: [
-                if (MediaQuery.of(context).orientation == Orientation.portrait)
-                  Column(
-                    children: [
-                      if (globals.showDebug == true)
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                          ),
-                          padding: const EdgeInsets.all(16.0),
-                          child: ListView(
-                            physics: const NeverScrollableScrollPhysics(),
-                            shrinkWrap: true,
-                            children: [
-                              DataValueWidget(text: "rotX", value: rotX),
-                              DataValueWidget(text: "rotY", value: rotY),
-                              DataValueWidget(
-                                  text: "neutralRotX", value: neutralRotX),
-                              DataValueWidget(
-                                  text: "neutralRotY", value: neutralRotY),
-                              DataValueWidget(
-                                  text: "leftEyeOpenProb",
-                                  value: leftEyeOpenProb),
-                              DataValueWidget(
-                                  text: "rightEyeOpenProb",
-                                  value: rightEyeOpenProb),
-                              DataValueWidget(
-                                  text: "hasFace", value: hasFace ? 1 : 0),
-                              if (widget.accelerometerOn == true)
-                                Column(
-                                  children: [
-                                    DataValueWidget(
-                                        text: "carMoving",
-                                        value: carMoving ? 1 : 0),
-                                    DataValueWidget(
-                                        text: "resultantAccel",
-                                        value: globals.resultantAccel),
-                                    DataValueWidget(
-                                        text: "accelX", value: accelX),
-                                    DataValueWidget(
-                                        text: "accelY", value: accelY),
-                                    DataValueWidget(
-                                        text: "accelZ", value: accelZ),
-                                  ],
-                                )
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-              ],
-            ),
-            if (widget.calibrationMode == true)
-              Column(
-                children: [
-                  if (!globals.showDebug)
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: MediaQuery.of(context).size.width,
-                          color: Colors.black.withOpacity(0.5),
-                          padding: const EdgeInsets.all(30),
-                          child: Column(
-                            children: const [
-                              CalibrateInstruction(
-                                bullet: "1.",
-                                instruction:
-                                    "Secure your phone in the phone holder",
+          body: Stack(
+            children: [
+              CameraView(
+                customPaint: showCameraPreview ? _customPaint : null,
+                text: _text,
+                onImage: (inputImage) {
+                  processImage(inputImage);
+                },
+                initialDirection: CameraLensDirection.front,
+              ),
+              if (globals.showDebug == true)
+                Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      padding: const EdgeInsets.all(16.0),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        children: [
+                          DataValueWidget(
+                              text: "rotX",
+                              doubleValue: faceDetectionService.rotX),
+                          DataValueWidget(
+                              text: "rotY",
+                              doubleValue: faceDetectionService.rotY),
+                          DataValueWidget(
+                              text: "neutralRotX",
+                              doubleValue: faceDetectionService.neutralRotX),
+                          DataValueWidget(
+                              text: "neutralRotY",
+                              doubleValue: faceDetectionService.neutralRotY),
+                          DataValueWidget(
+                              text: "leftEyeOpenProb",
+                              doubleValue:
+                                  faceDetectionService.leftEyeOpenProb),
+                          DataValueWidget(
+                              text: "rightEyeOpenProb",
+                              doubleValue:
+                                  faceDetectionService.rightEyeOpenProb),
+                          DataValueWidget(
+                              text: "leftOffset",
+                              doubleValue: faceDetectionService.rotYLeftOffset),
+                          DataValueWidget(
+                              text: "rightOffset",
+                              doubleValue:
+                                  faceDetectionService.rotYRightOffset),
+                          DataValueWidget(
+                              text: "reminderType",
+                              stringValue: faceDetectionService.reminderType),
+                          DataValueWidget(
+                              text: "drowsyAlertCount",
+                              intValue: currentSession.drowsyAlertCount),
+                          DataValueWidget(
+                              text: "inattentiveAlertCount",
+                              intValue: currentSession.inattentiveAlertCount),
+                          DataValueWidget(
+                              text: "carMoving", boolValue: carMoving),
+                          if (widget.accelerometerOn == true)
+                            Column(
+                              children: [
+                                DataValueWidget(
+                                    text: "resultantAccel",
+                                    doubleValue: globals.resultantAccel),
+                                DataValueWidget(
+                                    text: "accelX", doubleValue: accelX),
+                                DataValueWidget(
+                                    text: "accelY", doubleValue: accelY),
+                                DataValueWidget(
+                                    text: "accelZ", doubleValue: accelZ),
+                              ],
+                            ),
+                          if (geolocationService.positionList.isNotEmpty)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 150,
+                                    child: ListView.builder(
+                                      itemCount: geolocationService
+                                          .positionList.length,
+                                      itemBuilder: (context, index) {
+                                        final positionItem = geolocationService
+                                            .positionList[index];
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 4.0),
+                                          color: lightColorScheme.secondary,
+                                          alignment: Alignment.center,
+                                          child: Center(
+                                            child: SizedBox(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    positionItem.latitude
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 2,
+                                                  ),
+                                                  Text(
+                                                    positionItem.longitude
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 2,
+                                                  ),
+                                                  Text(
+                                                    positionItem.speed
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 2,
+                                                  ),
+                                                  Text(
+                                                    positionItem.timestamp
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      shrinkWrap: true,
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                if (geolocationService.speedList.isNotEmpty)
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 150,
+                                      child: ListView.builder(
+                                        itemCount:
+                                            geolocationService.speedList.length,
+                                        itemBuilder: (context, index) {
+                                          final speedItem = geolocationService
+                                              .speedList[index];
+                                          return Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4.0),
+                                            color: lightColorScheme.secondary,
+                                            alignment: Alignment.center,
+                                            child: Center(
+                                              child: SizedBox(
+                                                child: Wrap(
+                                                  crossAxisAlignment:
+                                                      WrapCrossAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      speedItem.toString(),
+                                                      style: const TextStyle(
+                                                          color: Colors.white),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        shrinkWrap: true,
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            )
+                          else if (geolocationService.positionList.isEmpty)
+                            SizedBox(
+                              height: 75,
+                              width: MediaQuery.of(context).size.width,
+                              child: Center(
+                                child: Text(
+                                  "No positions",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.copyWith(color: Colors.white),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
-                              SizedBox(height: 5),
-                              CalibrateInstruction(
-                                bullet: "2.",
-                                instruction:
-                                    "Make sure your head is visible in the camera preview",
-                              ),
-                              SizedBox(height: 5),
-                              CalibrateInstruction(
-                                bullet: "3.",
-                                instruction:
-                                    "Look forward towards the road (just like when you are driving attentively)",
-                              ),
-                              SizedBox(height: 5),
-                              CalibrateInstruction(
-                                bullet: "4.",
-                                instruction:
-                                    "Press 'Calibrate' and wait 3 seconds",
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (startCalibration == true)
-                          Container(
-                            width: MediaQuery.of(context).size.width,
-                            color: Colors.black.withOpacity(0.5),
-                            padding: const EdgeInsets.all(15),
+                            ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              if (mounted) {
+                                setState(() {
+                                  currentSession.distance += 1000;
+                                });
+                              }
+                            },
                             child: Text(
-                              caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+                              "Add distance (debug only)",
                               style: Theme.of(context)
                                   .textTheme
-                                  .displayMedium
-                                  ?.copyWith(
-                                    color: lightColorScheme.onPrimary,
-                                  ),
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
                               textAlign: TextAlign.center,
                             ),
                           ),
-                      ],
-                    ),
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            shape: const RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(16.0))),
-                            backgroundColor: lightColorScheme.primary,
-                            minimumSize: const Size.fromHeight(50),
-                          ),
-                          onPressed: () {
-                            if (startCalibration == false) {
-                              calibrationTimer();
-                            }
-                          },
-                          child: Text(
-                            "Calibrate",
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(color: lightColorScheme.onPrimary),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 80),
-                ],
-              )
-            else if (widget.calibrationMode == false)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.all(Radius.circular(16.0))),
-                        backgroundColor: lightColorScheme.primary,
-                        minimumSize: const Size.fromHeight(50),
+                        ],
                       ),
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (context) {
-                          return const HomePage(title: globals.appName);
-                        }));
-                      },
-                      child: Text(
-                        "Stop driving",
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelLarge
-                            ?.copyWith(color: lightColorScheme.onPrimary),
-                        textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              if (widget.calibrationMode == true)
+                Column(
+                  children: [
+                    if (!globals.showDebug)
+                      CalibrateInstructionList(
+                          startCalibration: startCalibration,
+                          caliSeconds: caliSeconds),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            onPressed: () {
+                              if (startCalibration == false) {
+                                calibrationTimer();
+                              }
+                            },
+                            child: Text(
+                              "Calibrate",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 80),
                   ],
+                )
+              else if (widget.calibrationMode == false)
+                Stack(
+                  children: [
+                    Column(
+                      children: [
+                        const Spacer(),
+                        if (!globals.showDebug)
+                          PageCenterText(showCameraPreview: showCameraPreview),
+                        const Spacer(),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              shape: const RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(16.0))),
+                              backgroundColor: lightColorScheme.primary,
+                              minimumSize: const Size.fromHeight(50),
+                            ),
+                            statesController: _statesController,
+                            onPressed: () async {
+                              if (!canExit) return;
+                              _updateSessionData();
+                              isValidSession = _validateSession();
+                              if (isValidSession) {
+                                databaseService.saveSessionData(currentSession);
+                              }
+                              if (mounted) {
+                                setState(() {});
+                              }
+                              Navigator.of(context).pop(true);
+                              Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (context) => DriveSessionSummary(
+                                        session: currentSession,
+                                        isValidSession: isValidSession,
+                                      )));
+                            },
+                            child: Text(
+                              "Stop driving",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(color: lightColorScheme.onPrimary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          if (!globals.showDebug) const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
+            ],
+          )),
+    );
+  }
+
+  /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
+  /// OTHER UTILS
+  ///
+  /// *******************************************************
+  /// *******************************************************
+  /// *******************************************************
+  ///
+  void showSnackBar(BuildContext context, String text) {
+    var snackBar =
+        SnackBar(content: Text(text), duration: const Duration(seconds: 1));
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  int calcDrivingScore() {
+    if ((currentSession.drowsyAlertCount / currentSession.duration) <=
+            (1 / 600) &&
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
+            (1 / 600)) {
+      return 5;
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
+            (3 / 600) ||
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
+            (3 / 600)) {
+      return 4;
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
+            (5 / 600) &&
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
+            (5 / 600)) {
+      return 3;
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
+            (7 / 600) &&
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
+            (7 / 600)) {
+      return 2;
+    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
+            (9 / 600) &&
+        (currentSession.inattentiveAlertCount / currentSession.duration) <=
+            (9 / 600)) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
+  Future<void> _updateSessionData() async {
+    if (mounted) {
+      setState(() {
+        currentSession.endTime = saveCurrentTime(noMillis);
+        currentSession.duration = DateTime.parse(currentSession.endTime)
+            .difference(DateTime.parse(currentSession.startTime))
+            .inSeconds;
+        currentSession.distance += geolocationService.accumulatedDistance;
+        currentSession.score = calcDrivingScore();
+      });
+    }
+  }
+
+  bool _validateSession() {
+    if (currentSession.distance < 500 || currentSession.duration < 10) {
+      return false;
+    }
+    return true;
+  }
+}
+
+class PageCenterText extends StatelessWidget {
+  const PageCenterText({
+    super.key,
+    required this.showCameraPreview,
+  });
+
+  final bool showCameraPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Icon(
+              Icons.security,
+              size: 69,
+              color: showCameraPreview
+                  ? lightColorScheme.onPrimary
+                  : lightColorScheme.primary,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              "You are now protected!",
+              style: showCameraPreview
+                  ? Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: lightColorScheme.onPrimary)
+                  : Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              "Drive Safely!",
+              style: showCameraPreview
+                  ? Theme.of(context)
+                      .textTheme
+                      .displayMedium
+                      ?.copyWith(color: lightColorScheme.onPrimary)
+                  : Theme.of(context).textTheme.displayMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CalibrateInstructionList extends StatelessWidget {
+  const CalibrateInstructionList({
+    super.key,
+    required this.startCalibration,
+    required this.caliSeconds,
+  });
+
+  final bool startCalibration;
+  final int caliSeconds;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: MediaQuery.of(context).size.width,
+          color: Colors.black.withOpacity(0.5),
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            children: const [
+              CalibrateInstruction(
+                bullet: "1.",
+                instruction: "Secure your phone in the phone holder",
               ),
-          ],
-        ));
+              SizedBox(height: 5),
+              CalibrateInstruction(
+                bullet: "2.",
+                instruction:
+                    "Make sure your head is visible in the camera preview",
+              ),
+              SizedBox(height: 5),
+              CalibrateInstruction(
+                bullet: "3.",
+                instruction:
+                    "Look forward towards the road (just like when you are driving attentively)",
+              ),
+              SizedBox(height: 5),
+              CalibrateInstruction(
+                bullet: "4.",
+                instruction: "Press 'Calibrate' and wait 3 seconds",
+              ),
+            ],
+          ),
+        ),
+        if (startCalibration == true)
+          Container(
+            width: MediaQuery.of(context).size.width,
+            color: Colors.black.withOpacity(0.5),
+            padding: const EdgeInsets.all(15),
+            child: Text(
+              caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    color: lightColorScheme.onPrimary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -770,17 +1216,23 @@ class DataValueWidget extends StatelessWidget {
   const DataValueWidget({
     Key? key,
     required this.text,
-    required this.value,
+    this.doubleValue,
+    this.intValue,
+    this.boolValue,
+    this.stringValue,
   }) : super(key: key);
 
   final String text;
-  final double? value;
+  final double? doubleValue;
+  final int? intValue;
+  final bool? boolValue;
+  final String? stringValue;
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: SizedBox(
-        height: 50,
+        height: 40,
         width: 200,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -790,7 +1242,14 @@ class DataValueWidget extends StatelessWidget {
                     .textTheme
                     .titleMedium
                     ?.copyWith(color: lightColorScheme.onPrimary)),
-            Text(value.toString(),
+            Text(
+                doubleValue != null
+                    ? doubleValue.toString()
+                    : intValue != null
+                        ? intValue.toString()
+                        : boolValue != null
+                            ? boolValue.toString()
+                            : stringValue.toString(),
                 style: Theme.of(context)
                     .textTheme
                     .labelLarge

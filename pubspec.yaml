@@ -43,9 +43,21 @@ dependencies:
   audioplayers: ^3.0.1
   flutter_sensors: ^1.0.1
   settings_ui: ^2.0.2
-  dynamic_color: ^1.5.4
+  dynamic_color: ^1.6.2
   google_fonts: ^4.0.3
   shared_preferences: ^2.0.18
+  geolocator: ^9.0.2
+  geolocator_android: ^4.1.7
+  geolocator_apple: ^2.2.5
+  file_picker: ^5.2.6
+  fl_chart: ^0.61.0
+  sqflite: ^2.2.6
+  path_provider: ^2.0.14
+  intl: ^0.17.0
+  path: ^1.8.2
+  collection: ^1.17.0
+  skeleton_loader: ^2.0.0+4
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -57,7 +69,14 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.12.0
 
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/logo_solid_dark_cropped.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
