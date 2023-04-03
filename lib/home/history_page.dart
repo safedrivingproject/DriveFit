@@ -39,7 +39,6 @@ class _HistoryPageState extends State<HistoryPage> {
       if (mounted) {
         setState(() {});
       }
-      print(isAtEndOfPage);
     });
     if (!_isInitialized) {
       _loadData();
@@ -70,6 +69,12 @@ class _HistoryPageState extends State<HistoryPage> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   double _getTitleOpacity() {
@@ -481,6 +486,8 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         CustomScrollView(
           controller: _scrollController,
+          physics: const BouncingScrollPhysics(
+              decelerationRate: ScrollDecelerationRate.fast),
           slivers: [
             SliverAppBar(
               leading: IconButton(
@@ -774,13 +781,6 @@ class _HistoryPageState extends State<HistoryPage> {
       fontSize: 14,
     );
     Widget text;
-    if (value.toInt() == 0) {
-      text = const Text('Past', style: style);
-      return SideTitleWidget(
-        axisSide: meta.axisSide,
-        child: text,
-      );
-    }
     if (value.toInt() ==
         (driveSessionsList.length > 14 ? 13 : driveSessionsList.length - 1)) {
       text = const Text('Recent', style: style);
@@ -788,7 +788,14 @@ class _HistoryPageState extends State<HistoryPage> {
         axisSide: meta.axisSide,
         child: text,
       );
+    } else if (value.toInt() == 0) {
+      text = const Text('Past', style: style);
+      return SideTitleWidget(
+        axisSide: meta.axisSide,
+        child: text,
+      );
     }
+
     text = const Text('', style: style);
     return SideTitleWidget(
       axisSide: meta.axisSide,
@@ -870,7 +877,7 @@ class SessionsListState extends State<SessionsList> {
               itemCount: widget.sessionsList.length,
               shrinkWrap: true,
               physics: widget.isAtEndOfPage
-                  ? const AlwaysScrollableScrollPhysics()
+                  ? const BouncingScrollPhysics()
                   : const NeverScrollableScrollPhysics(),
               itemBuilder: (BuildContext context, int index) {
                 SessionData session = widget.sessionsList[index];

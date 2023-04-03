@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:drive_fit/home/history_page.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,7 +27,12 @@ class _DrivePageState extends State<DrivePage> {
   final MaterialStatesController _statesController = MaterialStatesController();
   List<SessionData> driveSessionsList = [];
 
-  int totalAlerts = 0, drowsyAlertCount = 0, inattentiveAlertCount = 0;
+  int totalAlertCount = 0,
+      totalDrowsyAlertCount = 0,
+      totalInattentiveAlertCount = 0;
+  int latestAlertCount = 0,
+      latestDrowsyAlertCount = 0,
+      latestInattentiveAlertCount = 0;
   String tipType = "Generic";
   String drivingTip = "";
   int tipsIndex = 0;
@@ -37,121 +43,73 @@ class _DrivePageState extends State<DrivePage> {
   DateTime expirationDay = DateTime.now();
 
   bool canPress = false;
+  bool hasNewSession = false;
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     globals.enableGeolocation = (prefs.getBool('enableGeolocation') ?? true);
     globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
     globals.showDebug = (prefs.getBool('showDebug') ?? false);
-    previousDate = (prefs.getString('previousDate') ??
-        DateTime.now().subtract(const Duration(days: 1)).toString());
-    expirationDay = DateTime.parse(previousDate).add(const Duration(days: 1));
     tipsIndex = (prefs.getInt('tipsIndex') ?? 0);
+    _statesController.update(MaterialState.disabled, !globals.hasCalibrated);
+    canPress = globals.hasCalibrated;
+    hasNewSession = databaseService.needSessionDataUpdate;
     if (mounted) {
-      setState(() {
-        _statesController.update(
-            MaterialState.disabled, !globals.hasCalibrated);
-        canPress = globals.hasCalibrated;
-      });
+      setState(() {});
     }
-    getTipData();
   }
 
   Future<void> getSessionData() async {
-    driveSessionsList.clear();
     driveSessionsList = await databaseService.getAllSessions();
-    drowsyAlertCount = databaseService.getDrowsyAlertCount(driveSessionsList);
-    inattentiveAlertCount =
+    totalDrowsyAlertCount =
+        databaseService.getDrowsyAlertCount(driveSessionsList);
+    totalInattentiveAlertCount =
         databaseService.getInattentiveAlertCount(driveSessionsList);
-    totalAlerts = drowsyAlertCount + inattentiveAlertCount;
+    totalAlertCount = totalDrowsyAlertCount + totalInattentiveAlertCount;
+    if (driveSessionsList.isNotEmpty) {
+      latestDrowsyAlertCount = driveSessionsList[0].drowsyAlertCount;
+      latestInattentiveAlertCount = driveSessionsList[0].inattentiveAlertCount;
+      latestAlertCount = latestDrowsyAlertCount + latestInattentiveAlertCount;
+    }
     if (mounted) {
       setState(() {});
     }
   }
 
   Future<void> getTipData() async {
-    currentDate = DateTime.now();
-    if (currentDate.isAfter(expirationDay)) {
-      print("After");
-      previousDate = currentDate.toString();
-      expirationDay = DateTime.parse(previousDate).add(const Duration(days: 1));
-      final prefs = await SharedPreferences.getInstance();
-      prefs.setString('previousDate', currentDate.toString());
-      tipType = getTipType(driveSessionsList);
-      if (tipType == "Drowsy") {
-        tipsIndex = Random().nextInt(drowsyTipsList.length);
-      } else if (tipType == "Inattentive") {
-        tipsIndex = Random().nextInt(inattentiveTipsList.length);
-      } else {
-        tipsIndex = Random().nextInt(genericTipsList.length);
+    if (!hasNewSession) {
+      if (mounted) {
+        setState(() {
+          tipType = getTipType(driveSessionsList);
+          drivingTip = getTip(tipType, tipsIndex);
+        });
       }
-      prefs.setInt('tipsIndex', tipsIndex);
+      return;
     }
-    drivingTip = getTip(tipType, tipsIndex);
+    final prefs = await SharedPreferences.getInstance();
+    tipType = getTipType(driveSessionsList);
+    if (tipType == "Drowsy") {
+      tipsIndex = Random().nextInt(drowsyTipsList.length);
+    } else if (tipType == "Inattentive") {
+      tipsIndex = Random().nextInt(inattentiveTipsList.length);
+    } else {
+      tipsIndex = Random().nextInt(genericTipsList.length);
+    }
+    prefs.setInt('tipsIndex', tipsIndex);
+
     if (mounted) {
-      setState(() {});
+      setState(() {
+        drivingTip = getTip(tipType, tipsIndex);
+        hasNewSession = false;
+      });
     }
-  }
-
-  Future<void> checkPermissions() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-    String permissionType = "";
-
-    // Test if location services are enabled.
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      // Location services are not enabled don't continue
-      // accessing the position and request users of the
-      // App to enable the location services.
-      permissionType = "Services";
-      geolocationService.hasPermission = false;
-      showRequestPermissionsDialog(permissionType);
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        // Permissions are denied, next time you could try
-        // requesting permissions again (this is also where
-        // Android's shouldShowRequestPermissionRationale
-        // returned true. According to Android guidelines
-        // your App should show an explanatory UI now.
-        permissionType = "Permissions";
-        geolocationService.hasPermission = false;
-        showRequestPermissionsDialog(permissionType);
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, handle appropriately.
-      permissionType = "Permissions";
-      geolocationService.hasPermission = false;
-      showRequestPermissionsDialog(permissionType);
-      return;
-    }
-
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
-    geolocationService.hasPermission = true;
-  }
-
-  void showRequestPermissionsDialog(String permissionType) {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) => RequestPermissionDialog(
-              type: permissionType,
-            ));
   }
 
   String getTipType(List<SessionData> session) {
-    if (totalAlerts > 5) {
-      if (drowsyAlertCount - inattentiveAlertCount > 5) {
+    if (latestAlertCount > 3) {
+      if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 3) {
         return "Drowsy";
-      } else if (inattentiveAlertCount - drowsyAlertCount > 5) {
+      } else if (latestInattentiveAlertCount - latestDrowsyAlertCount > 3) {
         return "Inattentive";
       }
     }
@@ -167,12 +125,59 @@ class _DrivePageState extends State<DrivePage> {
     return genericTipsList[index];
   }
 
+  Future<void> checkPermissions() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    String permissionType = "";
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      permissionType = "Services";
+      geolocationService.hasPermission = false;
+      showRequestPermissionsDialog(permissionType);
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        permissionType = "Permissions";
+        geolocationService.hasPermission = false;
+        showRequestPermissionsDialog(permissionType);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      permissionType = "Permissions";
+      geolocationService.hasPermission = false;
+      showRequestPermissionsDialog(permissionType);
+      return;
+    }
+
+    geolocationService.hasPermission = true;
+  }
+
+  void showRequestPermissionsDialog(String permissionType) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) => RequestPermissionDialog(
+              type: permissionType,
+            ));
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-    getSessionData();
+    initData();
     checkPermissions();
+  }
+
+  Future<void> initData() async {
+    await _loadSettings();
+    await getSessionData();
+    getTipData();
   }
 
   @override
@@ -466,36 +471,6 @@ class _DrivePageState extends State<DrivePage> {
                                     ],
                                   ),
                                 ),
-                                if (globals.showDebug)
-                                  Padding(
-                                    padding:
-                                        const EdgeInsetsDirectional.fromSTEB(
-                                            16, 16, 16, 16),
-                                    child: Wrap(
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      children: [
-                                        Padding(
-                                            padding: const EdgeInsetsDirectional
-                                                .fromSTEB(0, 0, 8, 0),
-                                            child: Text(previousDate)),
-                                        Padding(
-                                            padding: const EdgeInsetsDirectional
-                                                .fromSTEB(0, 0, 8, 0),
-                                            child:
-                                                Text(expirationDay.toString())),
-                                        Padding(
-                                            padding: const EdgeInsetsDirectional
-                                                .fromSTEB(0, 0, 8, 0),
-                                            child:
-                                                Text(currentDate.toString())),
-                                        Padding(
-                                            padding: const EdgeInsetsDirectional
-                                                .fromSTEB(0, 0, 8, 0),
-                                            child: Text(tipsIndex.toString())),
-                                      ],
-                                    ),
-                                  ),
                               ],
                             ),
                           ),

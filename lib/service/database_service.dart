@@ -105,7 +105,8 @@ class DatabaseService {
     var dbClient = await db;
     List<Map> list =
         await dbClient!.rawQuery('SELECT * FROM sessions ORDER BY id DESC');
-    for (int i = sessionsCache.length; i < list.length; i++) {
+    sessionsCache = [];
+    for (int i = 0; i < list.length; i++) {
       sessionsCache.add(SessionData.fromMap(list[i] as Map<String, dynamic>));
     }
     needSessionDataUpdate = false;
