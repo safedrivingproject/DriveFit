@@ -156,7 +156,7 @@ class FaceDetectionService {
       reminderType = "None";
       return;
     }
-    if (rotYCounter > delay) {
+    if (rotYCounter > 0) {
       reminderType = "Inattentive";
       reminderCount++;
       rotYCounter = 0;

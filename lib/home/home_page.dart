@@ -15,16 +15,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int selectedPageIndex = 0;
 
-  final DatabaseService databaseService = DatabaseService();
-  List<SessionData> driveSessionsList = [];
-
-  Future<void> getSessionData() async {
-    driveSessionsList = await databaseService.getAllSessions();
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
   @override
   void initState() {
     super.initState();

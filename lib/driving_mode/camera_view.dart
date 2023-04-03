@@ -33,8 +33,6 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   CameraController? _controller;
   int _cameraIndex = -1;
   double zoomLevel = 0.0, minZoomLevel = 0.0, maxZoomLevel = 5.0;
-  //double _maxAvailableExposureOffset = 0.0, _minAvailableExposureOffset = 0.0;
-  //bool _changingCameraLens = false;
   bool _cameraOn = false;
   Timer? exposureTimer;
   bool showCameraPreview = true, useHighCameraResolution = false;
@@ -57,8 +55,13 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     _initCamera();
   }
 
-  void _initCamera() {
+  void _initCamera() async {
     _loadSettings();
+    final CameraController? oldController = _controller;
+    if (oldController != null) {
+      _controller = null;
+      await oldController.dispose();
+    }
     if (cameras.any(
       (element) =>
           element.lensDirection == widget.initialDirection &&
@@ -78,18 +81,16 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       }
     }
     if (_cameraIndex != -1) {
-      if (!_cameraOn) {
-        _cameraOn = true;
-        _startLiveFeed();
-      }
+      _startLiveFeed();
     }
   }
 
   @override
-  void dispose() {
+  void dispose() async {
     _stopLiveFeed();
     exposureTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _stopLiveFeed();
     super.dispose();
   }
 
@@ -99,7 +100,9 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   }
 
   Widget _liveFeedBody() {
-    if (_controller?.value.isInitialized == false) {
+    final CameraController? cameraController = _controller;
+    if (cameraController?.value.isInitialized == false ||
+        cameraController == null) {
       return Container(
         alignment: Alignment.center,
         color: lightColorScheme.background,
@@ -108,15 +111,28 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       );
     } else {
       final size = MediaQuery.of(context).size;
-      // calculate scale depending on screen and camera ratios
-      // this is actually size.aspectRatio / (1 / camera.aspectRatio)
-      // because camera preview size is received as landscape
-      // but we're calculating for portrait orientation
       var scale = size.aspectRatio * _controller!.value.aspectRatio;
-
-      // to prevent scaling down, invert the value
       if (scale < 1) scale = 1 / scale;
 
+      if (!globals.inCalibrationMode && !showCameraPreview) {
+        return Container(
+          color: Colors.black,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              Transform.scale(
+                scale: scale,
+                child: Center(
+                  child: Container(
+                    color: lightColorScheme.background,
+                  ),
+                ),
+              ),
+              if (widget.customPaint != null) widget.customPaint!,
+            ],
+          ),
+        );
+      }
       return Container(
         color: Colors.black,
         child: Stack(
@@ -125,13 +141,7 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
             Transform.scale(
               scale: scale,
               child: Center(
-                child: globals.inCalibrationMode
-                    ? CameraPreview(_controller!)
-                    : showCameraPreview
-                        ? CameraPreview(_controller!)
-                        : Container(
-                            color: lightColorScheme.background,
-                          ),
+                child: CameraPreview(_controller!),
               ),
             ),
             if (widget.customPaint != null) widget.customPaint!,
@@ -187,17 +197,11 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
     if (!mounted) {
       return;
     }
+    if (_cameraOn) return;
     _cameraOn = true;
-    _controller?.getMinZoomLevel().then((value) {
-      zoomLevel = value;
-    });
-    //_controller?.getMinExposureOffset().then((value) {
-    //  _minAvailableExposureOffset = value;
-    //});
-    //_controller?.getMaxExposureOffset().then((value) {
-    //  _maxAvailableExposureOffset = value;
-    //});
+
     _controller?.startImageStream(_processCameraImage);
+
     setState(() {});
 
     await Future.delayed(const Duration(seconds: 1));
@@ -206,7 +210,6 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
         if (mounted) {
           _controller?.setExposurePoint(
               Offset(globals.faceCenterX, globals.faceCenterY));
-          // _controller?.setExposurePoint(const Offset(0.5, 0.5));
         }
       } catch (e) {
         log("$e");
@@ -215,37 +218,13 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   }
 
   Future _stopLiveFeed() async {
-    _cameraOn = false;
-    await _controller?.stopImageStream();
-    await _controller?.dispose();
-    _controller = null;
+    if (_cameraOn) {
+      _cameraOn = false;
+      await _controller?.stopImageStream();
+      await _controller?.dispose();
+      _controller = null;
+    }
   }
-
-  //Future _switchLiveCamera() async {
-  //  setState(() => _changingCameraLens = true);
-  //  _cameraIndex = (_cameraIndex + 1) % cameras.length;
-  //
-  //  await _stopLiveFeed();
-  //  await _startLiveFeed();
-  //  setState(() => _changingCameraLens = false);
-  //}
-
-  // @override
-  // void didChangeAppLifecycleState(AppLifecycleState state) {
-  //   final CameraController? cameraController = _controller;
-
-  //   // App state changed before we got the chance to initialize.
-  //   if (cameraController == null || !cameraController.value.isInitialized) {
-  //     return;
-  //   }
-
-  //   if (state == AppLifecycleState.resumed) {
-  //     _startLiveFeed();
-  //     if (mounted) {
-  //       setState(() {});
-  //     }
-  //   }
-  // }
 
   Future _processCameraImage(CameraImage image) async {
     final WriteBuffer allBytes = WriteBuffer();

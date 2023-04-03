@@ -59,6 +59,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Future<void> getSessionData() async {
+    driveSessionsList.clear();
     driveSessionsList = await databaseService.getAllSessions();
     rowCount = databaseService.getRowCount(driveSessionsList);
     totalAlerts = databaseService.getDrowsyAlertCount(driveSessionsList) +

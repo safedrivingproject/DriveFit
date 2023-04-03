@@ -8,12 +8,11 @@ import 'package:path_provider/path_provider.dart';
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService.internal();
   factory DatabaseService() => _instance;
+
   static Database? _db;
   static const _databaseVersion = 2;
   List<SessionData> sessionsCache = [];
   bool needSessionDataUpdate = true;
-  int currentDrivingTipIndex = 0;
-  bool needIndexUpdate = true;
 
   Future<Database?> get db async {
     if (_db != null) return _db;
@@ -24,8 +23,6 @@ class DatabaseService {
   DatabaseService.internal() {
     sessionsCache = [];
     needSessionDataUpdate = true;
-    currentDrivingTipIndex = 0;
-    needIndexUpdate = true;
   }
 
   Future<Database> initDb() async {
@@ -56,6 +53,7 @@ class DatabaseService {
     var dbClient = await db;
     if (dbClient == null) return 0;
     int id = await dbClient.insert("sessions", session.toMap());
+    needSessionDataUpdate = true;
     return id;
   }
 
@@ -104,11 +102,10 @@ class DatabaseService {
     if (!needSessionDataUpdate) {
       return sessionsCache;
     }
-    sessionsCache = [];
     var dbClient = await db;
     List<Map> list =
         await dbClient!.rawQuery('SELECT * FROM sessions ORDER BY id DESC');
-    for (int i = 0; i < list.length; i++) {
+    for (int i = sessionsCache.length; i < list.length; i++) {
       sessionsCache.add(SessionData.fromMap(list[i] as Map<String, dynamic>));
     }
     needSessionDataUpdate = false;
@@ -118,6 +115,7 @@ class DatabaseService {
   Future<void> deleteData() async {
     var dbClient = await db;
     await dbClient?.delete("sessions");
+    needSessionDataUpdate = true;
   }
 }
 

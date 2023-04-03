@@ -453,10 +453,14 @@ class _DrivingViewState extends State<DrivingView> {
     var leftOffset = 15.0;
     var rightOffset = 15.0;
     if (neutralY <= 0) {
-      leftOffset = 15 + (neutralY.abs() / 8);
-      rightOffset = 15 - (neutralY.abs() / 10);
+      leftOffset = 20 + (neutralY.abs() / 10);
+      if (neutralY > -25) {
+        rightOffset = 20 + (neutralY.abs() / 2);
+      } else {
+        rightOffset = 20 + (neutralY.abs() / 6);
+      }
     } else if (neutralY > 0) {
-      leftOffset = 15 - (neutralY.abs() / 10);
+      leftOffset = 15 + (neutralY.abs() / 8);
       rightOffset = 15 + (neutralY.abs() / 8);
     }
     faceDetectionService.rotYLeftOffset = leftOffset;
@@ -949,7 +953,9 @@ class _DrivingViewState extends State<DrivingView> {
                               isValidSession = _validateSession();
                               if (isValidSession) {
                                 databaseService.saveSessionData(currentSession);
-                                databaseService.needSessionDataUpdate = true;
+                              }
+                              if (mounted) {
+                                setState(() {});
                               }
                               Navigator.of(context).pop(true);
                               Navigator.of(context).push(MaterialPageRoute(
@@ -989,7 +995,8 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   ///
   void showSnackBar(BuildContext context, String text) {
-    var snackBar = SnackBar(content: Text(text));
+    var snackBar =
+        SnackBar(content: Text(text), duration: const Duration(seconds: 1));
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
