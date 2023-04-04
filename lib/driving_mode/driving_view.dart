@@ -19,6 +19,7 @@ import 'coordinates_translator.dart';
 import '../service/face_detection_service.dart';
 import '../service/geolocation_service.dart';
 import '../service/database_service.dart';
+import '../service/shared_preferences_service.dart';
 import 'drive_session_summary.dart';
 import '/global_variables.dart' as globals;
 
@@ -62,9 +63,9 @@ class _DrivingViewState extends State<DrivingView> {
   bool _canProcess = true, _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
-  bool showCameraPreview = true;
-  double maxAccelThreshold = 1.0;
+  bool showCameraPreview = false;
 
+  double maxAccelThreshold = 1.0;
   bool _accelAvailable = false;
   List<double> accelData = List.filled(3, 0.0);
   StreamSubscription? _accelSubscription;
@@ -89,6 +90,8 @@ class _DrivingViewState extends State<DrivingView> {
 
   String text = "Stop service";
 
+  bool isReminding = false;
+
   /// *******************************************************
   /// *******************************************************
   /// *******************************************************
@@ -99,63 +102,40 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+        faceDetectionService.isReminding = false;
+        showCameraPreview =
+            SharedPreferencesService.getBool('showCameraPreview', false);
         geolocationService.stationaryAlertsDisabled =
-            (prefs.getBool('stationaryAlertsDisabled') ?? false);
+            SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
         geolocationService.additionalDelay =
-            (prefs.getInt('additionalDelay') ?? 20);
-        globals.showDebug = (prefs.getBool('showDebug') ?? false);
-        globals.hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
+            SharedPreferencesService.getInt('additionalDelay', 20);
+        globals.showDebug =
+            SharedPreferencesService.getBool('showDebug', false);
+        globals.hasCalibrated =
+            SharedPreferencesService.getBool('hasCalibrated', false);
         faceDetectionService.neutralRotX =
-            (prefs.getDouble('neutralRotX') ?? 5.0);
+            SharedPreferencesService.getDouble('neutralRotX', 5.0);
         faceDetectionService.neutralRotY =
-            (prefs.getDouble('neutralRotY') ?? -25.0);
+            SharedPreferencesService.getDouble('neutralRotY', -25.0);
         faceDetectionService.rotYLeftOffset =
-            (prefs.getDouble('rotYLeftOffset') ?? 20);
+            SharedPreferencesService.getDouble('rotYLeftOffset', 20.0);
         faceDetectionService.rotYRightOffset =
-            (prefs.getDouble('rotYRightOffset') ?? 10);
-        faceDetectionService.rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
-        faceDetectionService.rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
+            SharedPreferencesService.getDouble('rotYRightOffset', 10.0);
+        faceDetectionService.rotXDelay =
+            SharedPreferencesService.getInt('rotXDelay', 10);
+        faceDetectionService.rotYDelay =
+            SharedPreferencesService.getInt('rotYDelay', 25);
         geolocationService.carVelocityThreshold =
-            (prefs.getDouble('carVelocityThreshold') ?? 5.0);
-        globals.drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
-            ["assets", "audio/car_horn_high.mp3"]);
-        globals.inattentiveAlarmValue =
-            (prefs.getStringList('inattentiveAlarm') ??
-                ["assets", "audio/double_beep.mp3"]);
+            SharedPreferencesService.getDouble('carVelocityThreshold', 8.3);
+        globals.drowsyAlarmValue = SharedPreferencesService.getStringList(
+            'drowsyAlarm', ["assets", "audio/car_horn_high.mp3"]);
+        globals.inattentiveAlarmValue = SharedPreferencesService.getStringList(
+            'inattentiveAlarm', ["assets", "audio/double_beep.mp3"]);
       });
     }
     initAudioPlayers();
-  }
-
-  Future<void> _saveBool(String key, bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setBool(key, value);
-      });
-    }
-  }
-
-  Future<void> _saveDouble(String key, double value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setDouble(key, value);
-      });
-    }
-  }
-
-  Future<void> _saveInt(String key, int value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setInt(key, value);
-      });
-    }
   }
 
   /// *******************************************************
@@ -379,6 +359,11 @@ class _DrivingViewState extends State<DrivingView> {
           });
         }
       }
+      if (mounted) {
+        setState(() {
+          isReminding = faceDetectionService.isReminding;
+        });
+      }
     });
   }
 
@@ -408,21 +393,19 @@ class _DrivingViewState extends State<DrivingView> {
       if (caliSeconds < 0) {
         if (mounted) {
           setState(() {
-            _saveBool('hasCalibrated', true);
-            _saveDouble('neutralRotX', faceDetectionService.neutralRotX);
-            _saveDouble('neutralRotY', faceDetectionService.neutralRotY);
-            _saveDouble('rotYLeftOffset', faceDetectionService.rotYLeftOffset);
-            _saveDouble(
+            SharedPreferencesService.setBool('hasCalibrated', true);
+            SharedPreferencesService.setDouble(
+                'neutralRotX', faceDetectionService.neutralRotX);
+            SharedPreferencesService.setDouble(
+                'neutralRotY', faceDetectionService.neutralRotY);
+            SharedPreferencesService.setDouble(
+                'rotYLeftOffset', faceDetectionService.rotYLeftOffset);
+            SharedPreferencesService.setDouble(
                 'rotYRightOffset', faceDetectionService.rotYRightOffset);
             startCalibration = false;
           });
-          showSnackBar(context, "Calibration complete!");
-          Navigator.of(context).pushReplacement(MaterialPageRoute(
-              builder: (context) => const HomePage(
-                    title: globals.appName,
-                    index: 0,
-                  )));
-
+          showSnackBar("Calibration complete!");
+          Navigator.of(context).pop();
           timer.cancel();
         }
       } else {
@@ -660,6 +643,7 @@ class _DrivingViewState extends State<DrivingView> {
                   processImage(inputImage);
                 },
                 initialDirection: CameraLensDirection.front,
+                isReminding: isReminding,
               ),
               if (globals.showDebug == true)
                 Column(
@@ -702,8 +686,8 @@ class _DrivingViewState extends State<DrivingView> {
                               doubleValue:
                                   faceDetectionService.rotYRightOffset),
                           DataValueWidget(
-                              text: "reminderType",
-                              stringValue: faceDetectionService.reminderType),
+                              text: "hasReminded",
+                              boolValue: faceDetectionService.hasReminded),
                           DataValueWidget(
                               text: "drowsyAlertCount",
                               intValue: currentSession.drowsyAlertCount),
@@ -928,7 +912,10 @@ class _DrivingViewState extends State<DrivingView> {
                       children: [
                         const Spacer(),
                         if (!globals.showDebug)
-                          PageCenterText(showCameraPreview: showCameraPreview),
+                          PageCenterText(
+                            showCameraPreview: showCameraPreview,
+                            isReminding: isReminding,
+                          ),
                         const Spacer(),
                       ],
                     ),
@@ -957,12 +944,40 @@ class _DrivingViewState extends State<DrivingView> {
                               if (mounted) {
                                 setState(() {});
                               }
-                              Navigator.of(context).pop(true);
-                              Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (context) => DriveSessionSummary(
-                                        session: currentSession,
-                                        isValidSession: isValidSession,
-                                      )));
+                              Navigator.of(context)
+                                  .pushReplacement(PageRouteBuilder(
+                                barrierColor: lightColorScheme.primary,
+                                transitionDuration: const Duration(seconds: 1),
+                                pageBuilder: (BuildContext context,
+                                    Animation<double> animation,
+                                    Animation<double> secondaryAnimation) {
+                                  return DriveSessionSummary(
+                                    session: currentSession,
+                                    isValidSession: isValidSession,
+                                  );
+                                },
+                                transitionsBuilder: (context, animation,
+                                    secondaryAnimation, child) {
+                                  return FadeTransition(
+                                    opacity: TweenSequence<double>(
+                                      <TweenSequenceItem<double>>[
+                                        TweenSequenceItem<double>(
+                                          tween: ConstantTween<double>(0.0),
+                                          weight: 50.0,
+                                        ),
+                                        TweenSequenceItem<double>(
+                                          tween: Tween<double>(
+                                                  begin: 0.0, end: 1.0)
+                                              .chain(CurveTween(
+                                                  curve: Curves.easeOutExpo)),
+                                          weight: 50.0,
+                                        ),
+                                      ],
+                                    ).animate(animation),
+                                    child: child,
+                                  );
+                                },
+                              ));
                             },
                             child: Text(
                               "Stop driving",
@@ -994,10 +1009,10 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   ///
-  void showSnackBar(BuildContext context, String text) {
+  void showSnackBar(String text) {
     var snackBar =
         SnackBar(content: Text(text), duration: const Duration(seconds: 1));
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    globals.snackbarKey.currentState?.showSnackBar(snackBar);
   }
 
   int calcDrivingScore() {
@@ -1052,14 +1067,21 @@ class _DrivingViewState extends State<DrivingView> {
   }
 }
 
-class PageCenterText extends StatelessWidget {
+class PageCenterText extends StatefulWidget {
   const PageCenterText({
     super.key,
     required this.showCameraPreview,
+    required this.isReminding,
   });
 
   final bool showCameraPreview;
+  final bool isReminding;
 
+  @override
+  State<PageCenterText> createState() => _PageCenterTextState();
+}
+
+class _PageCenterTextState extends State<PageCenterText> {
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -1067,37 +1089,59 @@ class PageCenterText extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Icon(
-              Icons.security,
-              size: 69,
-              color: showCameraPreview
-                  ? lightColorScheme.onPrimary
-                  : lightColorScheme.primary,
+            child: AnimatedCrossFade(
+              duration: const Duration(seconds: 1),
+              firstChild: Icon(
+                Icons.security,
+                size: 69,
+                color: lightColorScheme.onPrimary,
+              ),
+              secondChild: Icon(
+                Icons.security,
+                size: 69,
+                color: lightColorScheme.primary,
+              ),
+              crossFadeState: widget.showCameraPreview
+                  ? CrossFadeState.showFirst
+                  : widget.isReminding
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text(
-              "You are now protected!",
-              style: showCameraPreview
-                  ? Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: lightColorScheme.onPrimary)
-                  : Theme.of(context).textTheme.bodyMedium,
+            child: AnimatedDefaultTextStyle(
+              style: widget.showCameraPreview
+                  ? Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      color: widget.isReminding
+                          ? lightColorScheme.errorContainer
+                          : lightColorScheme.background)
+                  : Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      color: widget.isReminding
+                          ? lightColorScheme.onPrimary
+                          : lightColorScheme.onPrimaryContainer),
+              duration: const Duration(seconds: 1),
+              child: const Text(
+                "You are now protected!",
+              ),
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Text(
-              "Drive Safely!",
-              style: showCameraPreview
-                  ? Theme.of(context)
-                      .textTheme
-                      .displayMedium
-                      ?.copyWith(color: lightColorScheme.onPrimary)
-                  : Theme.of(context).textTheme.displayMedium,
-              textAlign: TextAlign.center,
+            child: AnimatedDefaultTextStyle(
+              style: widget.showCameraPreview
+                  ? Theme.of(context).textTheme.displayMedium!.copyWith(
+                      color: widget.isReminding
+                          ? lightColorScheme.errorContainer
+                          : lightColorScheme.background)
+                  : Theme.of(context).textTheme.displayMedium!.copyWith(
+                      color: widget.isReminding
+                          ? lightColorScheme.onPrimary
+                          : lightColorScheme.onPrimaryContainer),
+              duration: const Duration(seconds: 1),
+              child: const Text(
+                "Drive Safely!",
+              ),
             ),
           ),
         ],

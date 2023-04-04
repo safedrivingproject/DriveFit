@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'home/home_page.dart';
 import 'notifications/notification_controller.dart';
+import '/service/shared_preferences_service.dart';
 import 'global_variables.dart' as globals;
 
 import 'theme/color_schemes.g.dart';
@@ -15,6 +16,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationController.initializeLocalNotifications();
   cameras = await availableCameras();
+  await SharedPreferencesService.init();
   runApp(const MyApp());
 }
 
@@ -86,6 +88,7 @@ class _MyAppState extends State<MyApp> {
 
         return MaterialApp(
             navigatorKey: MyApp.navigatorKey,
+            scaffoldMessengerKey: globals.snackbarKey,
             title: globals.appName,
             debugShowCheckedModeBanner: false,
             home: const HomePage(title: globals.appName),

@@ -98,6 +98,13 @@ class DatabaseService {
     return average;
   }
 
+  int getTotalScore(List<SessionData> sessions) {
+    if (sessions.isEmpty) return 0;
+    List<int> scoreList =
+        sessions.map((sessionData) => sessionData.score).toList();
+    return scoreList.sum;
+  }
+
   Future<List<SessionData>> getAllSessions() async {
     if (!needSessionDataUpdate) {
       return sessionsCache;

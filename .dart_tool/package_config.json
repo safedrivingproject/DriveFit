@@ -80,6 +80,12 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "bottom_bar_page_transition",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/bottom_bar_page_transition-2.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "camera",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/camera-0.10.3+2",
       "packageUri": "lib/",
@@ -614,7 +620,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-04-02T14:21:44.268532Z",
+  "generated": "2023-04-03T16:08:28.495008Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

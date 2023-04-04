@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:bottom_bar_page_transition/bottom_bar_page_transition.dart';
+
 import '/service/database_service.dart';
 import 'drive_page.dart';
 import 'history_page.dart';
+import 'achievements_page.dart';
 
 class HomePage extends StatefulWidget {
   final String? title;
@@ -13,26 +16,34 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int selectedPageIndex = 0;
+  final DatabaseService databaseService = DatabaseService();
+  int selectedPageIndex = 1;
+  List<SessionData> driveSessionsList = [];
 
   @override
   void initState() {
     super.initState();
     selectedPageIndex = widget.index ?? 0;
+    getSessionData();
+  }
+
+  Future<void> getSessionData() async {
+    driveSessionsList = await databaseService.getAllSessions();
   }
 
   @override
   Widget build(BuildContext context) {
-    setState(() {});
     return Scaffold(
       extendBodyBehindAppBar: true,
       bottomNavigationBar: NavigationBar(
         animationDuration: const Duration(milliseconds: 500),
         selectedIndex: selectedPageIndex,
         onDestinationSelected: (int index) {
-          setState(() {
+          if (mounted) {
+            setState(() {
             selectedPageIndex = index;
           });
+          }
         },
         destinations: const <NavigationDestination>[
           NavigationDestination(
@@ -52,34 +63,35 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: [
-        DrivePage(),
-        HistoryPage(),
-        const AchievementsPage(),
-      ][selectedPageIndex],
-    );
-  }
-}
-
-class AchievementsPage extends StatefulWidget {
-  const AchievementsPage({super.key});
-
-  @override
-  State<AchievementsPage> createState() => _AchievementsPageState();
-}
-
-class _AchievementsPageState extends State<AchievementsPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28.0),
-        child: Text(
-          "In development, please check back soon!",
-          style: Theme.of(context).textTheme.displaySmall,
-          textAlign: TextAlign.center,
-        ),
+      body: BottomBarPageTransition(
+        builder: (context, index) => _getBody(index),
+        currentIndex: selectedPageIndex,
+        totalLength: 3,
+        transitionType: TransitionType.fade,
+        transitionDuration: const Duration(milliseconds: 500),
+        transitionCurve: Curves.easeInOutExpo,
       ),
     );
+  }
+
+  Widget _getBody(int index) {
+    if (index == 0) {
+      return DrivePage(
+        sessionsList: driveSessionsList,
+      );
+    } else if (index == 1) {
+      return HistoryPage(
+        sessionsList: driveSessionsList,
+      );
+    } else if (index == 2) {
+      return AchievementsPage(
+        sessionsList: driveSessionsList,
+      );
+    }
+    return Center(
+        child: Text(
+      "Error: Unknown route",
+      style: Theme.of(context).textTheme.headlineLarge,
+    ));
   }
 }

@@ -1,4 +1,5 @@
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import '/global_variables.dart' as globals;
 
 class FaceDetectionService {
   static final FaceDetectionService _instance =
@@ -38,6 +39,7 @@ class FaceDetectionService {
     reminderCount = 0;
     reminderType = "None";
     hasReminded = false;
+    isReminding = false;
     //
     hasFace = false;
   }
@@ -63,6 +65,7 @@ class FaceDetectionService {
   int reminderCount = 0;
   String reminderType = "None";
   bool hasReminded = false;
+  bool isReminding = false;
   //
   bool hasFace = false;
 
@@ -90,15 +93,15 @@ class FaceDetectionService {
         eyeCounter++;
       } else {
         eyeCounter = 0;
-        hasReminded = false;
       }
-      if (reminderCount >= 3) {
+      if (reminderCount >= 4) {
         hasReminded = false;
         reminderType = "None";
         return;
       }
       if (eyeCounter > 10) {
         reminderType = "Drowsy";
+        isReminding = true;
         reminderCount++;
         eyeCounter = 0;
       }
@@ -119,6 +122,7 @@ class FaceDetectionService {
         reminderCount = 0;
         reminderType = "None";
         hasReminded = false;
+        isReminding = false;
       }
     }
   }
@@ -129,15 +133,15 @@ class FaceDetectionService {
       rotXCounter++;
     } else {
       rotXCounter = 0;
-      hasReminded = false;
     }
-    if (reminderCount >= 3) {
+    if (reminderCount >= 4) {
       hasReminded = false;
       reminderType = "None";
       return;
     }
     if (rotXCounter > delay) {
       reminderType = "Drowsy";
+      isReminding = true;
       reminderCount++;
       rotXCounter = 0;
     }
@@ -149,15 +153,15 @@ class FaceDetectionService {
       rotYCounter++;
     } else {
       rotYCounter = 0;
-      hasReminded = false;
     }
-    if (reminderCount >= 3) {
+    if (reminderCount >= 4) {
       hasReminded = false;
       reminderType = "None";
       return;
     }
     if (rotYCounter > delay) {
       reminderType = "Inattentive";
+      isReminding = true;
       reminderCount++;
       rotYCounter = 0;
     }
