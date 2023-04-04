@@ -149,9 +149,23 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
                 Navigator.of(context)
-                    .pushReplacement(MaterialPageRoute(builder: (context) {
-                  return const HomePage(title: globals.appName, index: 0);
-                }));
+                    .pushReplacement(PageRouteBuilder(
+                        pageBuilder: (BuildContext context,
+                                Animation<double> animation,
+                                Animation<double> secondaryAnimation) =>
+                            const HomePage(title: globals.appName, index: 0),
+                        transitionsBuilder:
+                            (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: Tween<double>(begin: 0.0, end: 1.0)
+                                .chain(CurveTween(curve: Curves.easeInOutExpo))
+                                .animate(animation),
+                            child: child,
+                          );
+                        },
+                        transitionDuration: const Duration(milliseconds: 500),
+                        reverseTransitionDuration:
+                            const Duration(milliseconds: 500)));
               },
             )),
         body: SettingsList(sections: [

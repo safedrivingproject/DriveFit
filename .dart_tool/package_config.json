@@ -410,6 +410,12 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "percent_indicator",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/percent_indicator-4.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "petitparser",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/petitparser-5.1.0",
       "packageUri": "lib/",
@@ -620,7 +626,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-04-03T16:08:28.495008Z",
+  "generated": "2023-04-04T13:20:30.663871Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

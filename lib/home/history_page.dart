@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -65,32 +66,6 @@ class _HistoryPageState extends State<HistoryPage> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  double _getTitleOpacity() {
-    double opacity;
-    var threshold = 150 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 1.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = (_scrollOffset - threshold) / 50;
-    } else {
-      return 0.0;
-    }
-    return opacity;
-  }
-
-  double _getAppBarOpacity() {
-    double opacity;
-    var threshold = 150 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 1.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = (_scrollOffset - threshold) / 50;
-    } else {
-      return 0.0;
-    }
-    return opacity;
   }
 
   double _getLargeTitleOpacity() {
@@ -408,81 +383,24 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: lightColorScheme.background,
-      child: Stack(
+    return SingleChildScrollView(
+      padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height * 0.6,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [lightColorScheme.primary, lcsPrimaryTransparent],
-                stops: const [0.15, 1],
-                begin: const AlignmentDirectional(0, -1),
-                end: const AlignmentDirectional(0, 1),
-              ),
-            ),
+          AutoSizeText(
+            'Drive Summary',
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                height: 1,
+                color: lightColorScheme.onPrimary
+                    .withOpacity(_getLargeTitleOpacity())),
+            textAlign: TextAlign.center,
+            maxLines: 2,
           ),
-          CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(
-                decelerationRate: ScrollDecelerationRate.fast),
-            slivers: [
-              SliverAppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.settings),
-                  color: lightColorScheme.background,
-                  onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) =>
-                            const SettingsPage(title: "Settings")));
-                  },
-                ),
-                title: Text('Drive Summary',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: lightColorScheme.onPrimary
-                            .withOpacity(_getTitleOpacity()))),
-                centerTitle: true,
-                pinned: true,
-                snap: false,
-                floating: false,
-                toolbarHeight: kToolbarHeight + 1.25,
-                backgroundColor:
-                    lightColorScheme.primary.withOpacity(_getAppBarOpacity()),
-                scrolledUnderElevation: 4,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-              ),
-              SliverToBoxAdapter(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Drive Summary',
-                          style: Theme.of(context)
-                              .textTheme
-                              .displayLarge
-                              ?.copyWith(
-                                  height: 1,
-                                  color: lightColorScheme.onPrimary
-                                      .withOpacity(_getLargeTitleOpacity())),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      _body(),
-                    ],
-                  ), // Data Column
-                ),
-              ),
-            ],
-          ),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+          _body(),
         ],
-      ),
+      ), // Data Column
     );
   }
 
@@ -817,9 +735,7 @@ class SessionsListState extends State<SessionsList> {
             child: ListView.builder(
               itemCount: widget.sessionsList.length,
               shrinkWrap: true,
-              physics: widget.isAtEndOfPage
-                  ? const BouncingScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
+              physics: const BouncingScrollPhysics(),
               itemBuilder: (BuildContext context, int index) {
                 SessionData session = widget.sessionsList[index];
                 return Card(
