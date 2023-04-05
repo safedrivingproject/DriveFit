@@ -91,6 +91,17 @@ class _DrivingViewState extends State<DrivingView> {
   String text = "Stop service";
 
   bool isReminding = false;
+  var opacityTweenSequence = <TweenSequenceItem<double>>[
+    TweenSequenceItem<double>(
+      tween: ConstantTween<double>(0.0),
+      weight: 50.0,
+    ),
+    TweenSequenceItem<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutExpo)),
+      weight: 50.0,
+    ),
+  ];
 
   /// *******************************************************
   /// *******************************************************
@@ -405,7 +416,24 @@ class _DrivingViewState extends State<DrivingView> {
             startCalibration = false;
           });
           showSnackBar("Calibration complete!");
-          Navigator.of(context).pop();
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              barrierColor: lightColorScheme.primary,
+              transitionDuration: const Duration(milliseconds: 1500),
+              pageBuilder: (BuildContext context, Animation<double> animation,
+                  Animation<double> secondaryAnimation) {
+                return const HomePage(index: 0);
+              },
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: TweenSequence<double>(opacityTweenSequence)
+                      .animate(animation),
+                  child: child,
+                );
+              },
+            ),
+          );
           timer.cancel();
         }
       } else {
@@ -960,20 +988,8 @@ class _DrivingViewState extends State<DrivingView> {
                                     secondaryAnimation, child) {
                                   return FadeTransition(
                                     opacity: TweenSequence<double>(
-                                      <TweenSequenceItem<double>>[
-                                        TweenSequenceItem<double>(
-                                          tween: ConstantTween<double>(0.0),
-                                          weight: 50.0,
-                                        ),
-                                        TweenSequenceItem<double>(
-                                          tween: Tween<double>(
-                                                  begin: 0.0, end: 1.0)
-                                              .chain(CurveTween(
-                                                  curve: Curves.easeOutExpo)),
-                                          weight: 50.0,
-                                        ),
-                                      ],
-                                    ).animate(animation),
+                                            opacityTweenSequence)
+                                        .animate(animation),
                                     child: child,
                                   );
                                 },
@@ -1022,7 +1038,7 @@ class _DrivingViewState extends State<DrivingView> {
             (1 / 600)) {
       return 5;
     } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
-            (3 / 600) ||
+            (3 / 600) &&
         (currentSession.inattentiveAlertCount / currentSession.duration) <=
             (3 / 600)) {
       return 4;
@@ -1060,6 +1076,7 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   bool _validateSession() {
+    if (globals.showDebug) return true;
     if (currentSession.distance < 500 || currentSession.duration < 10) {
       return false;
     }

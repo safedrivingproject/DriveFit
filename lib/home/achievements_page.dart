@@ -1,10 +1,12 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:drive_fit/service/shared_preferences_service.dart';
 import 'package:flutter/material.dart';
 import 'package:skeleton_loader/skeleton_loader.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
+import 'rank_list.dart';
 import '../settings/settings_page.dart';
 import '/service/database_service.dart';
 
@@ -19,7 +21,8 @@ class AchievementsPage extends StatefulWidget {
   State<AchievementsPage> createState() => _AchievementsPageState();
 }
 
-class _AchievementsPageState extends State<AchievementsPage> {
+class _AchievementsPageState extends State<AchievementsPage>
+    with TickerProviderStateMixin {
   final DatabaseService databaseService = DatabaseService();
   final ScrollController _scrollController =
       ScrollController(keepScrollOffset: true);
@@ -29,6 +32,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
   int totalScore = 0;
 
   bool _isInitialized = false;
+
+  int rankIndex = 0;
+  String rankName = "Tesla";
 
   @override
   void initState() {
@@ -41,6 +47,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
     });
     if (!_isInitialized) {
       getSessionData();
+      getRank();
       if (mounted) setState(() {});
     }
     _isInitialized = true;
@@ -49,6 +56,20 @@ class _AchievementsPageState extends State<AchievementsPage> {
   void getSessionData() {
     driveSessionsList = widget.sessionsList;
     totalScore = databaseService.getTotalScore(driveSessionsList);
+  }
+
+  void getRank() {
+    rankIndex = rankList
+        .lastIndexWhere((element) => totalScore >= element["requiredScore"]);
+    rankName = rankList[rankIndex]["name"];
+  }
+
+  String _getRequiredScoreForNextRank() {
+    if (rankIndex == rankList.length - 1) {
+      return "Great job! You are at the highest rank!";
+    }
+    var requiredScore = rankList[rankIndex + 1]["requiredScore"] - totalScore;
+    return "$requiredScore more point${requiredScore == 1 ? "" : "s"} to the next rank!";
   }
 
   @override
@@ -94,6 +115,132 @@ class _AchievementsPageState extends State<AchievementsPage> {
       return 1.0;
     }
     return opacity;
+  }
+
+  Widget _getPreviousCarImages() {
+    if (rankIndex > 1) {
+      String previousRankName1 = rankList[rankIndex - 1]["name"];
+      String previousRankName2 = rankList[rankIndex - 2]["name"];
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: Image(
+                image: AssetImage("./assets/cars/$previousRankName2.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: Image(
+                image: AssetImage("./assets/cars/$previousRankName1.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      );
+    } else if (rankIndex > 0) {
+      String previousRankName = rankList[rankIndex - 1]["name"];
+      return Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.05,
+          height: MediaQuery.of(context).size.width * 0.05,
+          clipBehavior: Clip.antiAlias,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+          ),
+          child: Image(
+            image: AssetImage("./assets/cars/$previousRankName.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Container(height: MediaQuery.of(context).size.width * 0.05),
+    );
+  }
+
+  Widget _getFollowingCarImages() {
+    if (rankIndex < rankList.length - 2) {
+      String followingRankName1 = rankList[rankIndex + 1]["name"];
+      String followingRankName2 = rankList[rankIndex + 2]["name"];
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: Image(
+                image: AssetImage("./assets/cars/$followingRankName1.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: Image(
+                image: AssetImage("./assets/cars/$followingRankName2.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ],
+      );
+    } else if (rankIndex < rankList.length - 1) {
+      String followingRankName = rankList[rankIndex + 1]["name"];
+      return Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.05,
+          height: MediaQuery.of(context).size.width * 0.05,
+          clipBehavior: Clip.antiAlias,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+          ),
+          child: Image(
+            image: AssetImage("./assets/cars/$followingRankName.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Container(height: MediaQuery.of(context).size.width * 0.05),
+    );
   }
 
   Widget _body() {
@@ -158,9 +305,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                         ),
-                        child: Image.network(
-                          'https://picsum.photos/seed/501/600',
+                        child: Image(
+                          image: AssetImage("./assets/cars/$rankName.png"),
                           fit: BoxFit.cover,
+                          isAntiAlias: true,
                         ),
                       ),
                       progressColor: sourceXanthous,
@@ -175,104 +323,29 @@ class _AchievementsPageState extends State<AchievementsPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  height:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.network(
-                                    'https://picsum.photos/seed/501/600',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  height:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.network(
-                                    'https://picsum.photos/seed/501/600',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          _getPreviousCarImages(),
                           Container(
                             width: MediaQuery.of(context).size.width * 0.4,
                             height: 50,
                             decoration: const BoxDecoration(),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  height:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.network(
-                                    'https://picsum.photos/seed/501/600',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  height:
-                                      MediaQuery.of(context).size.width * 0.05,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.network(
-                                    'https://picsum.photos/seed/501/600',
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          _getFollowingCarImages(),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Text(
-                'Ferrari',
+              AutoSizeText(
+                rankName,
                 style: Theme.of(context)
                     .textTheme
                     .displaySmall
                     ?.copyWith(color: lightColorScheme.primary),
+                maxLines: 1,
               ),
               Text(
-                '8 more points to the next level',
+                _getRequiredScoreForNextRank(),
                 style: Theme.of(context)
                     .textTheme
                     .bodyLarge

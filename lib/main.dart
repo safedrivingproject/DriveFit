@@ -14,6 +14,7 @@ List<CameraDescription> cameras = [];
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  imageCache.clear();
   await NotificationController.initializeLocalNotifications();
   cameras = await availableCameras();
   await SharedPreferencesService.init();

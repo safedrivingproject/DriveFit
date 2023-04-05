@@ -52,11 +52,23 @@ class _DrivePageState extends State<DrivePage> {
   bool hasNewSession = false;
   bool _isInitialized = false;
 
+  var opacityTweenSequence = <TweenSequenceItem<double>>[
+    TweenSequenceItem<double>(
+      tween: ConstantTween<double>(0.0),
+      weight: 80.0,
+    ),
+    TweenSequenceItem<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutExpo)),
+      weight: 20.0,
+    ),
+  ];
+
   void _loadSettings() {
     globals.enableGeolocation =
         SharedPreferencesService.getBool('enableGeolocation', true);
     globals.hasCalibrated =
-        SharedPreferencesService.getBool('hasCalibrated', true);
+        SharedPreferencesService.getBool('hasCalibrated', false);
     globals.showDebug = SharedPreferencesService.getBool('showDebug', true);
     tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
     _statesController.update(MaterialState.disabled, !globals.hasCalibrated);
@@ -175,7 +187,7 @@ class _DrivePageState extends State<DrivePage> {
   Widget _body() {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
-    
+
     return ListView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -397,13 +409,29 @@ class _DrivePageState extends State<DrivePage> {
                   : lightColorScheme.background,
             ),
             onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const DrivingView(
-                            calibrationMode: true,
-                            enableGeolocation: false,
-                          )));
+              Navigator.of(context).push(
+                  PageRouteBuilder(
+                  barrierColor: lightColorScheme.primary,
+                  transitionDuration: const Duration(milliseconds: 1500),
+                  pageBuilder: (BuildContext context,
+                      Animation<double> animation,
+                      Animation<double> secondaryAnimation) {
+                    return const DrivingView(
+                      calibrationMode: true,
+                      enableGeolocation:
+                          false,
+                    );
+                  },
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: TweenSequence<double>(
+                        opacityTweenSequence
+                      ).animate(animation),
+                      child: child,
+                    );
+                  },
+                ),);
             },
             label: Text(
               "Calibrate",
@@ -424,10 +452,14 @@ class _DrivePageState extends State<DrivePage> {
           padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 32),
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-                shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                minimumSize: const Size.fromHeight(50.0),
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0)),
+              shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(16.0))),
+              minimumSize: const Size.fromHeight(50.0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
+              backgroundColor: globals.hasCalibrated
+                  ? lightColorScheme.primary
+                  : lightColorScheme.surfaceVariant,
+            ),
             icon: const Icon(
               Icons.directions_car_outlined,
             ),
@@ -451,17 +483,7 @@ class _DrivePageState extends State<DrivePage> {
                       (context, animation, secondaryAnimation, child) {
                     return FadeTransition(
                       opacity: TweenSequence<double>(
-                        <TweenSequenceItem<double>>[
-                          TweenSequenceItem<double>(
-                            tween: ConstantTween<double>(0.0),
-                            weight: 80.0,
-                          ),
-                          TweenSequenceItem<double>(
-                            tween: Tween<double>(begin: 0.0, end: 1.0)
-                                .chain(CurveTween(curve: Curves.easeOutExpo)),
-                            weight: 20.0,
-                          ),
-                        ],
+                        opacityTweenSequence
                       ).animate(animation),
                       child: child,
                     );

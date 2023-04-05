@@ -187,8 +187,8 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                 crossAxisAlignment: WrapCrossAlignment.end,
                                 children: [
                                   Text(
-                                    (widget.session.distance / 1000)
-                                        .toStringAsFixed(2),
+                                    widget.session.distance >= 0.01 ? (widget.session.distance / 1000)
+                                        .toStringAsFixed(2) : "N/A",
                                     style: Theme.of(context)
                                         .textTheme
                                         .displaySmall,
