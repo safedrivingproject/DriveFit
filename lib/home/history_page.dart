@@ -102,7 +102,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   offset: Offset(0, 1),
                 )
               ],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: lightColorScheme.background,
                 width: 1,
@@ -170,7 +170,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   offset: Offset(0, 1),
                 )
               ],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: lightColorScheme.onPrimary,
                 width: 1,
@@ -276,7 +276,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   offset: Offset(0, 1),
                 )
               ],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
@@ -331,7 +331,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   offset: Offset(0, 1),
                 )
               ],
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
@@ -719,7 +719,7 @@ class SessionsListState extends State<SessionsList> {
                 offset: Offset(0, 1),
               )
             ],
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: lightColorScheme.background,
               width: 1,

@@ -24,7 +24,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   double _scrollOffset = 0.0;
   bool isAtEndOfPage = false;
-  int selectedPageIndex = 1;
+  int selectedPageIndex = 0;
 
   List<SessionData> driveSessionsList = [];
 

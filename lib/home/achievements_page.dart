@@ -1,4 +1,5 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:collection/collection.dart';
 import 'package:drive_fit/service/shared_preferences_service.dart';
 import 'package:flutter/material.dart';
 import 'package:skeleton_loader/skeleton_loader.dart';
@@ -30,11 +31,13 @@ class _AchievementsPageState extends State<AchievementsPage>
 
   List<SessionData> driveSessionsList = [];
   int totalScore = 0;
+  int rankScore = 0;
+  int scoreStreak = 0;
 
   bool _isInitialized = false;
 
   int rankIndex = 0;
-  String rankName = "Tesla";
+  String rankName = "Toyota";
 
   @override
   void initState() {
@@ -48,6 +51,7 @@ class _AchievementsPageState extends State<AchievementsPage>
     if (!_isInitialized) {
       getSessionData();
       getRank();
+      calcScoreStreak();
       if (mounted) setState(() {});
     }
     _isInitialized = true;
@@ -55,20 +59,38 @@ class _AchievementsPageState extends State<AchievementsPage>
 
   void getSessionData() {
     driveSessionsList = widget.sessionsList;
+    scoreStreak = SharedPreferencesService.getInt('scoreStreak', 0);
     totalScore = databaseService.getTotalScore(driveSessionsList);
   }
 
   void getRank() {
+    rankScore = totalScore + scoreStreak;
     rankIndex = rankList
-        .lastIndexWhere((element) => totalScore >= element["requiredScore"]);
+        .lastIndexWhere((element) => rankScore >= element["requiredScore"]);
     rankName = rankList[rankIndex]["name"];
+  }
+
+  Future<void> calcScoreStreak() async {
+    if (driveSessionsList.isEmpty) {
+      scoreStreak = 0;
+      return;
+    }
+    scoreStreak = 0;
+    for (var session in driveSessionsList) {
+      if (session.score == 5) {
+        scoreStreak++;
+      } else {
+        break;
+      }
+    }
+    SharedPreferencesService.setInt('scoreStreak', scoreStreak);
   }
 
   String _getRequiredScoreForNextRank() {
     if (rankIndex == rankList.length - 1) {
       return "Great job! You are at the highest rank!";
     }
-    var requiredScore = rankList[rankIndex + 1]["requiredScore"] - totalScore;
+    var requiredScore = rankList[rankIndex + 1]["requiredScore"] - rankScore;
     return "$requiredScore more point${requiredScore == 1 ? "" : "s"} to the next rank!";
   }
 
@@ -243,6 +265,15 @@ class _AchievementsPageState extends State<AchievementsPage>
     );
   }
 
+  double getRankProgress() {
+    if (rankIndex < rankList.length - 1) {
+      var difference = rankList[rankIndex + 1]["requiredScore"] -
+          rankList[rankIndex]["requiredScore"];
+      return (rankScore - rankList[rankIndex]["requiredScore"]) / difference;
+    }
+    return 1.0;
+  }
+
   Widget _body() {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
@@ -252,7 +283,7 @@ class _AchievementsPageState extends State<AchievementsPage>
       physics: const NeverScrollableScrollPhysics(),
       children: [
         Container(
-          margin: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 14),
+          margin: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
           width: MediaQuery.of(context).size.width,
           padding: const EdgeInsets.all(14.0),
           decoration: BoxDecoration(
@@ -264,7 +295,7 @@ class _AchievementsPageState extends State<AchievementsPage>
                 offset: Offset(0, 1),
               )
             ],
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: lightColorScheme.background,
               width: 1,
@@ -277,7 +308,7 @@ class _AchievementsPageState extends State<AchievementsPage>
               Padding(
                 padding: const EdgeInsetsDirectional.fromSTEB(0, 7, 0, 14),
                 child: Text(
-                  'Your rank is:',
+                  'Your rank:',
                   style: Theme.of(context)
                       .textTheme
                       .titleSmall
@@ -297,7 +328,7 @@ class _AchievementsPageState extends State<AchievementsPage>
                       circularStrokeCap: CircularStrokeCap.round,
                       radius: MediaQuery.of(context).size.width * 0.3,
                       lineWidth: 20.0,
-                      percent: 0.7,
+                      percent: getRankProgress(),
                       center: Container(
                         width: MediaQuery.of(context).size.width * 0.5,
                         height: MediaQuery.of(context).size.width * 0.5,
@@ -354,6 +385,82 @@ class _AchievementsPageState extends State<AchievementsPage>
             ],
           ),
         ),
+        Container(
+          margin: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+          width: MediaQuery.of(context).size.width,
+          padding: const EdgeInsets.all(14.0),
+          decoration: BoxDecoration(
+            color: lightColorScheme.background,
+            boxShadow: const [
+              BoxShadow(
+                blurRadius: 4,
+                color: Color(0x35000000),
+                offset: Offset(0, 1),
+              )
+            ],
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: lightColorScheme.background,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 0, 0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your score streak:',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 4, 0, 0),
+                              child: Text(
+                                '$scoreStreak',
+                                style: Theme.of(context).textTheme.displaySmall,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 8, 0, 0),
+                              child: Icon(
+                                Icons.local_fire_department,
+                                color: sourceXanthous,
+                                size: 24,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Padding(
+                      padding:
+                          const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 0),
+                      child: Text(
+                        'FYI: Your score streak is the number of consecutive sessions in which you got max points.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        )
       ],
     );
   }

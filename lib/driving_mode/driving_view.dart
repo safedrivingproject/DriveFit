@@ -7,9 +7,9 @@ import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_sensors/flutter_sensors.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:wakelock/wakelock.dart';
 
 import '/theme/color_schemes.g.dart';
 import 'camera_view.dart';
@@ -83,6 +83,7 @@ class _DrivingViewState extends State<DrivingView> {
       score: 0);
   bool isValidSession = false;
   bool canExit = false;
+  bool wakeLockEnabled = false;
 
   DateFormat noMillis = DateFormat("yyyy-MM-dd HH:mm:ss");
   DateFormat noSeconds = DateFormat("yyyy-MM-dd HH:mm");
@@ -158,6 +159,21 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   /// *******************************************************
+
+  Future<void> _enableWakeLock() async {
+    wakeLockEnabled = await Wakelock.enabled;
+    if (!wakeLockEnabled) {
+      Wakelock.enable();
+    }
+  }
+
+  Future<void> _disableWakeLock() async {
+    wakeLockEnabled = await Wakelock.enabled;
+    if (wakeLockEnabled) {
+      Wakelock.disable();
+    }
+  }
+
   void initAudioPlayers() {
     drowsyAudioPlayer.setSource(globals.drowsyAlarmValue[0] == "asset"
         ? AssetSource(globals.drowsyAlarmValue[1])
@@ -209,6 +225,8 @@ class _DrivingViewState extends State<DrivingView> {
   void initState() {
     super.initState();
 
+    _enableWakeLock();
+
     geolocationService.positionList.clear();
     geolocationService.speedList.clear();
 
@@ -218,12 +236,6 @@ class _DrivingViewState extends State<DrivingView> {
     periodicDetectionTimer?.cancel();
 
     _initSessionData();
-
-    // _statesController.addListener(() {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     if (mounted) setState(() {});
-    //   });
-    // });
 
     if (widget.calibrationMode == true) {
       if (mounted) {
@@ -246,6 +258,8 @@ class _DrivingViewState extends State<DrivingView> {
 
   @override
   void dispose() {
+    _disableWakeLock();
+
     _canProcess = false;
     periodicDetectionTimer?.cancel();
     periodicCalibrationTimer?.cancel();
@@ -1027,7 +1041,7 @@ class _DrivingViewState extends State<DrivingView> {
   ///
   void showSnackBar(String text) {
     var snackBar =
-        SnackBar(content: Text(text), duration: const Duration(seconds: 1));
+        SnackBar(content: Text(text), duration: const Duration(seconds: 2));
     globals.snackbarKey.currentState?.showSnackBar(snackBar);
   }
 
@@ -1077,7 +1091,7 @@ class _DrivingViewState extends State<DrivingView> {
 
   bool _validateSession() {
     if (globals.showDebug) return true;
-    if (currentSession.distance < 500 || currentSession.duration < 10) {
+    if (currentSession.distance < 500 || currentSession.duration < 60) {
       return false;
     }
     return true;
