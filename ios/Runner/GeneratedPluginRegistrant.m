@@ -30,6 +30,12 @@
 @import file_picker;
 #endif
 
+#if __has_include(<flutter_foreground_task/FlutterForegroundTaskPlugin.h>)
+#import <flutter_foreground_task/FlutterForegroundTaskPlugin.h>
+#else
+@import flutter_foreground_task;
+#endif
+
 #if __has_include(<flutter_sensors/FlutterSensorsPlugin.h>)
 #import <flutter_sensors/FlutterSensorsPlugin.h>
 #else
@@ -85,6 +91,7 @@
   [AwesomeNotificationsPlugin registerWithRegistrar:[registry registrarForPlugin:@"AwesomeNotificationsPlugin"]];
   [CameraPlugin registerWithRegistrar:[registry registrarForPlugin:@"CameraPlugin"]];
   [FilePickerPlugin registerWithRegistrar:[registry registrarForPlugin:@"FilePickerPlugin"]];
+  [FlutterForegroundTaskPlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterForegroundTaskPlugin"]];
   [FlutterSensorsPlugin registerWithRegistrar:[registry registrarForPlugin:@"FlutterSensorsPlugin"]];
   [GeolocatorPlugin registerWithRegistrar:[registry registrarForPlugin:@"GeolocatorPlugin"]];
   [GoogleMlKitCommonsPlugin registerWithRegistrar:[registry registrarForPlugin:@"GoogleMlKitCommonsPlugin"]];

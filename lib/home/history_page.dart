@@ -288,7 +288,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
                     child: Text(
-                      'Trend of drowsy alerts',
+                      'Trend of drowsy alerts (Last 14 days)',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -343,7 +343,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
                     child: Text(
-                      'Trend of inattentive alerts',
+                      'Trend of inattentive alerts (Last 14 days)',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -503,13 +503,17 @@ class _HistoryPageState extends State<HistoryPage> {
         .toList();
     var sessionsDrowsyListDouble =
         sessionsDrowsyListInt.map((count) => count.toDouble()).toList();
-    for (int i = 0; i < sessionsDrowsyListInt.length; i++) {
+    for (int i = 0;
+        i <
+            (sessionsDrowsyListInt.length > 14
+                ? 14
+                : sessionsDrowsyListInt.length);
+        i++) {
       flSpotlist.add(FlSpot(
           ((driveSessionsList.length > 14
                   ? 13.0
                   : driveSessionsList.length.toDouble()) -
-              i -
-              1),
+              i),
           sessionsDrowsyListDouble[i]));
     }
     return flSpotlist;
@@ -614,13 +618,17 @@ class _HistoryPageState extends State<HistoryPage> {
         .toList();
     var sessionsInattentiveListDouble =
         sessionsInattentiveListInt.map((count) => count.toDouble()).toList();
-    for (int i = 0; i < sessionsInattentiveListInt.length; i++) {
+    for (int i = 0;
+        i <
+            (sessionsInattentiveListInt.length > 14
+                ? 14
+                : sessionsInattentiveListInt.length);
+        i++) {
       flSpotlist.add(FlSpot(
           ((driveSessionsList.length > 14
                   ? 13.0
                   : driveSessionsList.length.toDouble()) -
-              i -
-              1),
+              i),
           sessionsInattentiveListDouble[i]));
     }
     return flSpotlist;

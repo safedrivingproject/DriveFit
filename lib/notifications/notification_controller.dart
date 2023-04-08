@@ -23,10 +23,10 @@ class NotificationController {
               defaultColor: lightColorScheme.primary,
               ledColor: Colors.red),
           NotificationChannel(
-              channelKey: 'foreground_service',
-              channelName: 'DriveFit Service',
+              channelKey: 'drivefit_foreground_service',
+              channelName: 'DriveFit Foreground Service',
               channelDescription:
-                  'Notification channel for the foreground services.',
+                  'Notification channel for foreground services.',
               playSound: true,
               groupAlertBehavior: GroupAlertBehavior.All,
               importance: NotificationImportance.Default,
@@ -158,6 +158,26 @@ class NotificationController {
         wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
+        actionType: ActionType.DisabledAction,
+      ),
+    );
+  }
+
+  static Future<void> createRestReminderNotification() async {
+    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+    if (!isAllowed) isAllowed = await displayNotificationRationale();
+    if (!isAllowed) return;
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: -1,
+        channelKey: 'drivefit_alerts',
+        title: 'Take a break!',
+        body: "You have driven for quite long already!",
+        notificationLayout: NotificationLayout.Default,
+        wakeUpScreen: true,
+        fullScreenIntent: true,
+        criticalAlert: false,
         actionType: ActionType.DisabledAction,
       ),
     );

@@ -1,7 +1,11 @@
+import 'dart:isolate';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+
 import 'home/home_page.dart';
 import 'notifications/notification_controller.dart';
 import '/service/shared_preferences_service.dart';
@@ -31,39 +35,47 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  //static const String routeHome = '/', routeNotification = '/notification-page';
+  void _initForegroundTask() {
+    FlutterForegroundTask.init(
+        androidNotificationOptions: AndroidNotificationOptions(
+            channelId: 'drivefit_foreground_service',
+            channelName: 'DriveFit Foreground Service',
+            channelDescription: 'Notification channel for foreground services.',
+            channelImportance: NotificationChannelImportance.LOW,
+            priority: NotificationPriority.LOW,
+            iconData: const NotificationIconData(
+              resType: ResourceType.drawable,
+              resPrefix: ResourcePrefix.ic,
+              name: 'bg_service_small',
+            )),
+        iosNotificationOptions:
+            const IOSNotificationOptions(showNotification: false),
+        foregroundTaskOptions:
+            const ForegroundTaskOptions(interval: 1000, autoRunOnBoot: true));
+  }
+
+  Future<void> _startForegroundTask() async {
+    if (await FlutterForegroundTask.isRunningService) {
+      FlutterForegroundTask.stopService();
+      FlutterForegroundTask.startService(
+        notificationTitle: 'Going to drive?',
+        notificationText: 'Tap to start DriveFit!',
+      );
+    } else {
+      FlutterForegroundTask.startService(
+        notificationTitle: 'Going to drive?',
+        notificationText: 'Tap to start DriveFit!',
+      );
+    }
+  }
 
   @override
   void initState() {
     NotificationController.startListeningNotificationEvents();
+    _initForegroundTask();
+    _startForegroundTask();
     super.initState();
   }
-
-  // List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
-  //  List<Route<dynamic>> pageStack = [];
-  //  pageStack
-  //      .add(MaterialPageRoute(builder: (_) => const Home(title: appName)));
-  //  if (initialRouteName == routeNotification &&
-  //      NotificationController.initialAction != null) {
-  //    pageStack.add(MaterialPageRoute(
-  //        builder: (_) => NotificationPage(
-  //            receivedAction: NotificationController.initialAction!)));
-  //  }
-  //  return pageStack;
-  //}
-
-  //Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-  //  switch (settings.name) {
-  //    case routeHome:
-  //      return MaterialPageRoute(builder: (_) => const Home(title: appName));
-
-  //    case routeNotification:
-  //      ReceivedAction receivedAction = settings.arguments as ReceivedAction;
-  //      return MaterialPageRoute(
-  //          builder: (_) => NotificationPage(receivedAction: receivedAction));
-  //  }
-  //  return null;
-  //}
 
   @override
   Widget build(BuildContext context) {
@@ -78,11 +90,9 @@ class _MyAppState extends State<MyApp> {
           lightScheme = lightColorScheme;
           lightCustomColors = lightCustomColors.harmonized(lightScheme);
 
-          // Repeat for the dark color scheme.
           darkScheme = darkColorScheme;
           darkCustomColors = darkCustomColors.harmonized(darkScheme);
         } else {
-          // Otherwise, use fallback schemes.
           lightScheme = lightColorScheme;
           darkScheme = darkColorScheme;
         }
@@ -175,14 +185,6 @@ class _MyAppState extends State<MyApp> {
                     fontSize: 11,
                     color: lightColorScheme.onBackground),
               ),
-              // const TextTheme(
-              //   bodyLarge: TextStyle(fontSize: 16.0, fontFamily: 'Inter'),
-              //   bodyMedium: TextStyle(fontSize: 14.0, fontFamily: 'Inter'),
-              //   bodySmall: TextStyle(fontSize: 12.0, fontFamily: 'Inter'),
-              //   displayLarge: TextStyle(fontSize: 50.0, fontWeight: FontWeight.bold),
-              //   displayMedium: TextStyle(fontSize: 35.0, fontWeight: FontWeight.bold),
-              //   displaySmall: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-              // ),
             ));
       },
     );

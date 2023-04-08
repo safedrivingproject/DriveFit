@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:drive_fit/home/history_page.dart';
@@ -410,7 +411,7 @@ class _DrivePageState extends State<DrivePage> {
             ),
             onPressed: () {
               Navigator.of(context).push(
-                  PageRouteBuilder(
+                PageRouteBuilder(
                   barrierColor: lightColorScheme.primary,
                   transitionDuration: const Duration(milliseconds: 1500),
                   pageBuilder: (BuildContext context,
@@ -418,20 +419,19 @@ class _DrivePageState extends State<DrivePage> {
                       Animation<double> secondaryAnimation) {
                     return const DrivingView(
                       calibrationMode: true,
-                      enableGeolocation:
-                          false,
+                      enableGeolocation: false,
                     );
                   },
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
                     return FadeTransition(
-                      opacity: TweenSequence<double>(
-                        opacityTweenSequence
-                      ).animate(animation),
+                      opacity: TweenSequence<double>(opacityTweenSequence)
+                          .animate(animation),
                       child: child,
                     );
                   },
-                ),);
+                ),
+              );
             },
             label: Text(
               "Calibrate",
@@ -482,9 +482,8 @@ class _DrivePageState extends State<DrivePage> {
                   transitionsBuilder:
                       (context, animation, secondaryAnimation, child) {
                     return FadeTransition(
-                      opacity: TweenSequence<double>(
-                        opacityTweenSequence
-                      ).animate(animation),
+                      opacity: TweenSequence<double>(opacityTweenSequence)
+                          .animate(animation),
                       child: child,
                     );
                   },
