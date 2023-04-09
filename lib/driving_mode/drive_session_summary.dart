@@ -29,7 +29,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
       weight: 50.0,
     ),
   ];
-  
+
   String formatTime(DateFormat format, String time) {
     return format.format(DateTime.tryParse(time) ?? DateTime.now());
   }

@@ -22,18 +22,6 @@ class NotificationController {
               defaultPrivacy: NotificationPrivacy.Public,
               defaultColor: lightColorScheme.primary,
               ledColor: Colors.red),
-          NotificationChannel(
-              channelKey: 'drivefit_foreground_service',
-              channelName: 'DriveFit Foreground Service',
-              channelDescription:
-                  'Notification channel for foreground services.',
-              playSound: true,
-              groupAlertBehavior: GroupAlertBehavior.All,
-              importance: NotificationImportance.Default,
-              defaultPrivacy: NotificationPrivacy.Public,
-              defaultColor: lightColorScheme.primary,
-              ledColor: Colors.blue,
-              locked: true)
         ],
         debug: true);
 
@@ -135,7 +123,6 @@ class NotificationController {
         title: 'Drive Safely!',
         body: "Wanna park and take a nap?",
         notificationLayout: NotificationLayout.Default,
-        wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
         actionType: ActionType.DisabledAction,
@@ -155,7 +142,6 @@ class NotificationController {
         title: 'Drive Safely!',
         body: "Keep your eyes on the road!",
         notificationLayout: NotificationLayout.Default,
-        wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
         actionType: ActionType.DisabledAction,
@@ -175,7 +161,6 @@ class NotificationController {
         title: 'Take a break!',
         body: "You have driven for quite long already!",
         notificationLayout: NotificationLayout.Default,
-        wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: false,
         actionType: ActionType.DisabledAction,

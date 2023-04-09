@@ -506,18 +506,6 @@
       "languageVersion": "2.17"
     },
     {
-      "name": "shimmer",
-      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/shimmer-2.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
-      "name": "skeleton_loader",
-      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/skeleton_loader-2.0.0+4",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
       "name": "sky_engine",
       "rootUri": "file:///C:/src/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
@@ -662,7 +650,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-04-08T13:52:04.232168Z",
+  "generated": "2023-04-09T14:36:52.047993Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

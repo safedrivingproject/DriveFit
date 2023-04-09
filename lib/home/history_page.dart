@@ -2,11 +2,9 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:skeleton_loader/skeleton_loader.dart';
 
 import '/theme/color_schemes.g.dart';
 import '/theme/custom_color.g.dart';
-import '/settings/settings_page.dart';
 import '../service/database_service.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -288,7 +286,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
                     child: Text(
-                      'Trend of drowsy alerts (Last 14 days)',
+                      'Trend of drowsy alerts (Last 14 sessions)',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -343,7 +341,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
                     child: Text(
-                      'Trend of inattentive alerts (Last 14 days)',
+                      'Trend of inattentive alerts (Last 14 sessions)',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -512,7 +510,7 @@ class _HistoryPageState extends State<HistoryPage> {
       flSpotlist.add(FlSpot(
           ((driveSessionsList.length > 14
                   ? 13.0
-                  : driveSessionsList.length.toDouble()) -
+                  : driveSessionsList.length.toDouble() - 1) -
               i),
           sessionsDrowsyListDouble[i]));
     }
@@ -627,7 +625,7 @@ class _HistoryPageState extends State<HistoryPage> {
       flSpotlist.add(FlSpot(
           ((driveSessionsList.length > 14
                   ? 13.0
-                  : driveSessionsList.length.toDouble()) -
+                  : driveSessionsList.length.toDouble() - 1) -
               i),
           sessionsInattentiveListDouble[i]));
     }

@@ -1,14 +1,11 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:collection/collection.dart';
 import 'package:drive_fit/service/shared_preferences_service.dart';
 import 'package:flutter/material.dart';
-import 'package:skeleton_loader/skeleton_loader.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
 import 'rank_list.dart';
-import '../settings/settings_page.dart';
 import '/service/database_service.dart';
 
 class AchievementsPage extends StatefulWidget {

@@ -502,15 +502,21 @@ class _DrivingViewState extends State<DrivingView> {
     var leftOffset = 15.0;
     var rightOffset = 15.0;
     if (neutralY <= 0) {
-      leftOffset = 20 + (neutralY.abs() / 10);
       if (neutralY > -25) {
+        leftOffset = 20 - (neutralY.abs() / 10);
         rightOffset = 20 + (neutralY.abs() / 2);
       } else {
-        rightOffset = 20 + (neutralY.abs() / 6);
+        leftOffset = 20 + (neutralY.abs() / 5);
+        rightOffset = 20 - (neutralY.abs() / 7);
       }
     } else if (neutralY > 0) {
-      leftOffset = 15 + (neutralY.abs() / 8);
-      rightOffset = 15 + (neutralY.abs() / 8);
+      if (neutralY < 25) {
+        leftOffset = 20 + (neutralY.abs() / 2);
+        rightOffset = 20 - (neutralY.abs() / 10);
+      } else {
+        leftOffset = 20 - (neutralY.abs() / 7);
+        rightOffset = 20 + (neutralY.abs() / 5);
+      }
     }
     faceDetectionService.rotYLeftOffset = leftOffset;
     faceDetectionService.rotYRightOffset = rightOffset;
@@ -1036,9 +1042,9 @@ class _DrivingViewState extends State<DrivingView> {
   void stopDriving() {
     if (!canExit) return;
     FlutterForegroundTask.updateService(
-        notificationTitle: 'Going to drive?',
-        notificationText: 'Tap to start DriveFit!',
-      );
+      notificationTitle: 'Going to drive?',
+      notificationText: 'Tap to start DriveFit!',
+    );
     finalizeSessionData();
     isValidSession = _validateSession();
     if (isValidSession) {

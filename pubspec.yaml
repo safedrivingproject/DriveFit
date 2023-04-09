@@ -55,8 +55,6 @@ dependencies:
   path_provider: ^2.0.14
   intl: ^0.17.0
   path: ^1.8.2
-  collection: ^1.17.0
-  skeleton_loader: ^2.0.0+4
   auto_size_text: ^3.0.0
   bottom_bar_page_transition: ^2.0.0
   percent_indicator: ^4.2.3
