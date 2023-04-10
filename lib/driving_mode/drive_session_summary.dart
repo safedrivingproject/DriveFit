@@ -318,10 +318,10 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                   ),
                   onPressed: () {
                     var hasNewRank = checkForNewRank();
-                    if (showDebug) {
-                      goToNewRankPage();
-                      return;
-                    }
+                    // if (showDebug) {
+                    //   goToNewRankPage();
+                    //   return;
+                    // }
                     if (hasNewRank) {
                       goToNewRankPage();
                     } else {
@@ -361,7 +361,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
       transitionDuration: const Duration(seconds: 1),
       pageBuilder: (BuildContext context, Animation<double> animation,
           Animation<double> secondaryAnimation) {
-        return const HomePage();
+        return const HomePage(index: 1);
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(

@@ -53,7 +53,6 @@ class _HistoryPageState extends State<HistoryPage> {
     super.dispose();
   }
 
-
   Widget _body() {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
