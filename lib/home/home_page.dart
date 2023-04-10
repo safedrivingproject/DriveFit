@@ -49,6 +49,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    selectedPageIndex = 0;
+    getSessionData();
+    rankingService.getScores();
+    rankingService.getRank();
     _animationController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -61,14 +65,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         setState(() {});
       }
     });
-    selectedPageIndex = widget.index ?? 0;
-    getSessionData();
-    rankingService.getScores();
-    rankingService.getRank();
   }
 
   Future<void> getSessionData() async {
     driveSessionsList = await databaseService.getAllSessions();
+    goToPage(widget.index);
+  }
+
+  Future<void> goToPage(int? index) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    selectedPageIndex = widget.index ?? 0;
+    if (mounted) setState(() {});
   }
 
   @override
@@ -80,7 +87,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   double _getTitleOpacity() {
     double opacity;
-    var threshold = 180 - kToolbarHeight;
+    var threshold = 150 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 1.0;
     } else if (_scrollOffset > threshold) {
@@ -93,7 +100,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   double _getAppBarOpacity() {
     double opacity;
-    var threshold = 180 - kToolbarHeight;
+    var threshold = 150 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 1.0;
     } else if (_scrollOffset > threshold) {

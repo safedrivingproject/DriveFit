@@ -22,7 +22,6 @@ Future<void> main() async {
   await NotificationController.initializeLocalNotifications();
   cameras = await availableCameras();
   await SharedPreferencesService.init();
-  _initForegroundTask();
   runApp(const MyApp());
 }
 
@@ -121,6 +120,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     NotificationController.startListeningNotificationEvents();
+    _initForegroundTask();
     _startForegroundTask();
     FlutterForegroundTask.setOnLockScreenVisibility(true);
     super.initState();
