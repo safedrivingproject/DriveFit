@@ -1,9 +1,14 @@
+import 'dart:isolate';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+
 import 'home/home_page.dart';
 import 'notifications/notification_controller.dart';
+import '/service/shared_preferences_service.dart';
 import 'global_variables.dart' as globals;
 
 import 'theme/color_schemes.g.dart';
@@ -13,9 +18,83 @@ List<CameraDescription> cameras = [];
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  imageCache.clear();
   await NotificationController.initializeLocalNotifications();
   cameras = await availableCameras();
+  await SharedPreferencesService.init();
+  _initForegroundTask();
   runApp(const MyApp());
+}
+
+void _initForegroundTask() {
+  FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+          channelId: 'drivefit_foreground_service',
+          channelName: 'DriveFit Foreground Service',
+          channelDescription: 'Notification channel for foreground services.',
+          channelImportance: NotificationChannelImportance.LOW,
+          priority: NotificationPriority.LOW,
+          iconData: const NotificationIconData(
+            resType: ResourceType.drawable,
+            resPrefix: ResourcePrefix.ic,
+            name: 'bg_service_small',
+          )),
+      iosNotificationOptions:
+          const IOSNotificationOptions(showNotification: false),
+      foregroundTaskOptions:
+          const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: true));
+}
+
+@pragma('vm:entry-point')
+void startCallback() {
+  // The setTaskHandler function must be called to handle the task in the background.
+  FlutterForegroundTask.setTaskHandler(FirstTaskHandler());
+}
+
+class FirstTaskHandler extends TaskHandler {
+  SendPort? _sendPort;
+
+  @override
+  Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
+    _sendPort = sendPort;
+
+    // You can use the getData function to get the stored data.
+    final customData =
+        await FlutterForegroundTask.getData<String>(key: 'customData');
+    print('customData: $customData');
+  }
+
+  @override
+  Future<void> onEvent(DateTime timestamp, SendPort? sendPort) async {
+    // Send data to the main isolate.
+    sendPort?.send(timestamp);
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp, SendPort? sendPort) async {
+    // You can use the clearAllData function to clear all the stored data.
+    await FlutterForegroundTask.clearAllData();
+  }
+
+  @override
+  void onButtonPressed(String id) {
+    // Called when the notification button on the Android platform is pressed.
+    print('onButtonPressed >> $id');
+  }
+
+  @override
+  void onNotificationPressed() {
+    // Called when the notification itself on the Android platform is pressed.
+    //
+    // "android.permission.SYSTEM_ALERT_WINDOW" permission must be granted for
+    // this function to be called.
+
+    // Note that the app will only route to "/resume-route" when it is exited so
+    // it will usually be necessary to send a message through the send port to
+    // signal it to restore state when the app is already started.
+    FlutterForegroundTask.launchApp("/resume-route");
+    _sendPort?.send('onNotificationPressed');
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -28,39 +107,24 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  //static const String routeHome = '/', routeNotification = '/notification-page';
+  Future<void> _startForegroundTask() async {
+    if (await FlutterForegroundTask.isRunningService) {
+      FlutterForegroundTask.restartService();
+    } else {
+      FlutterForegroundTask.startService(
+        notificationTitle: 'Going to drive?',
+        notificationText: 'Tap to start DriveFit!',
+      );
+    }
+  }
 
   @override
   void initState() {
     NotificationController.startListeningNotificationEvents();
+    _startForegroundTask();
+    FlutterForegroundTask.setOnLockScreenVisibility(true);
     super.initState();
   }
-
-  // List<Route<dynamic>> onGenerateInitialRoutes(String initialRouteName) {
-  //  List<Route<dynamic>> pageStack = [];
-  //  pageStack
-  //      .add(MaterialPageRoute(builder: (_) => const Home(title: appName)));
-  //  if (initialRouteName == routeNotification &&
-  //      NotificationController.initialAction != null) {
-  //    pageStack.add(MaterialPageRoute(
-  //        builder: (_) => NotificationPage(
-  //            receivedAction: NotificationController.initialAction!)));
-  //  }
-  //  return pageStack;
-  //}
-
-  //Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-  //  switch (settings.name) {
-  //    case routeHome:
-  //      return MaterialPageRoute(builder: (_) => const Home(title: appName));
-
-  //    case routeNotification:
-  //      ReceivedAction receivedAction = settings.arguments as ReceivedAction;
-  //      return MaterialPageRoute(
-  //          builder: (_) => NotificationPage(receivedAction: receivedAction));
-  //  }
-  //  return null;
-  //}
 
   @override
   Widget build(BuildContext context) {
@@ -75,17 +139,16 @@ class _MyAppState extends State<MyApp> {
           lightScheme = lightColorScheme;
           lightCustomColors = lightCustomColors.harmonized(lightScheme);
 
-          // Repeat for the dark color scheme.
           darkScheme = darkColorScheme;
           darkCustomColors = darkCustomColors.harmonized(darkScheme);
         } else {
-          // Otherwise, use fallback schemes.
           lightScheme = lightColorScheme;
           darkScheme = darkColorScheme;
         }
 
         return MaterialApp(
             navigatorKey: MyApp.navigatorKey,
+            scaffoldMessengerKey: globals.snackbarKey,
             title: globals.appName,
             debugShowCheckedModeBanner: false,
             home: const HomePage(title: globals.appName),
@@ -171,14 +234,6 @@ class _MyAppState extends State<MyApp> {
                     fontSize: 11,
                     color: lightColorScheme.onBackground),
               ),
-              // const TextTheme(
-              //   bodyLarge: TextStyle(fontSize: 16.0, fontFamily: 'Inter'),
-              //   bodyMedium: TextStyle(fontSize: 14.0, fontFamily: 'Inter'),
-              //   bodySmall: TextStyle(fontSize: 12.0, fontFamily: 'Inter'),
-              //   displayLarge: TextStyle(fontSize: 50.0, fontWeight: FontWeight.bold),
-              //   displayMedium: TextStyle(fontSize: 35.0, fontWeight: FontWeight.bold),
-              //   displaySmall: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
-              // ),
             ));
       },
     );

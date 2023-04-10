@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer';
 
 import 'package:camera/camera.dart';
+import 'package:drive_fit/service/face_detection_service.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,36 +13,39 @@ import '../main.dart';
 import '/global_variables.dart' as globals;
 
 class CameraView extends StatefulWidget {
-  const CameraView(
-      {Key? key,
-      required this.customPaint,
-      this.text,
-      required this.onImage,
-      this.initialDirection = CameraLensDirection.back})
-      : super(key: key);
+  const CameraView({
+    Key? key,
+    required this.customPaint,
+    this.text,
+    required this.onImage,
+    this.initialDirection = CameraLensDirection.back,
+    required this.isReminding,
+  }) : super(key: key);
 
   final CustomPaint? customPaint;
   final String? text;
   final Function(InputImage inputImage) onImage;
   final CameraLensDirection initialDirection;
+  final bool isReminding;
 
   @override
   State<CameraView> createState() => CameraViewState();
 }
 
 class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
+  final FaceDetectionService faceDetectionService = FaceDetectionService();
   CameraController? _controller;
   int _cameraIndex = -1;
   double zoomLevel = 0.0, minZoomLevel = 0.0, maxZoomLevel = 5.0;
   bool _cameraOn = false;
   Timer? exposureTimer;
-  bool showCameraPreview = true, useHighCameraResolution = false;
+  bool showCameraPreview = false, useHighCameraResolution = false;
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+        showCameraPreview = (prefs.getBool('showCameraPreview') ?? false);
         useHighCameraResolution =
             (prefs.getBool('useHighCameraResolution') ?? false);
       });
@@ -113,40 +117,38 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
       final size = MediaQuery.of(context).size;
       var scale = size.aspectRatio * _controller!.value.aspectRatio;
       if (scale < 1) scale = 1 / scale;
-
       if (!globals.inCalibrationMode && !showCameraPreview) {
-        return Container(
-          color: Colors.black,
-          child: Stack(
+        return Center(
+          child: AnimatedContainer(
+            duration: const Duration(seconds: 1),
+            color: widget.isReminding
+                ? lightColorScheme.error
+                : lightColorScheme.background,
+          ),
+        );
+      }
+      return Stack(
+        children: [
+          Stack(
             fit: StackFit.expand,
             children: <Widget>[
               Transform.scale(
                 scale: scale,
                 child: Center(
-                  child: Container(
-                    color: lightColorScheme.background,
-                  ),
+                  child: CameraPreview(_controller!),
                 ),
               ),
               if (widget.customPaint != null) widget.customPaint!,
             ],
           ),
-        );
-      }
-      return Container(
-        color: Colors.black,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            Transform.scale(
-              scale: scale,
-              child: Center(
-                child: CameraPreview(_controller!),
-              ),
+          AnimatedOpacity(
+            opacity: widget.isReminding ? 0.6 : 0.0,
+            duration: const Duration(seconds: 1),
+            child: Container(
+              color: lightColorScheme.error,
             ),
-            if (widget.customPaint != null) widget.customPaint!,
-          ],
-        ),
+          ),
+        ],
       );
     }
   }
@@ -204,7 +206,6 @@ class CameraViewState extends State<CameraView> with WidgetsBindingObserver {
 
     setState(() {});
 
-    await Future.delayed(const Duration(seconds: 1));
     exposureTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       try {
         if (mounted) {

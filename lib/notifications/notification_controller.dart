@@ -22,18 +22,6 @@ class NotificationController {
               defaultPrivacy: NotificationPrivacy.Public,
               defaultColor: lightColorScheme.primary,
               ledColor: Colors.red),
-          NotificationChannel(
-              channelKey: 'foreground_service',
-              channelName: 'DriveFit Service',
-              channelDescription:
-                  'Notification channel for the foreground services.',
-              playSound: true,
-              groupAlertBehavior: GroupAlertBehavior.All,
-              importance: NotificationImportance.Default,
-              defaultPrivacy: NotificationPrivacy.Public,
-              defaultColor: lightColorScheme.primary,
-              ledColor: Colors.blue,
-              locked: true)
         ],
         debug: true);
 
@@ -135,7 +123,6 @@ class NotificationController {
         title: 'Drive Safely!',
         body: "Wanna park and take a nap?",
         notificationLayout: NotificationLayout.Default,
-        wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
         actionType: ActionType.DisabledAction,
@@ -155,9 +142,27 @@ class NotificationController {
         title: 'Drive Safely!',
         body: "Keep your eyes on the road!",
         notificationLayout: NotificationLayout.Default,
-        wakeUpScreen: true,
         fullScreenIntent: true,
         criticalAlert: true,
+        actionType: ActionType.DisabledAction,
+      ),
+    );
+  }
+
+  static Future<void> createRestReminderNotification() async {
+    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+    if (!isAllowed) isAllowed = await displayNotificationRationale();
+    if (!isAllowed) return;
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: -1,
+        channelKey: 'drivefit_alerts',
+        title: 'Take a break!',
+        body: "You have driven for quite long already!",
+        notificationLayout: NotificationLayout.Default,
+        fullScreenIntent: true,
+        criticalAlert: false,
         actionType: ActionType.DisabledAction,
       ),
     );

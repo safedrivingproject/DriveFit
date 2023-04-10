@@ -1,8 +1,12 @@
+import 'package:drive_fit/global_variables.dart';
 import 'package:drive_fit/home/home_page.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '/service/database_service.dart';
+import '/service/ranking_service.dart';
+import '/home/new_rank_screen.dart';
 
 import '/theme/custom_color.g.dart';
 
@@ -18,6 +22,20 @@ class DriveSessionSummary extends StatefulWidget {
 }
 
 class _DriveSessionSummaryState extends State<DriveSessionSummary> {
+  final RankingService rankingService = RankingService();
+
+  var opacityTweenSequence = <TweenSequenceItem<double>>[
+    TweenSequenceItem<double>(
+      tween: ConstantTween<double>(0.0),
+      weight: 50.0,
+    ),
+    TweenSequenceItem<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutExpo)),
+      weight: 50.0,
+    ),
+  ];
+
   String formatTime(DateFormat format, String time) {
     return format.format(DateTime.tryParse(time) ?? DateTime.now());
   }
@@ -196,8 +214,10 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                   crossAxisAlignment: WrapCrossAlignment.end,
                                   children: [
                                     Text(
-                                      (widget.session.distance / 1000)
-                                          .toStringAsFixed(2),
+                                      widget.session.distance >= 0.01
+                                          ? (widget.session.distance / 1000)
+                                              .toStringAsFixed(2)
+                                          : "N/A",
                                       style: Theme.of(context)
                                           .textTheme
                                           .displaySmall,
@@ -297,9 +317,16 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                     minimumSize: const Size.fromHeight(50),
                   ),
                   onPressed: () {
-                    Navigator.of(context).pushReplacement(MaterialPageRoute(
-                      builder: (context) => const HomePage(index: 0),
-                    ));
+                    var hasNewRank = checkForNewRank();
+                    if (showDebug) {
+                      goToNewRankPage();
+                      return;
+                    }
+                    if (hasNewRank) {
+                      goToNewRankPage();
+                    } else {
+                      goToHome();
+                    }
                   },
                   child: Text(
                     "Return to home page",
@@ -314,6 +341,54 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  bool checkForNewRank() {
+    rankingService.getRank();
+    print(
+        "${rankingService.previousRankIndex}, ${rankingService.currentRankIndex}");
+    if (rankingService.currentRankIndex > rankingService.previousRankIndex) {
+      return true;
+    }
+    return false;
+  }
+
+  void goToHome() {
+    Navigator.of(context).pushReplacement(PageRouteBuilder(
+      barrierColor: lightColorScheme.primary,
+      transitionDuration: const Duration(seconds: 1),
+      pageBuilder: (BuildContext context, Animation<double> animation,
+          Animation<double> secondaryAnimation) {
+        return const HomePage();
+      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity:
+              TweenSequence<double>(opacityTweenSequence).animate(animation),
+          child: child,
+        );
+      },
+    ));
+  }
+
+  void goToNewRankPage() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        barrierColor: lightColorScheme.primary,
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (BuildContext context, Animation<double> animation,
+            Animation<double> secondaryAnimation) {
+          return NewRankScreen(rankIndex: rankingService.currentRankIndex);
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity:
+                TweenSequence<double>(opacityTweenSequence).animate(animation),
+            child: child,
+          );
+        },
       ),
     );
   }

@@ -64,10 +64,9 @@ class GeolocationService {
     } else if (Platform.isIOS || Platform.isMacOS) {
       _locationSettings = AppleSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        activityType: ActivityType.automotiveNavigation,
+        activityType: ActivityType.other,
         distanceFilter: 0,
         pauseLocationUpdatesAutomatically: true,
-        // Only set to true if our app will be started up in the background.
         showBackgroundLocationIndicator: false,
       );
     } else {

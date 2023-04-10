@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '/home/home_page.dart';
 import '../service/database_service.dart';
+import '../service/shared_preferences_service.dart';
 import '../global_variables.dart' as globals;
 
 class SettingsPage extends StatefulWidget {
@@ -17,11 +17,12 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  DatabaseService databaseService = DatabaseService();
+  final DatabaseService databaseService = DatabaseService();
   final _rotXController = TextEditingController();
   final _rotYController = TextEditingController();
   final _carVelocityController = TextEditingController();
   final _additionalDelayController = TextEditingController();
+  final _restReminderController = TextEditingController();
   final _statesController = MaterialStatesController();
   bool? enableGeolocation,
       stationaryAlertsDisabled,
@@ -32,81 +33,50 @@ class _SettingsPageState extends State<SettingsPage> {
   bool isInvalid = false;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
-  double? carVelocityThresholdMS = 8.3, carVelocityThresholdKMH = 30.0;
+  double? carVelocityThresholdMS = 8.33, carVelocityThresholdKMH = 30.0;
+  int? restReminderTime = 3600;
   List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
   List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
   double _doubleValue = 1.0;
   int _intValue = 10;
   double _speedValue = 0.0;
 
-  Future<void> _loadDefaultSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+  void _loadDefaultSettings() {
     if (mounted) {
       setState(() {
-        enableGeolocation = (prefs.getBool('enableGeolocation') ?? true);
+        enableGeolocation =
+            SharedPreferencesService.getBool('enableGeolocation', true);
         stationaryAlertsDisabled =
-            (prefs.getBool('stationaryAlertsDisabled') ?? false);
-        additionalDelay = (prefs.getInt('additionalDelay') ?? 20);
-        showCameraPreview = (prefs.getBool('showCameraPreview') ?? true);
+            SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
+        additionalDelay =
+            SharedPreferencesService.getInt('additionalDelay', 20);
+        showCameraPreview =
+            SharedPreferencesService.getBool('showCameraPreview', false);
         useHighCameraResolution =
-            (prefs.getBool('useHighCameraResolution') ?? false);
-        showDebug = (prefs.getBool('showDebug') ?? false);
-        hasCalibrated = (prefs.getBool('hasCalibrated') ?? false);
-        neutralRotX = (prefs.getDouble('neutralRotX') ?? 5.0);
-        neutralRotY = (prefs.getDouble('neutralRotY') ?? -25.0);
-        rotXDelay = (prefs.getInt('rotXDelay') ?? 10);
-        rotYDelay = (prefs.getInt('rotYDelay') ?? 25);
+            SharedPreferencesService.getBool('useHighCameraResolution', false);
+        showDebug = SharedPreferencesService.getBool('showDebug', false);
+        hasCalibrated =
+            SharedPreferencesService.getBool('hasCalibrated', false);
+        neutralRotX = SharedPreferencesService.getDouble('neutralRotX', 5.0);
+        neutralRotY = SharedPreferencesService.getDouble('neutralRotY', -25.0);
+        rotXDelay = SharedPreferencesService.getInt('rotXDelay', 10);
+        rotYDelay = SharedPreferencesService.getInt('rotYDelay', 25);
         carVelocityThresholdMS =
-            (prefs.getDouble('carVelocityThreshold') ?? 8.33);
+            SharedPreferencesService.getDouble('carVelocityThreshold', 8.33);
         carVelocityThresholdKMH =
-            (carVelocityThresholdMS! * 3.6).roundToDouble();
-        drowsyAlarmValue = (prefs.getStringList('drowsyAlarm') ??
-            ["asset", "audio/car_horn_high.mp3"]);
-        inattentiveAlarmValue = (prefs.getStringList('inattentiveAlarm') ??
-            ["asset", "audio/double_beep.mp3"]);
+            (carVelocityThresholdMS! * 3.6).roundToDouble() + 5.0;
+        drowsyAlarmValue = SharedPreferencesService.getStringList(
+            'drowsyAlarm', ["asset", "audio/car_horn_high.mp3"]);
+        inattentiveAlarmValue = SharedPreferencesService.getStringList(
+            'inattentiveAlarm', ["asset", "audio/double_beep.mp3"]);
+        restReminderTime =
+            SharedPreferencesService.getInt('restReminderTime', 3600);
       });
     }
   }
 
-  Future<void> _saveBool(String key, bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setBool(key, value);
-      });
-    }
-  }
-
-  Future<void> _saveInt(String key, int value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setInt(key, value);
-      });
-    }
-  }
-
-  Future<void> _saveDouble(String key, double value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setDouble(key, value);
-      });
-    }
-  }
-
-  Future<void> _saveStringList(String key, List<String> value) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        prefs.setStringList(key, value);
-      });
-    }
-  }
-
-  Future<void> _clearSPData() async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.clear();
+  void _clearSPData() {
+    SharedPreferencesService.clear();
   }
 
   @override
@@ -114,21 +84,24 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadDefaultSettings();
     _rotXController.addListener(() {
-      onFieldChanged(_rotXController, true, false);
+      onFieldChanged(_rotXController, true, false, false);
     });
     _rotYController.addListener(() {
-      onFieldChanged(_rotYController, true, false);
+      onFieldChanged(_rotYController, true, false, false);
     });
     _carVelocityController.addListener(() {
-      onFieldChanged(_carVelocityController, false, true);
+      onFieldChanged(_carVelocityController, false, true, false);
     });
     _additionalDelayController.addListener(() {
-      onFieldChanged(_additionalDelayController, true, false);
+      onFieldChanged(_additionalDelayController, true, false, false);
+    });
+    _restReminderController.addListener(() {
+      onFieldChanged(_restReminderController, false, false, true);
     });
   }
 
-  void onFieldChanged(
-      TextEditingController controller, bool convertDelay, bool convertSpeed) {
+  void onFieldChanged(TextEditingController controller, bool convertDelay,
+      bool convertSpeed, bool convertSeconds) {
     if (mounted) {
       setState(() {
         if (controller.text.isEmpty ||
@@ -153,8 +126,15 @@ class _SettingsPageState extends State<SettingsPage> {
       } else if (convertSpeed) {
         if (mounted) {
           setState(() {
-            _doubleValue = double.tryParse(controller.text) ?? 30.0 - 5;
+            _doubleValue = (double.tryParse(controller.text) ?? 30.0) - 5.0;
             _speedValue = (_doubleValue / 3.6);
+          });
+        }
+      } else if (convertSeconds) {
+        if (mounted) {
+          setState(() {
+            _doubleValue = double.tryParse(controller.text) ?? 60.0;
+            _intValue = (_doubleValue * 60).round();
           });
         }
       }
@@ -167,6 +147,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _rotYController.dispose();
     _carVelocityController.dispose();
     _additionalDelayController.dispose();
+    _restReminderController.dispose();
     _statesController.dispose();
     super.dispose();
   }
@@ -183,10 +164,23 @@ class _SettingsPageState extends State<SettingsPage> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                Navigator.of(context)
-                    .pushReplacement(MaterialPageRoute(builder: (context) {
-                  return const HomePage(title: globals.appName, index: 0);
-                }));
+                Navigator.of(context).pushReplacement(PageRouteBuilder(
+                    pageBuilder: (BuildContext context,
+                            Animation<double> animation,
+                            Animation<double> secondaryAnimation) =>
+                        const HomePage(title: globals.appName, index: 0),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(
+                        opacity: Tween<double>(begin: 0.0, end: 1.0)
+                            .chain(CurveTween(curve: Curves.easeInOutExpo))
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
+                    transitionDuration: const Duration(milliseconds: 500),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 500)));
               },
             )),
         body: SettingsList(sections: [
@@ -204,7 +198,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (mounted) {
                     setState(() {
                       enableGeolocation = value;
-                      _saveBool('enableGeolocation', value);
+                      SharedPreferencesService.setBool(
+                          'enableGeolocation', value);
                     });
                   }
                 },
@@ -220,7 +215,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (mounted) {
                     setState(() {
                       stationaryAlertsDisabled = value;
-                      _saveBool('stationaryAlertsDisabled', value);
+                      SharedPreferencesService.setBool(
+                          'stationaryAlertsDisabled', value);
                     });
                   }
                 },
@@ -281,7 +277,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar(context, "Setting unchanged.");
+                                showSnackBar("Setting unchanged.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Cancel"),
@@ -293,18 +289,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar(context, "Invalid value.");
+                                  showSnackBar("Invalid value.");
                                   Navigator.of(context).pop();
                                   return;
                                 }
                                 if (mounted) {
                                   setState(() {
                                     additionalDelay = _intValue;
-                                    _saveInt('additionalDelay',
-                                        additionalDelay ?? _intValue);
+                                    SharedPreferencesService.setInt(
+                                        'additionalDelay', _intValue);
                                   });
                                 }
-                                showSnackBar(context, "Setting updated.");
+                                showSnackBar("Setting updated.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Save"),
@@ -322,14 +318,15 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.switchTile(
                 title: const Text("Show camera preview when driving"),
                 description: const Text(
-                    "See yourself in the driving page. Turn off if you think it's distracting."),
+                    "Whether you can see yourself in the driving page."),
                 leading: const Icon(Icons.visibility_outlined),
                 initialValue: showCameraPreview,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
                       showCameraPreview = value;
-                      _saveBool('showCameraPreview', value);
+                      SharedPreferencesService.setBool(
+                          'showCameraPreview', value);
                     });
                   }
                 },
@@ -344,7 +341,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (mounted) {
                     setState(() {
                       useHighCameraResolution = value;
-                      _saveBool('useHighCameraResolution', value);
+                      SharedPreferencesService.setBool(
+                          'useHighCameraResolution', value);
                     });
                   }
                 },
@@ -400,7 +398,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar(context, "Setting unchanged.");
+                                showSnackBar("Setting unchanged.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Cancel"),
@@ -412,18 +410,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar(context, "Invalid value.");
+                                  showSnackBar("Invalid value.");
                                   Navigator.of(context).pop();
                                   return;
                                 }
                                 if (mounted) {
                                   setState(() {
                                     rotXDelay = _intValue;
-                                    _saveInt(
-                                        'rotXDelay', rotXDelay ?? _intValue);
+                                    SharedPreferencesService.setInt(
+                                        'rotXDelay', _intValue);
                                   });
                                 }
-                                showSnackBar(context, "Setting updated.");
+                                showSnackBar("Setting updated.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Save"),
@@ -483,7 +481,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar(context, "Setting unchanged.");
+                                showSnackBar("Setting unchanged.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Cancel"),
@@ -495,18 +493,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar(context, "Invalid value.");
+                                  showSnackBar("Invalid value.");
                                   Navigator.of(context).pop();
                                   return;
                                 }
                                 if (mounted) {
                                   setState(() {
                                     rotYDelay = _intValue;
-                                    _saveInt(
-                                        'rotYDelay', rotYDelay ?? _intValue);
+                                    SharedPreferencesService.setInt(
+                                        'rotYDelay', _intValue);
                                   });
                                 }
-                                showSnackBar(context, "Setting updated.");
+                                showSnackBar("Setting updated.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Save"),
@@ -568,7 +566,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar(context, "Setting unchanged.");
+                                showSnackBar("Setting unchanged.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Cancel"),
@@ -580,7 +578,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar(context, "Invalid value.");
+                                  showSnackBar("Invalid value.");
                                   Navigator.of(context).pop();
                                   return;
                                 }
@@ -588,11 +586,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                   setState(() {
                                     carVelocityThresholdMS = _speedValue;
                                     carVelocityThresholdKMH = _doubleValue;
-                                    _saveDouble('carVelocityThreshold',
-                                        carVelocityThresholdMS ?? _speedValue);
+                                    SharedPreferencesService.setDouble(
+                                        'carVelocityThreshold', _speedValue);
                                   });
                                 }
-                                showSnackBar(context, "Setting updated.");
+                                showSnackBar("Setting updated.");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Save"),
@@ -623,10 +621,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/car_horn_high.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -636,10 +634,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/car_horn_low.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -649,10 +647,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/double_beep.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -662,10 +660,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/soft_beep.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -679,13 +677,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                     "file",
                                     result.files.first.path!
                                   ];
-                                  _saveStringList(
+                                  SharedPreferencesService.setStringList(
                                       'drowsyAlarm', drowsyAlarmValue);
-                                  // ignore: use_build_context_synchronously
-                                  showSnackBar(context, "Alarm updated.");
+                                  showSnackBar("Alarm updated.");
                                 } else {
-                                  // ignore: use_build_context_synchronously
-                                  showSnackBar(context, "Alarm unchanged.");
+                                  showSnackBar("Alarm unchanged.");
                                 }
                               },
                             ),
@@ -715,10 +711,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/car_horn_high.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -728,10 +724,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/car_horn_low.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -741,23 +737,23 @@ class _SettingsPageState extends State<SettingsPage> {
                                   "asset",
                                   "audio/double_beep.mp3"
                                 ];
-                                _saveStringList(
+                                SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
                               child: const Text("Soft Beep"),
                               onPressed: () {
-                                drowsyAlarmValue = [
+                                inattentiveAlarmValue = [
                                   "asset",
                                   "audio/soft_beep.mp3"
                                 ];
-                                _saveStringList(
-                                    'drowsyAlarm', drowsyAlarmValue);
+                                SharedPreferencesService.setStringList(
+                                    'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar(context, "Alarm updated.");
+                                showSnackBar("Alarm updated.");
                               },
                             ),
                             SimpleDialogOption(
@@ -771,13 +767,12 @@ class _SettingsPageState extends State<SettingsPage> {
                                     "file",
                                     result.files.first.path!
                                   ];
-                                  _saveStringList('inattentiveAlarm',
+                                  SharedPreferencesService.setStringList(
+                                      'inattentiveAlarm',
                                       inattentiveAlarmValue);
-                                  // ignore: use_build_context_synchronously
-                                  showSnackBar(context, "Alarm updated.");
+                                  showSnackBar("Alarm updated.");
                                 } else {
-                                  // ignore: use_build_context_synchronously
-                                  showSnackBar(context, "Alarm unchanged.");
+                                  showSnackBar("Alarm unchanged.");
                                 }
                               },
                             ),
@@ -786,6 +781,91 @@ class _SettingsPageState extends State<SettingsPage> {
                       });
                 },
               ),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Long-duration Drive Resting Reminder Frequency",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                          "${(restReminderTime! / 60).toStringAsFixed(1)} min${restReminderTime == 1 ? "" : "s"}"),
+                    ],
+                  ),
+                  description: const Text(
+                      "The frequency of reminders to take a break from driving."),
+                  leading: const Icon(Icons.timer_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _restReminderController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return 'Invalid value.';
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Frequency (in minutes)',
+                                hintText: 'e.g. 60'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("Setting unchanged.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    restReminderTime = _intValue;
+                                    SharedPreferencesService.setInt(
+                                        'restReminderTime', _intValue);
+                                  });
+                                }
+                                showSnackBar("Setting updated.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Save"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
             ],
           ),
           SettingsSection(
@@ -793,14 +873,14 @@ class _SettingsPageState extends State<SettingsPage> {
             title: const Text("Developer"),
             tiles: [
               SettingsTile.switchTile(
-                title: const Text("Show debug info"),
+                title: const Text("Enable Debug"),
                 leading: const Icon(Icons.bug_report_outlined),
                 initialValue: showDebug,
                 onToggle: (value) {
                   if (mounted) {
                     setState(() {
                       showDebug = value;
-                      _saveBool('showDebug', value);
+                      SharedPreferencesService.setBool('showDebug', value);
                     });
                   }
                 },
@@ -843,7 +923,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     databaseService.deleteData();
                                   });
                                 }
-                                showSnackBar(context, "Data Cleared!");
+                                showSnackBar("Data Cleared!");
                                 Navigator.of(context).pop();
                               },
                               child: const Text("Clear"),
@@ -858,12 +938,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ]));
   }
 
-  void showSnackBar(BuildContext context, String text) {
+  void showSnackBar(String text) {
     var snackBar = SnackBar(
       content: Text(text),
       duration: const Duration(seconds: 1),
     );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    globals.snackbarKey.currentState?.showSnackBar(snackBar);
   }
 }
 

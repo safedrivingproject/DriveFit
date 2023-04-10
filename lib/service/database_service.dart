@@ -91,11 +91,19 @@ class DatabaseService {
         sessions.map((sessionData) => sessionData.score).toList();
     var sum = 0;
     for (int i = 0; i < days; i++) {
-      if (i > scoreList.length - 1) break;
-      sum += scoreList[i];
+      if (i < scoreList.length) {
+        sum += scoreList[i];
+      }
     }
-    double average = sum / scoreList.length;
+    double average = sum / (scoreList.length > days ? days : scoreList.length);
     return average;
+  }
+
+  int getTotalScore(List<SessionData> sessions) {
+    if (sessions.isEmpty) return 0;
+    List<int> scoreList =
+        sessions.map((sessionData) => sessionData.score).toList();
+    return scoreList.sum;
   }
 
   Future<List<SessionData>> getAllSessions() async {
