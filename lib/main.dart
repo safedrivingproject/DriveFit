@@ -22,7 +22,27 @@ Future<void> main() async {
   await NotificationController.initializeLocalNotifications();
   cameras = await availableCameras();
   await SharedPreferencesService.init();
+  _initForegroundTask();
   runApp(const MyApp());
+}
+
+void _initForegroundTask() {
+  FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+          channelId: 'drivefit_foreground_service',
+          channelName: 'DriveFit Foreground Service',
+          channelDescription: 'Notification channel for foreground services.',
+          channelImportance: NotificationChannelImportance.LOW,
+          priority: NotificationPriority.LOW,
+          iconData: const NotificationIconData(
+            resType: ResourceType.drawable,
+            resPrefix: ResourcePrefix.ic,
+            name: 'bg_service_small',
+          )),
+      iosNotificationOptions:
+          const IOSNotificationOptions(showNotification: false),
+      foregroundTaskOptions:
+          const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: true));
 }
 
 @pragma('vm:entry-point')
@@ -87,25 +107,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  void _initForegroundTask() {
-    FlutterForegroundTask.init(
-        androidNotificationOptions: AndroidNotificationOptions(
-            channelId: 'drivefit_foreground_service',
-            channelName: 'DriveFit Foreground Service',
-            channelDescription: 'Notification channel for foreground services.',
-            channelImportance: NotificationChannelImportance.LOW,
-            priority: NotificationPriority.LOW,
-            iconData: const NotificationIconData(
-              resType: ResourceType.drawable,
-              resPrefix: ResourcePrefix.ic,
-              name: 'bg_service_small',
-            )),
-        iosNotificationOptions:
-            const IOSNotificationOptions(showNotification: false),
-        foregroundTaskOptions:
-            const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: true));
-  }
-
   Future<void> _startForegroundTask() async {
     if (await FlutterForegroundTask.isRunningService) {
       FlutterForegroundTask.restartService();
@@ -120,7 +121,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     NotificationController.startListeningNotificationEvents();
-    _initForegroundTask();
     _startForegroundTask();
     FlutterForegroundTask.setOnLockScreenVisibility(true);
     super.initState();

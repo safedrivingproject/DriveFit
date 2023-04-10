@@ -1,12 +1,12 @@
 import 'package:auto_size_text/auto_size_text.dart';
-import 'package:drive_fit/service/shared_preferences_service.dart';
 import 'package:flutter/material.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
-import 'rank_list.dart';
+import '../service/rank_list.dart';
 import '/service/database_service.dart';
+import '/service/ranking_service.dart';
 
 class AchievementsPage extends StatefulWidget {
   const AchievementsPage({
@@ -22,13 +22,11 @@ class AchievementsPage extends StatefulWidget {
 class _AchievementsPageState extends State<AchievementsPage>
     with TickerProviderStateMixin {
   final DatabaseService databaseService = DatabaseService();
-  final ScrollController _scrollController =
-      ScrollController(keepScrollOffset: true);
-  double _scrollOffset = 0.0;
+  final RankingService rankingService = RankingService();
 
   List<SessionData> driveSessionsList = [];
+  int driveScore = 0;
   int totalScore = 0;
-  int rankScore = 0;
   int scoreStreak = 0;
 
   bool _isInitialized = false;
@@ -39,16 +37,9 @@ class _AchievementsPageState extends State<AchievementsPage>
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(() {
-      _scrollOffset = _scrollController.offset;
-      if (mounted) {
-        setState(() {});
-      }
-    });
     if (!_isInitialized) {
       getSessionData();
-      getRank();
-      calcScoreStreak();
+      updateRankInfo();
       if (mounted) setState(() {});
     }
     _isInitialized = true;
@@ -56,84 +47,14 @@ class _AchievementsPageState extends State<AchievementsPage>
 
   void getSessionData() {
     driveSessionsList = widget.sessionsList;
-    scoreStreak = SharedPreferencesService.getInt('scoreStreak', 0);
-    totalScore = databaseService.getTotalScore(driveSessionsList);
   }
 
-  void getRank() {
-    rankScore = totalScore + scoreStreak;
-    rankIndex = rankList
-        .lastIndexWhere((element) => rankScore >= element["requiredScore"]);
-    rankName = rankList[rankIndex]["name"];
-  }
-
-  Future<void> calcScoreStreak() async {
-    if (driveSessionsList.isEmpty) {
-      scoreStreak = 0;
-      return;
-    }
-    scoreStreak = 0;
-    for (var session in driveSessionsList) {
-      if (session.score == 5) {
-        scoreStreak++;
-      } else {
-        break;
-      }
-    }
-    SharedPreferencesService.setInt('scoreStreak', scoreStreak);
-  }
-
-  String _getRequiredScoreForNextRank() {
-    if (rankIndex == rankList.length - 1) {
-      return "Great job! You are at the highest rank!";
-    }
-    var requiredScore = rankList[rankIndex + 1]["requiredScore"] - rankScore;
-    return "$requiredScore more point${requiredScore == 1 ? "" : "s"} to the next rank!";
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  double _getTitleOpacity() {
-    double opacity;
-    var threshold = 150 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 1.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = (_scrollOffset - threshold) / 50;
-    } else {
-      return 0.0;
-    }
-    return opacity;
-  }
-
-  double _getAppBarOpacity() {
-    double opacity;
-    var threshold = 150 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 1.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = (_scrollOffset - threshold) / 50;
-    } else {
-      return 0.0;
-    }
-    return opacity;
-  }
-
-  double _getLargeTitleOpacity() {
-    double opacity;
-    var threshold = 100 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 0.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = 1 - ((_scrollOffset - threshold) / 50);
-    } else {
-      return 1.0;
-    }
-    return opacity;
+  void updateRankInfo() {
+    rankIndex = rankingService.currentRankIndex;
+    rankName = rankingService.currentRankName;
+    driveScore = rankingService.driveScore;
+    scoreStreak = rankingService.scoreStreak;
+    totalScore = rankingService.totalScore;
   }
 
   Widget _getPreviousCarImages() {
@@ -264,11 +185,96 @@ class _AchievementsPageState extends State<AchievementsPage>
 
   double getRankProgress() {
     if (rankIndex < rankList.length - 1) {
-      var difference = rankList[rankIndex + 1]["requiredScore"] -
-          rankList[rankIndex]["requiredScore"];
-      return (rankScore - rankList[rankIndex]["requiredScore"]) / difference;
+      return totalScore / rankList[rankIndex + 1]["requiredScore"];
     }
     return 1.0;
+  }
+
+  Widget _getAccumulatedScore(Color? highlightColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 4, 0, 0),
+          child: Text(
+            "$driveScore ",
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall
+                ?.copyWith(fontSize: 32),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+          child: Icon(
+            Icons.star_rounded,
+            color: highlightColor,
+            size: 24,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 4, 0, 0),
+          child: Text(
+            " + ",
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 4, 0, 0),
+          child: Text(
+            "$scoreStreak ",
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall
+                ?.copyWith(fontSize: 32),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+          child: Icon(
+            Icons.local_fire_department,
+            color: highlightColor,
+            size: 24,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _getRequiredScoreForNextRank() {
+    if (rankIndex == rankList.length - 1) {
+      return Text(
+        "Great job! You are at the highest rank!",
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    }
+    var requiredScore =
+        rankList[rankIndex + 1]["requiredScore"] - driveScore - scoreStreak;
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: "$requiredScore ",
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall
+                ?.copyWith(height: 1.0, fontSize: 32),
+          ),
+          TextSpan(
+            text: "more point${requiredScore == 1 ? "" : "s"} to ",
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          TextSpan(
+            text: "${rankList[rankIndex + 1]["name"]}",
+            style: Theme.of(context)
+                .textTheme
+                .displaySmall
+                ?.copyWith(fontSize: 20, color: lightColorScheme.primary),
+          )
+        ],
+      ),
+    );
   }
 
   Widget _body() {
@@ -372,13 +378,8 @@ class _AchievementsPageState extends State<AchievementsPage>
                     ?.copyWith(color: lightColorScheme.primary),
                 maxLines: 1,
               ),
-              Text(
-                _getRequiredScoreForNextRank(),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyLarge
-                    ?.copyWith(color: lightColorScheme.primary),
-              ),
+              _getAccumulatedScore(sourceXanthous),
+              _getRequiredScoreForNextRank(),
             ],
           ),
         ),
@@ -424,7 +425,7 @@ class _AchievementsPageState extends State<AchievementsPage>
                               padding: const EdgeInsetsDirectional.fromSTEB(
                                   0, 4, 0, 0),
                               child: Text(
-                                '$scoreStreak',
+                                '$scoreStreak ',
                                 style: Theme.of(context).textTheme.displaySmall,
                               ),
                             ),
@@ -471,17 +472,17 @@ class _AchievementsPageState extends State<AchievementsPage>
         children: [
           AutoSizeText(
             'Achievements',
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                height: 1,
-                color: lightColorScheme.onPrimary
-                    .withOpacity(_getLargeTitleOpacity())),
+            style: Theme.of(context)
+                .textTheme
+                .displayLarge
+                ?.copyWith(height: 1, color: lightColorScheme.onPrimary),
             textAlign: TextAlign.center,
             maxLines: 1,
           ),
           SizedBox(height: MediaQuery.of(context).size.height * 0.01),
           _body(),
         ],
-      ), // Data Column
+      ),
     );
   }
 }

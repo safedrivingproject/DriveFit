@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:drive_fit/home/history_page.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 
@@ -13,7 +11,6 @@ import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
 import '/service/shared_preferences_service.dart';
 import '/driving_mode/driving_view.dart';
-import '/settings/settings_page.dart';
 import '../global_variables.dart' as globals;
 import 'tips.dart';
 
@@ -45,9 +42,9 @@ class _DrivePageState extends State<DrivePage> {
   int tipsIndex = 0;
 
   DateTime currentDate = DateTime.now();
-  String previousDate =
-      DateTime.now().subtract(const Duration(days: 1)).toString();
-  DateTime expirationDay = DateTime.now();
+  String expirationDay =
+      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
+          .toString();
 
   bool canPress = false;
   bool hasNewSession = false;
@@ -75,6 +72,11 @@ class _DrivePageState extends State<DrivePage> {
     _statesController.update(MaterialState.disabled, !globals.hasCalibrated);
     canPress = globals.hasCalibrated;
     hasNewSession = databaseService.needSessionDataUpdate;
+    currentDate = DateTime.now();
+    expirationDay = SharedPreferencesService.getString(
+        'expirationDate',
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
+            .toString());
   }
 
   void getSessionData() {
@@ -93,9 +95,11 @@ class _DrivePageState extends State<DrivePage> {
 
   void getTipData() {
     if (!hasNewSession) {
-      tipType = getTipType(driveSessionsList);
-      drivingTip = getTip(tipType, tipsIndex);
-      return;
+      if (currentDate.isBefore(DateTime.parse(expirationDay))) {
+        tipType = getTipType(driveSessionsList);
+        drivingTip = getTip(tipType, tipsIndex);
+        return;
+      }
     }
     tipType = getTipType(driveSessionsList);
     if (tipType == "Drowsy") {
@@ -108,6 +112,12 @@ class _DrivePageState extends State<DrivePage> {
     drivingTip = getTip(tipType, tipsIndex);
     SharedPreferencesService.setInt('tipsIndex', tipsIndex);
     hasNewSession = false;
+    if (currentDate.isAfter(DateTime.parse(expirationDay)) ||
+        currentDate.isAtSameMomentAs(DateTime.parse(expirationDay))) {
+      expirationDay =
+          DateTime.parse(expirationDay).add(const Duration(days: 1)).toString();
+      SharedPreferencesService.setString('expirationDate', expirationDay);
+    }
   }
 
   String getTipType(List<SessionData> session) {

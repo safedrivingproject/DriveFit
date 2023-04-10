@@ -21,6 +21,7 @@ import '../service/face_detection_service.dart';
 import '../service/geolocation_service.dart';
 import '../service/database_service.dart';
 import '../service/shared_preferences_service.dart';
+import '../service/ranking_service.dart';
 import 'drive_session_summary.dart';
 import '/global_variables.dart' as globals;
 
@@ -44,6 +45,7 @@ class _DrivingViewState extends State<DrivingView> {
   final FaceDetectionService faceDetectionService = FaceDetectionService();
   final GeolocationService geolocationService = GeolocationService();
   final DatabaseService databaseService = DatabaseService();
+  final RankingService rankingService = RankingService();
 
   final AudioPlayer drowsyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
@@ -1049,10 +1051,9 @@ class _DrivingViewState extends State<DrivingView> {
     isValidSession = _validateSession();
     if (isValidSession) {
       databaseService.saveSessionData(currentSession);
+      updateScores();
     }
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
     Navigator.of(context).pushReplacement(PageRouteBuilder(
       barrierColor: lightColorScheme.primary,
       transitionDuration: const Duration(seconds: 1),
@@ -1077,7 +1078,7 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   ///
-  /// OTHER UTILS
+  /// SESSION END FUNCTIONS & OTHER UTILS
   ///
   /// *******************************************************
   /// *******************************************************
@@ -1139,6 +1140,12 @@ class _DrivingViewState extends State<DrivingView> {
       return false;
     }
     return true;
+  }
+
+  void updateScores() {
+    rankingService.updateDriveScore(currentSession.score);
+    rankingService.updateScoreStreak(currentSession.score);
+    rankingService.updateTotalScore();
   }
 }
 

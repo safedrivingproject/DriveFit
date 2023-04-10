@@ -30,5 +30,11 @@ class SharedPreferencesService {
   static Future<bool> setStringList(String key, List<String> value) async =>
       _instance.setStringList(key, value);
 
+  static String getString(String key, String defaultValue) =>
+      _instance.getString(key) ?? defaultValue;
+
+  static Future<bool> setString(String key, String value) async =>
+      _instance.setString(key, value);
+
   static Future<bool> clear() async => _instance.clear();
 }

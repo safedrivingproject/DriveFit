@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:bottom_bar_page_transition/bottom_bar_page_transition.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 
 import '/service/database_service.dart';
+import '/service/ranking_service.dart';
 import '/settings/settings_page.dart';
 import 'drive_page.dart';
 import 'history_page.dart';
@@ -19,6 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final DatabaseService databaseService = DatabaseService();
+  final RankingService rankingService = RankingService();
   final ScrollController _scrollController =
       ScrollController(keepScrollOffset: false);
 
@@ -32,6 +33,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     duration: const Duration(milliseconds: 500),
     vsync: this,
   );
+
+  var opacityTweenSequence = <TweenSequenceItem<double>>[
+    TweenSequenceItem<double>(
+      tween: ConstantTween<double>(0.0),
+      weight: 80.0,
+    ),
+    TweenSequenceItem<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutExpo)),
+      weight: 20.0,
+    ),
+  ];
 
   @override
   void initState() {
@@ -50,6 +63,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
     selectedPageIndex = widget.index ?? 0;
     getSessionData();
+    rankingService.getScores();
+    rankingService.getRank();
   }
 
   Future<void> getSessionData() async {
@@ -65,7 +80,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   double _getTitleOpacity() {
     double opacity;
-    var threshold = 150 - kToolbarHeight;
+    var threshold = 180 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 1.0;
     } else if (_scrollOffset > threshold) {
@@ -78,26 +93,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   double _getAppBarOpacity() {
     double opacity;
-    var threshold = 150 - kToolbarHeight;
+    var threshold = 180 - kToolbarHeight;
     if (_scrollOffset > (threshold + 50)) {
       return 1.0;
     } else if (_scrollOffset > threshold) {
       opacity = (_scrollOffset - threshold) / 50;
     } else {
       return 0.0;
-    }
-    return opacity;
-  }
-
-  double _getLargeTitleOpacity() {
-    double opacity;
-    var threshold = 100 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 0.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = 1 - ((_scrollOffset - threshold) / 50);
-    } else {
-      return 1.0;
     }
     return opacity;
   }

@@ -80,12 +80,6 @@
       "languageVersion": "2.17"
     },
     {
-      "name": "bottom_bar_page_transition",
-      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/bottom_bar_page_transition-2.0.0",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
       "name": "camera",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/camera-0.10.3+2",
       "packageUri": "lib/",
@@ -144,6 +138,12 @@
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/collection-1.17.0",
       "packageUri": "lib/",
       "languageVersion": "2.12"
+    },
+    {
+      "name": "confetti",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/confetti-0.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
     },
     {
       "name": "convert",
@@ -650,7 +650,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-04-09T14:36:52.047993Z",
+  "generated": "2023-04-10T14:28:52.027338Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

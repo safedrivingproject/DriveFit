@@ -20,9 +20,6 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   final DatabaseService databaseService = DatabaseService();
-  final ScrollController _scrollController =
-      ScrollController(keepScrollOffset: true);
-  double _scrollOffset = 0.0;
   bool isAtEndOfPage = false;
 
   List<SessionData> driveSessionsList = [];
@@ -34,15 +31,6 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(() {
-      _scrollOffset = _scrollController.offset;
-      if (_scrollController.position.atEdge) {
-        isAtEndOfPage = _scrollController.position.pixels != 0;
-      }
-      if (mounted) {
-        setState(() {});
-      }
-    });
     if (!_isInitialized) {
       getSessionData();
       if (mounted) setState(() {});
@@ -62,22 +50,9 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
     super.dispose();
   }
 
-  double _getLargeTitleOpacity() {
-    double opacity;
-    var threshold = 100 - kToolbarHeight;
-    if (_scrollOffset > (threshold + 50)) {
-      return 0.0;
-    } else if (_scrollOffset > threshold) {
-      opacity = 1 - ((_scrollOffset - threshold) / 50);
-    } else {
-      return 1.0;
-    }
-    return opacity;
-  }
 
   Widget _body() {
     final sourceXanthous =
@@ -388,10 +363,10 @@ class _HistoryPageState extends State<HistoryPage> {
         children: [
           AutoSizeText(
             'Drive Summary',
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                height: 1,
-                color: lightColorScheme.onPrimary
-                    .withOpacity(_getLargeTitleOpacity())),
+            style: Theme.of(context)
+                .textTheme
+                .displayLarge
+                ?.copyWith(height: 1, color: lightColorScheme.onPrimary),
             textAlign: TextAlign.center,
             maxLines: 2,
           ),
@@ -755,8 +730,8 @@ class SessionsListState extends State<SessionsList> {
                           "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.end,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
                               '${Duration(seconds: session.duration).inMinutes}',
@@ -779,6 +754,19 @@ class SessionsListState extends State<SessionsList> {
                                   0, 0, 0, 2),
                               child: Text(
                                 ' seconds ',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              (session.distance / 1000).toStringAsFixed(2),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 0, 0, 2),
+                              child: Text(
+                                ' km ',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),

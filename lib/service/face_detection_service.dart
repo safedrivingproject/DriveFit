@@ -1,5 +1,4 @@
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import '/global_variables.dart' as globals;
 
 class FaceDetectionService {
   static final FaceDetectionService _instance =
