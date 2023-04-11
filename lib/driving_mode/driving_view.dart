@@ -76,14 +76,17 @@ class _DrivingViewState extends State<DrivingView> {
   double accelX = 0, accelY = 0, accelZ = 0;
 
   SessionData currentSession = SessionData(
-      id: 0,
-      startTime: "",
-      endTime: "",
-      duration: 0,
-      distance: 0.0,
-      drowsyAlertCount: 0,
-      inattentiveAlertCount: 0,
-      score: 0);
+    id: 0,
+    startTime: "",
+    endTime: "",
+    duration: 0,
+    distance: 0.0,
+    drowsyAlertCount: 0,
+    inattentiveAlertCount: 0,
+    score: 0,
+    drowsyAlertTimestampsList: [],
+    inattentiveAlertTimestampsList: [],
+  );
   int restReminderTime = 3600;
   bool isValidSession = false;
   bool canExit = false;
@@ -212,16 +215,19 @@ class _DrivingViewState extends State<DrivingView> {
       setState(() {
         geolocationService.accumulatedDistance = 0.0;
         currentSession = SessionData(
-            id: DateTime.now().millisecondsSinceEpoch,
-            startTime: "",
-            endTime: "",
-            duration: 0,
-            distance: widget.enableGeolocation
-                ? geolocationService.accumulatedDistance
-                : -1.0,
-            drowsyAlertCount: 0,
-            inattentiveAlertCount: 0,
-            score: 0);
+          id: DateTime.now().millisecondsSinceEpoch,
+          startTime: "",
+          endTime: "",
+          duration: 0,
+          distance: widget.enableGeolocation
+              ? geolocationService.accumulatedDistance
+              : -1.0,
+          drowsyAlertCount: 0,
+          inattentiveAlertCount: 0,
+          score: 0,
+          drowsyAlertTimestampsList: [],
+          inattentiveAlertTimestampsList: [],
+        );
         currentSession.startTime = saveCurrentTime(noMillis);
       });
     }
@@ -393,6 +399,8 @@ class _DrivingViewState extends State<DrivingView> {
           setState(() {
             if (faceDetectionService.hasReminded == false) {
               currentSession.drowsyAlertCount++;
+              currentSession.drowsyAlertTimestampsList
+                  .insert(0, noMillis.format(DateTime.now()));
               faceDetectionService.hasReminded = true;
             }
             faceDetectionService.reminderType = "None";
@@ -404,6 +412,8 @@ class _DrivingViewState extends State<DrivingView> {
           setState(() {
             if (faceDetectionService.hasReminded == false) {
               currentSession.inattentiveAlertCount++;
+              currentSession.inattentiveAlertTimestampsList
+                  .insert(0, noMillis.format(DateTime.now()));
               faceDetectionService.hasReminded = true;
             }
             faceDetectionService.reminderType = "None";
@@ -720,7 +730,7 @@ class _DrivingViewState extends State<DrivingView> {
                   initialDirection: CameraLensDirection.front,
                   isReminding: isReminding,
                 ),
-                if (globals.showDebug == true)
+                if (!widget.calibrationMode && globals.showDebug)
                   Column(
                     children: [
                       Container(
@@ -1050,8 +1060,11 @@ class _DrivingViewState extends State<DrivingView> {
     finalizeSessionData();
     isValidSession = _validateSession();
     if (isValidSession) {
-      databaseService.saveSessionData(currentSession);
+      databaseService.saveSessionDataToLocal(currentSession);
       updateScores();
+      if (globals.hasSignedIn) {
+        databaseService.saveSessionDataToFirebase(currentSession);
+      }
     }
     if (mounted) setState(() {});
     Navigator.of(context).pushReplacement(PageRouteBuilder(

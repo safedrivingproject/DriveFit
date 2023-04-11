@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "155993529740",
+    "firebase_url": "https://drivefit-user-sessions-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "drivefit-user-sessions",
+    "storage_bucket": "drivefit-user-sessions.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:155993529740:android:2c81c206a0d14a22d38aa9",
+        "android_client_info": {
+          "package_name": "com.example.drive_fit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "155993529740-08upoq2i100o6sbb2pqf95ciu8s34nq8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhsQDYPBym3xqRfPvcCCMwk-heLCZnFWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "155993529740-08upoq2i100o6sbb2pqf95ciu8s34nq8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "155993529740-c9r0pbhce3f783bqph0hem05bjidchrm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.faceDetection"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

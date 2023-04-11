@@ -920,7 +920,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   setState(() {
                                     _clearSPData();
                                     _loadDefaultSettings();
-                                    databaseService.deleteData();
+                                    databaseService.deleteDataLocal();
+                                    if (globals.hasSignedIn) {
+                                      databaseService.deleteDataFirebase();
+                                    }
                                   });
                                 }
                                 showSnackBar("Data Cleared!");

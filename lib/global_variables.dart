@@ -24,5 +24,7 @@ List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
 
 bool inCalibrationMode = false;
 
+bool hasSignedIn = false;
+
 final GlobalKey<ScaffoldMessengerState> snackbarKey =
     GlobalKey<ScaffoldMessengerState>();

@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_linux
   awesome_notifications
+  desktop_webview_auth
   dynamic_color
 )
 

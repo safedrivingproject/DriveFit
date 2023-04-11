@@ -1,5 +1,8 @@
+import 'package:drive_fit/home/login_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
+import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 
 import '/service/database_service.dart';
 import '/service/ranking_service.dart';
@@ -7,6 +10,7 @@ import '/settings/settings_page.dart';
 import 'drive_page.dart';
 import 'history_page.dart';
 import 'achievements_page.dart';
+import '/global_variables.dart' as globals;
 
 class HomePage extends StatefulWidget {
   final String? title;
@@ -49,6 +53,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    globals.hasSignedIn = FirebaseAuth.instance.currentUser != null;
+    databaseService.updateUserProfile();
+    if (globals.hasSignedIn) databaseService.saveUserDataToFirebase();
     selectedPageIndex = 0;
     getSessionData();
     rankingService.getScores();
@@ -196,6 +203,80 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             const Duration(milliseconds: 500)));
                   },
                 ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.account_circle),
+                    color: lightColorScheme.background,
+                    onPressed: () {
+                      if (globals.hasSignedIn) {
+                        Navigator.of(context).push(PageRouteBuilder(
+                            pageBuilder: (BuildContext context,
+                                    Animation<double> animation,
+                                    Animation<double> secondaryAnimation) =>
+                                ProfileScreen(
+                                  appBar: AppBar(
+                                    title: Text(
+                                      "Your Profile",
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge,
+                                    ),
+                                    centerTitle: true,
+                                  ),
+                                  actions: [
+                                    SignedOutAction((context) {
+                                      globals.hasSignedIn = false;
+                                      databaseService.updateUserProfile();
+                                      showSnackBar("Signed out!");
+                                      Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const HomePage()));
+                                    })
+                                  ],
+                                  actionCodeSettings: ActionCodeSettings(
+                                      url:
+                                          "https://drivefituser.page.link/home"),
+                                ),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: Tween<double>(begin: 0.0, end: 1.0)
+                                    .chain(
+                                        CurveTween(curve: Curves.easeInOutExpo))
+                                    .animate(animation),
+                                child: child,
+                              );
+                            },
+                            transitionDuration:
+                                const Duration(milliseconds: 500),
+                            reverseTransitionDuration:
+                                const Duration(milliseconds: 500)));
+                      } else {
+                        Navigator.of(context).push(PageRouteBuilder(
+                            pageBuilder: (BuildContext context,
+                                    Animation<double> animation,
+                                    Animation<double> secondaryAnimation) =>
+                                LoginPage(),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: Tween<double>(begin: 0.0, end: 1.0)
+                                    .chain(
+                                        CurveTween(curve: Curves.easeInOutExpo))
+                                    .animate(animation),
+                                child: child,
+                              );
+                            },
+                            transitionDuration:
+                                const Duration(milliseconds: 500),
+                            reverseTransitionDuration:
+                                const Duration(milliseconds: 500)));
+                      }
+                    },
+                  ),
+                ],
                 title: Text(_getAppBarTitle(selectedPageIndex),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: lightColorScheme.onPrimary
@@ -219,6 +300,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  void showSnackBar(String text) {
+    var snackBar =
+        SnackBar(content: Text(text), duration: const Duration(seconds: 2));
+    globals.snackbarKey.currentState?.showSnackBar(snackBar);
   }
 
   Widget _getAnimation() {
