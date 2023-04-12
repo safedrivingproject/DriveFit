@@ -93,11 +93,11 @@ class FaceDetectionService {
       } else {
         eyeCounter = 0;
       }
-      if (reminderCount >= 4) {
-        hasReminded = false;
-        reminderType = "None";
-        return;
-      }
+      // if (reminderCount >= 4) {
+      //   hasReminded = false;
+      //   reminderType = "None";
+      //   return;
+      // }
       if (eyeCounter > 10) {
         reminderType = "Drowsy";
         isReminding = true;
@@ -133,11 +133,11 @@ class FaceDetectionService {
     } else {
       rotXCounter = 0;
     }
-    if (reminderCount >= 4) {
-      hasReminded = false;
-      reminderType = "None";
-      return;
-    }
+    // if (reminderCount >= 4) {
+    //   hasReminded = false;
+    //   reminderType = "None";
+    //   return;
+    // }
     if (rotXCounter > delay) {
       reminderType = "Drowsy";
       isReminding = true;
@@ -153,11 +153,11 @@ class FaceDetectionService {
     } else {
       rotYCounter = 0;
     }
-    if (reminderCount >= 4) {
-      hasReminded = false;
-      reminderType = "None";
-      return;
-    }
+    // if (reminderCount >= 4) {
+    //   hasReminded = false;
+    //   reminderType = "None";
+    //   return;
+    // }
     if (rotYCounter > delay) {
       reminderType = "Inattentive";
       isReminding = true;

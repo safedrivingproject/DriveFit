@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
@@ -18,6 +19,8 @@ class DatabaseService {
   FirebaseDatabase database = FirebaseDatabase.instance;
   String? uid = FirebaseAuth.instance.currentUser?.uid;
   String? username = FirebaseAuth.instance.currentUser?.displayName;
+
+  String? drivingTip;
 
   Future<Database?> get db async {
     if (_db != null) return _db;
@@ -87,7 +90,8 @@ class DatabaseService {
         session.drowsyAlertTimestampsList.join(", ");
     session.inattentiveAlertTimestamps =
         session.inattentiveAlertTimestampsList.join(", ");
-    DatabaseReference ref = FirebaseDatabase.instance.ref("users/$uid/sessions");
+    DatabaseReference ref =
+        FirebaseDatabase.instance.ref("users/$uid/sessions");
     await ref.update({
       "${session.id}/start_time": session.startTime,
       "${session.id}/end_time": session.endTime,
@@ -95,10 +99,8 @@ class DatabaseService {
       "${session.id}/distance": session.distance,
       "${session.id}/score": session.score,
       "${session.id}/drowsy_alert_count": session.drowsyAlertCount,
-      "${session.id}/inattentive_alert_count":
-          session.inattentiveAlertCount,
-      "${session.id}/drowsy_alert_timestamps":
-          session.drowsyAlertTimestamps,
+      "${session.id}/inattentive_alert_count": session.inattentiveAlertCount,
+      "${session.id}/drowsy_alert_timestamps": session.drowsyAlertTimestamps,
       "${session.id}/inattentive_alert_timestamps":
           session.inattentiveAlertTimestamps,
     });

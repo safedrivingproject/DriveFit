@@ -11,6 +11,25 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ProfileScreen profileScreen = ProfileScreen(
+      appBar: AppBar(
+        title: Text(
+          "Your Profile",
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        centerTitle: true,
+      ),
+      actions: [
+        SignedOutAction((context) {
+          globals.hasSignedIn = false;
+          databaseService.updateUserProfile();
+          showSnackBar("Signed out!");
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (context) => const HomePage()));
+        })
+      ],
+    );
+
     return Scaffold(
       appBar: AppBar(),
       body: Center(
@@ -58,6 +77,34 @@ class LoginPage extends StatelessWidget {
                                 Animation<double> secondaryAnimation) =>
                             SignInScreen(
                               actions: [
+                                EmailLinkSignInAction((context) {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: ((context) =>
+                                              EmailLinkSignInScreen(
+                                                actions: [
+                                                  AuthStateChangeAction<
+                                                          SignedIn>(
+                                                      (context, state) {
+                                                    databaseService
+                                                        .updateUserProfile();
+                                                    showSnackBar("Signed in!");
+                                                    Navigator.pushReplacement(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                            builder: (context) =>
+                                                                const HomePage()));
+                                                    Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              profileScreen,
+                                                        ));
+                                                  }),
+                                                ],
+                                              ))));
+                                }),
                                 AuthStateChangeAction<SignedIn>(
                                     (context, state) {
                                   databaseService.updateUserProfile();
@@ -70,30 +117,7 @@ class LoginPage extends StatelessWidget {
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => ProfileScreen(
-                                          appBar: AppBar(
-                                            title: Text(
-                                              "Your Profile",
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleLarge,
-                                            ),
-                                            centerTitle: true,
-                                          ),
-                                          actions: [
-                                            SignedOutAction((context) {
-                                              globals.hasSignedIn = false;
-                                              databaseService
-                                                  .updateUserProfile();
-                                              showSnackBar("Signed out!");
-                                              Navigator.pushReplacement(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          const HomePage()));
-                                            })
-                                          ],
-                                        ),
+                                        builder: (context) => profileScreen,
                                       ));
                                 }),
                               ],

@@ -5,6 +5,8 @@ const List<String> drowsyTipsList = [
   "Let's do some stretching 🙆‍♂️",
   "Get comfortable before you drive 🙆‍♂️",
   "Let's listen to the radio 📻",
+  "",
+  "",
 ];
 const List<String> inattentiveTipsList = [
   "Hands always on steering wheel, right? 😉",

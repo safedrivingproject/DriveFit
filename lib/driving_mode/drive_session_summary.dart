@@ -35,8 +35,19 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
     ),
   ];
 
+  DateFormat onlyHMS = DateFormat("HH:mm:ss");
+
   String formatTime(DateFormat format, String time) {
     return format.format(DateTime.tryParse(time) ?? DateTime.now());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.session.drowsyAlertTimestampsList =
+        widget.session.drowsyAlertTimestamps.split(", ");
+    widget.session.inattentiveAlertTimestampsList =
+        widget.session.inattentiveAlertTimestamps.split(", ");
   }
 
   @override
@@ -60,11 +71,11 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                 child: Align(
                   alignment: const AlignmentDirectional(0, 0),
                   child: Text(
-                    'Drive Session Summary',
+                    'Session Summary',
                     textAlign: TextAlign.center,
                     style: Theme.of(context)
                         .textTheme
-                        .displayMedium
+                        .displaySmall
                         ?.copyWith(color: lightColorScheme.primary),
                   ),
                 ),
@@ -101,188 +112,264 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                   ],
                 ),
               ),
-              ListView(
-                padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
-                scrollDirection: Axis.vertical,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  Card(
-                    color: lightColorScheme.onPrimary,
-                    shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text("Your score: ",
-                              style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(width: 10),
-                          Text(
-                            '${widget.session.score} / 5',
-                            style: Theme.of(context).textTheme.displaySmall,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.05,
-                            child: ListView.builder(
-                              itemCount: widget.session.score,
-                              shrinkWrap: true,
-                              scrollDirection: Axis.horizontal,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemBuilder: (BuildContext context, int index) {
-                                return Icon(
-                                  Icons.star_rounded,
-                                  color: sourceXanthous,
-                                  size: 24,
-                                );
-                              },
+              SizedBox(
+                height: widget.isValidSession
+                    ? MediaQuery.of(context).size.height * 0.7
+                    : MediaQuery.of(context).size.height * 0.6,
+                child: ListView(
+                  padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
+                  scrollDirection: Axis.vertical,
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(
+                      decelerationRate: ScrollDecelerationRate.fast),
+                  children: [
+                    Card(
+                      color: lightColorScheme.onPrimary,
+                      shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(16.0))),
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Text("Your score: ",
+                                style: Theme.of(context).textTheme.titleSmall),
+                            const SizedBox(width: 10),
+                            Text(
+                              '${widget.session.score} / 5 ',
+                              style: Theme.of(context).textTheme.displaySmall,
                             ),
-                          ),
-                        ],
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.05,
+                              child: ListView.builder(
+                                itemCount: widget.session.score,
+                                shrinkWrap: true,
+                                scrollDirection: Axis.horizontal,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemBuilder: (BuildContext context, int index) {
+                                  return Icon(
+                                    Icons.star_rounded,
+                                    color: sourceXanthous,
+                                    size: 24,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Card(
-                    color: lightColorScheme.onPrimary,
-                    shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text("You drove for: ",
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.end,
-                                  children: [
-                                    Text(
-                                      '${Duration(seconds: widget.session.duration).inMinutes}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .displaySmall,
-                                    ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              0, 0, 0, 4),
-                                      child: Text(
-                                        ' min ',
+                    Card(
+                      color: lightColorScheme.onPrimary,
+                      shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(16.0))),
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 8),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Text("You drove for: ",
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.end,
+                                    children: [
+                                      Text(
+                                        '${Duration(seconds: widget.session.duration).inMinutes}',
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodyLarge,
+                                            .displaySmall,
                                       ),
-                                    ),
-                                    Text(
-                                      '${Duration(seconds: widget.session.duration).inSeconds - (Duration(seconds: widget.session.duration).inMinutes * 60)}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .displaySmall,
-                                    ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              0, 0, 0, 4),
-                                      child: Text(
-                                        ' seconds ',
+                                      Padding(
+                                        padding: const EdgeInsetsDirectional
+                                            .fromSTEB(0, 0, 0, 4),
+                                        child: Text(
+                                          ' min ',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${Duration(seconds: widget.session.duration).inSeconds - (Duration(seconds: widget.session.duration).inMinutes * 60)}',
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodyLarge,
+                                            .displaySmall,
                                       ),
-                                    ),
-                                  ],
+                                      Padding(
+                                        padding: const EdgeInsetsDirectional
+                                            .fromSTEB(0, 0, 0, 4),
+                                        child: Text(
+                                          ' seconds ',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text("with a distance of: ",
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.end,
-                                  children: [
-                                    Text(
-                                      widget.session.distance >= 0.01
-                                          ? (widget.session.distance / 1000)
-                                              .toStringAsFixed(2)
-                                          : "N/A",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .displaySmall,
-                                    ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsetsDirectional.fromSTEB(
-                                              0, 0, 0, 4),
-                                      child: Text(
-                                        ' km ',
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Text("with a distance of: ",
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.end,
+                                    children: [
+                                      Text(
+                                        widget.session.distance >= 0.01
+                                            ? (widget.session.distance / 1000)
+                                                .toStringAsFixed(2)
+                                            : "N/A",
                                         style: Theme.of(context)
                                             .textTheme
-                                            .bodyLarge,
+                                            .displaySmall,
                                       ),
-                                    ),
-                                  ],
+                                      Padding(
+                                        padding: const EdgeInsetsDirectional
+                                            .fromSTEB(0, 0, 0, 4),
+                                        child: Text(
+                                          ' km ',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Card(
-                    color: lightColorScheme.onPrimary,
-                    shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("You were alerted of drowsiness for: ",
-                              style: Theme.of(context).textTheme.titleMedium),
-                          Row(
-                            children: [
-                              Text(
-                                '${widget.session.drowsyAlertCount}',
-                                style: Theme.of(context).textTheme.displaySmall,
+                    Card(
+                      color: lightColorScheme.onPrimary,
+                      shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.all(Radius.circular(16.0))),
+                      child: Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("You were alerted of drowsiness for: ",
+                                style: Theme.of(context).textTheme.titleSmall),
+                            Row(
+                              children: [
+                                Text(
+                                  '${widget.session.drowsyAlertCount} ',
+                                  style:
+                                      Theme.of(context).textTheme.displaySmall,
+                                ),
+                                Text(
+                                  ' time${widget.session.drowsyAlertCount == 1 ? "" : "s"}',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                              ],
+                            ),
+                            if (widget.session.drowsyAlertTimestamps.isNotEmpty)
+                              ListView.builder(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 4, 0, 8),
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: widget
+                                    .session.drowsyAlertTimestampsList.length,
+                                itemBuilder: (context, index) {
+                                  String drowsyTimestamp = widget
+                                      .session.drowsyAlertTimestampsList[index];
+                                  if (index == 0) {
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Timestamps:",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall,
+                                        ),
+                                        Text(formatTime(
+                                            onlyHMS, drowsyTimestamp)),
+                                      ],
+                                    );
+                                  } else {
+                                    return Text(
+                                        formatTime(onlyHMS, drowsyTimestamp));
+                                  }
+                                },
                               ),
-                              Text(
-                                ' times',
-                                style: Theme.of(context).textTheme.bodyLarge,
+                            Text("and of inattentiveness for: ",
+                                style: Theme.of(context).textTheme.titleSmall),
+                            Row(
+                              children: [
+                                Text(
+                                  '${widget.session.inattentiveAlertCount} ',
+                                  style:
+                                      Theme.of(context).textTheme.displaySmall,
+                                ),
+                                Text(
+                                  ' time${widget.session.inattentiveAlertCount == 1 ? "" : "s"}',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                              ],
+                            ),
+                            if (widget
+                                .session.inattentiveAlertTimestamps.isNotEmpty)
+                              ListView.builder(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 4, 0, 8),
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: widget.session
+                                    .inattentiveAlertTimestampsList.length,
+                                itemBuilder: (context, index) {
+                                  String inattentiveTimestamp = widget.session
+                                      .inattentiveAlertTimestampsList[index];
+                                  if (index == 0) {
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Timestamps:",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall,
+                                        ),
+                                        Text(formatTime(
+                                            onlyHMS, inattentiveTimestamp)),
+                                      ],
+                                    );
+                                  } else {
+                                    return Text(formatTime(
+                                        onlyHMS, inattentiveTimestamp));
+                                  }
+                                },
                               ),
-                            ],
-                          ),
-                          Text("and of inattentiveness for: ",
-                              style: Theme.of(context).textTheme.titleMedium),
-                          Row(
-                            children: [
-                              Text(
-                                '${widget.session.inattentiveAlertCount}',
-                                style: Theme.of(context).textTheme.displaySmall,
-                              ),
-                              Text(
-                                ' times',
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               if (widget.isValidSession == false)
                 Container(
@@ -307,7 +394,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                 ),
               const Spacer(),
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(12.0),
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     shape: const RoundedRectangleBorder(
@@ -317,10 +404,6 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                   ),
                   onPressed: () {
                     var hasNewRank = checkForNewRank();
-                    // if (showDebug) {
-                    //   goToNewRankPage();
-                    //   return;
-                    // }
                     if (hasNewRank) {
                       goToNewRankPage();
                     } else {

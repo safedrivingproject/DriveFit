@@ -24,6 +24,14 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   FirebaseUIAuth.configureProviders([
+    EmailLinkAuthProvider(
+      actionCodeSettings: ActionCodeSettings(
+        url: "https://drivefituser.page.link/home",
+        androidPackageName: "com.example.drive_fit",
+        handleCodeInApp: true,
+        androidMinimumVersion: '5',
+      ),
+    ),
     EmailAuthProvider(),
   ]);
   imageCache.clear();

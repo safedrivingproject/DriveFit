@@ -1,9 +1,12 @@
+import 'dart:math';
+
 import 'package:drive_fit/home/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 
+import '../service/shared_preferences_service.dart';
 import '/service/database_service.dart';
 import '/service/ranking_service.dart';
 import '/settings/settings_page.dart';
@@ -11,6 +14,7 @@ import 'drive_page.dart';
 import 'history_page.dart';
 import 'achievements_page.dart';
 import '/global_variables.dart' as globals;
+import 'tips.dart';
 
 class HomePage extends StatefulWidget {
   final String? title;
@@ -32,6 +36,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int selectedPageIndex = 0;
 
   List<SessionData> driveSessionsList = [];
+
+  int totalAlertCount = 0,
+      totalDrowsyAlertCount = 0,
+      totalInattentiveAlertCount = 0;
+  int latestAlertCount = 0,
+      latestDrowsyAlertCount = 0,
+      latestInattentiveAlertCount = 0;
+  String tipType = "Generic";
+  String oldTipType = "Generic";
+  int tipsIndex = 0;
+
+  DateTime currentDate = DateTime.now();
+  String expirationDay =
+      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
+          .toString();
+
+  bool hasNewSession = false;
 
   late final AnimationController _animationController = AnimationController(
     duration: const Duration(milliseconds: 500),
@@ -57,6 +78,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     databaseService.updateUserProfile();
     if (globals.hasSignedIn) databaseService.saveUserDataToFirebase();
     selectedPageIndex = 0;
+    _loadSettings();
     getSessionData();
     rankingService.getScores();
     rankingService.getRank();
@@ -74,9 +96,95 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
+  void _loadSettings() {
+    tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
+    tipType = SharedPreferencesService.getString('tipType', "Generic");
+    databaseService.drivingTip = getTip(tipType, tipsIndex);
+    hasNewSession = databaseService.needSessionDataUpdate;
+    currentDate = DateTime.now();
+    expirationDay = SharedPreferencesService.getString(
+        'expirationDate',
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
+            .toString());
+  }
+
   Future<void> getSessionData() async {
+
     driveSessionsList = await databaseService.getAllSessions();
+  
+   
+    totalDrowsyAlertCount =
+        databaseService.getDrowsyAlertCount(driveSessionsList);
+    totalInattentiveAlertCount =
+        databaseService.getInattentiveAlertCount(driveSessionsList);
+    totalAlertCount = totalDrowsyAlertCount + totalInattentiveAlertCount;
+    if (driveSessionsList.isNotEmpty) {
+      latestDrowsyAlertCount = driveSessionsList[0].drowsyAlertCount;
+      latestInattentiveAlertCount = driveSessionsList[0].inattentiveAlertCount;
+      latestAlertCount = latestDrowsyAlertCount + latestInattentiveAlertCount;
+    }
+    getTipData();
     goToPage(widget.index);
+  }
+
+  void getTipData() {
+    print(hasNewSession);
+    if (!hasNewSession) {
+      if (currentDate.isBefore(DateTime.parse(expirationDay))) {
+        oldTipType = tipType;
+        tipType = getTipType();
+        SharedPreferencesService.setString('tipType', tipType);
+        if (oldTipType != tipType) {
+          generateNewTipIndex();
+          SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+        }
+        databaseService.drivingTip = getTip(tipType, tipsIndex);
+        return;
+      }
+    }
+    tipType = getTipType();
+    SharedPreferencesService.setString('tipType', tipType);
+    generateNewTipIndex();
+    databaseService.drivingTip = getTip(tipType, tipsIndex);
+    SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+    hasNewSession = false;
+    if (currentDate.isAfter(DateTime.parse(expirationDay)) ||
+        currentDate.isAtSameMomentAs(DateTime.parse(expirationDay))) {
+      expirationDay =
+          DateTime.parse(expirationDay).add(const Duration(days: 1)).toString();
+      SharedPreferencesService.setString('expirationDate', expirationDay);
+    }
+  }
+
+  void generateNewTipIndex() {
+    if (tipType == "Drowsy") {
+      tipsIndex = Random().nextInt(drowsyTipsList.length);
+    } else if (tipType == "Inattentive") {
+      tipsIndex = Random().nextInt(inattentiveTipsList.length);
+    } else {
+      tipsIndex = Random().nextInt(genericTipsList.length);
+    }
+  }
+
+  String getTipType() {
+    print(latestAlertCount);
+    if (latestAlertCount > 3) {
+      if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 3) {
+        return "Drowsy";
+      } else if (latestInattentiveAlertCount - latestDrowsyAlertCount > 3) {
+        return "Inattentive";
+      }
+    }
+    return "Generic";
+  }
+
+  String getTip(String tipType, int index) {
+    if (tipType == "Drowsy") {
+      return drowsyTipsList[index];
+    } else if (tipType == "Inattentive") {
+      return inattentiveTipsList[index];
+    }
+    return genericTipsList[index];
   }
 
   Future<void> goToPage(int? index) async {
@@ -350,7 +458,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (index == 0) return "";
     if (index == 1) return "Drive Summary";
     if (index == 2) return "Achievements";
-    return "DriveFit";
+    return "";
   }
 
   Widget _getPage(int index) {

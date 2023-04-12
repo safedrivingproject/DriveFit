@@ -49,6 +49,7 @@ class _DrivingViewState extends State<DrivingView> {
 
   final AudioPlayer drowsyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
+  final AudioPlayer passengerAudioPlayer = AudioPlayer();
 
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
@@ -198,6 +199,9 @@ class _DrivingViewState extends State<DrivingView> {
             : AssetSource("audio/double_beep.mp3"));
     inattentiveAudioPlayer.setVolume(1.0);
     inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    passengerAudioPlayer.setSource(AssetSource("audio/passenger_alert.mp3"));
+    passengerAudioPlayer.setVolume(1.0);
+    passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
   }
 
   Future<void> saveCurrentPosition(Position? position) async {
@@ -313,6 +317,10 @@ class _DrivingViewState extends State<DrivingView> {
     NotificationController.createDistractedNotification();
   }
 
+  void sendPassengerReminder() {
+    passengerAudioPlayer.resume();
+  }
+
   void updateDuration() {
     currentSession.duration = DateTime.now()
         .difference(DateTime.parse(currentSession.startTime))
@@ -394,7 +402,12 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       if (faceDetectionService.reminderType == "Drowsy") {
-        sendSleepyReminder();
+        if (faceDetectionService.reminderCount <= 5) {
+          sendSleepyReminder();
+        }
+        if (faceDetectionService.reminderCount == 10) {
+          sendPassengerReminder();
+        }
         if (mounted) {
           setState(() {
             if (faceDetectionService.hasReminded == false) {
@@ -407,7 +420,12 @@ class _DrivingViewState extends State<DrivingView> {
           });
         }
       } else if (faceDetectionService.reminderType == "Inattentive") {
-        sendDistractedReminder();
+        if (faceDetectionService.reminderCount <= 5) {
+          sendDistractedReminder();
+        }
+        if (faceDetectionService.reminderCount == 6) {
+          sendPassengerReminder();
+        }
         if (mounted) {
           setState(() {
             if (faceDetectionService.hasReminded == false) {
@@ -730,7 +748,7 @@ class _DrivingViewState extends State<DrivingView> {
                   initialDirection: CameraLensDirection.front,
                   isReminding: isReminding,
                 ),
-                if (!widget.calibrationMode && globals.showDebug)
+                if (globals.showDebug)
                   Column(
                     children: [
                       Container(
@@ -764,13 +782,8 @@ class _DrivingViewState extends State<DrivingView> {
                                 doubleValue:
                                     faceDetectionService.rightEyeOpenProb),
                             DataValueWidget(
-                                text: "leftOffset",
-                                doubleValue:
-                                    faceDetectionService.rotYLeftOffset),
-                            DataValueWidget(
-                                text: "rightOffset",
-                                doubleValue:
-                                    faceDetectionService.rotYRightOffset),
+                                text: "reminderCount",
+                                intValue: faceDetectionService.reminderCount),
                             DataValueWidget(
                                 text: "hasReminded",
                                 boolValue: faceDetectionService.hasReminded),
@@ -924,37 +937,12 @@ class _DrivingViewState extends State<DrivingView> {
                                   ),
                                 ),
                               ),
-                            FilledButton(
-                              style: FilledButton.styleFrom(
-                                shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.all(
-                                        Radius.circular(16.0))),
-                                backgroundColor: lightColorScheme.primary,
-                                minimumSize: const Size.fromHeight(50),
-                              ),
-                              onPressed: () {
-                                if (mounted) {
-                                  setState(() {
-                                    currentSession.distance += 1000;
-                                  });
-                                }
-                              },
-                              child: Text(
-                                "Add distance (debug only)",
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelLarge
-                                    ?.copyWith(
-                                        color: lightColorScheme.onPrimary),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                if (widget.calibrationMode == true)
+                if (widget.calibrationMode)
                   Column(
                     children: [
                       if (!globals.showDebug)
@@ -1027,7 +1015,7 @@ class _DrivingViewState extends State<DrivingView> {
                               ),
                               statesController: _statesController,
                               onPressed: () async {
-                                stopDriving();
+                                stopDrivingMode();
                               },
                               child: Text(
                                 "Stop driving",
@@ -1051,7 +1039,7 @@ class _DrivingViewState extends State<DrivingView> {
     );
   }
 
-  void stopDriving() {
+  void stopDrivingMode() {
     if (!canExit) return;
     FlutterForegroundTask.updateService(
       notificationTitle: 'Going to drive?',
@@ -1063,7 +1051,10 @@ class _DrivingViewState extends State<DrivingView> {
       databaseService.saveSessionDataToLocal(currentSession);
       updateScores();
       if (globals.hasSignedIn) {
-        databaseService.saveSessionDataToFirebase(currentSession);
+        if (currentSession.drowsyAlertCount > 0 ||
+            currentSession.inattentiveAlertCount > 0) {
+          databaseService.saveSessionDataToFirebase(currentSession);
+        }
       }
     }
     if (mounted) setState(() {});
@@ -1143,6 +1134,8 @@ class _DrivingViewState extends State<DrivingView> {
             .inSeconds;
         currentSession.distance += geolocationService.accumulatedDistance;
         currentSession.score = calcDrivingScore();
+        currentSession.drowsyAlertTimestamps =
+            currentSession.drowsyAlertTimestampsList.join(", ");
       });
     }
   }

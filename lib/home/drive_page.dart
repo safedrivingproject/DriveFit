@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
@@ -12,7 +11,6 @@ import '/service/database_service.dart';
 import '/service/shared_preferences_service.dart';
 import '/driving_mode/driving_view.dart';
 import '../global_variables.dart' as globals;
-import 'tips.dart';
 
 class DrivePage extends StatefulWidget {
   const DrivePage({
@@ -30,16 +28,6 @@ class _DrivePageState extends State<DrivePage> {
   final DatabaseService databaseService = DatabaseService();
   final MaterialStatesController _statesController = MaterialStatesController();
   List<SessionData> driveSessionsList = [];
-
-  int totalAlertCount = 0,
-      totalDrowsyAlertCount = 0,
-      totalInattentiveAlertCount = 0;
-  int latestAlertCount = 0,
-      latestDrowsyAlertCount = 0,
-      latestInattentiveAlertCount = 0;
-  String tipType = "Generic";
-  String drivingTip = "";
-  int tipsIndex = 0;
 
   DateTime currentDate = DateTime.now();
   String expirationDay =
@@ -68,76 +56,13 @@ class _DrivePageState extends State<DrivePage> {
     globals.hasCalibrated =
         SharedPreferencesService.getBool('hasCalibrated', false);
     globals.showDebug = SharedPreferencesService.getBool('showDebug', true);
-    tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
     _statesController.update(MaterialState.disabled, !globals.hasCalibrated);
     canPress = globals.hasCalibrated;
     hasNewSession = databaseService.needSessionDataUpdate;
-    currentDate = DateTime.now();
-    expirationDay = SharedPreferencesService.getString(
-        'expirationDate',
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
-            .toString());
   }
 
   void getSessionData() {
     driveSessionsList = widget.sessionsList;
-    totalDrowsyAlertCount =
-        databaseService.getDrowsyAlertCount(driveSessionsList);
-    totalInattentiveAlertCount =
-        databaseService.getInattentiveAlertCount(driveSessionsList);
-    totalAlertCount = totalDrowsyAlertCount + totalInattentiveAlertCount;
-    if (driveSessionsList.isNotEmpty) {
-      latestDrowsyAlertCount = driveSessionsList[0].drowsyAlertCount;
-      latestInattentiveAlertCount = driveSessionsList[0].inattentiveAlertCount;
-      latestAlertCount = latestDrowsyAlertCount + latestInattentiveAlertCount;
-    }
-  }
-
-  void getTipData() {
-    if (!hasNewSession) {
-      if (currentDate.isBefore(DateTime.parse(expirationDay))) {
-        tipType = getTipType(driveSessionsList);
-        drivingTip = getTip(tipType, tipsIndex);
-        return;
-      }
-    }
-    tipType = getTipType(driveSessionsList);
-    if (tipType == "Drowsy") {
-      tipsIndex = Random().nextInt(drowsyTipsList.length);
-    } else if (tipType == "Inattentive") {
-      tipsIndex = Random().nextInt(inattentiveTipsList.length);
-    } else {
-      tipsIndex = Random().nextInt(genericTipsList.length);
-    }
-    drivingTip = getTip(tipType, tipsIndex);
-    SharedPreferencesService.setInt('tipsIndex', tipsIndex);
-    hasNewSession = false;
-    if (currentDate.isAfter(DateTime.parse(expirationDay)) ||
-        currentDate.isAtSameMomentAs(DateTime.parse(expirationDay))) {
-      expirationDay =
-          DateTime.parse(expirationDay).add(const Duration(days: 1)).toString();
-      SharedPreferencesService.setString('expirationDate', expirationDay);
-    }
-  }
-
-  String getTipType(List<SessionData> session) {
-    if (latestAlertCount > 3) {
-      if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 3) {
-        return "Drowsy";
-      } else if (latestInattentiveAlertCount - latestDrowsyAlertCount > 3) {
-        return "Inattentive";
-      }
-    }
-    return "Generic";
-  }
-
-  String getTip(String tipType, int index) {
-    if (tipType == "Drowsy") {
-      return drowsyTipsList[index];
-    } else if (tipType == "Inattentive") {
-      return inattentiveTipsList[index];
-    }
-    return genericTipsList[index];
   }
 
   Future<void> checkPermissions() async {
@@ -188,7 +113,6 @@ class _DrivePageState extends State<DrivePage> {
     if (!_isInitialized) {
       _loadSettings();
       getSessionData();
-      getTipData();
       if (mounted) setState(() {});
     }
     _isInitialized = true;
@@ -392,7 +316,7 @@ class _DrivePageState extends State<DrivePage> {
                 ),
                 Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
-                  child: AutoSizeText(drivingTip,
+                  child: AutoSizeText(databaseService.drivingTip ?? "",
                       maxLines: 1,
                       textAlign: TextAlign.start,
                       style: Theme.of(context).textTheme.headlineSmall),
