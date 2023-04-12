@@ -778,8 +778,27 @@ class SessionsListState extends State<SessionsList> {
                               ),
                             ],
                           ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Score: ',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Text(
+                                '${session.score}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Icon(
+                                Icons.star_rounded,
+                                color: sourceXanthous,
+                                size: 24,
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 10),
                           Row(
+                            mainAxisSize: MainAxisSize.max,
                             children: [
                               SessionDetailsModule(
                                 icon: const Icon(Icons.info_outline_rounded),
@@ -788,7 +807,7 @@ class SessionsListState extends State<SessionsList> {
                                 trailing:
                                     " time${session.drowsyAlertCount == 1 ? "" : "s"}",
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 5),
                               SessionDetailsModule(
                                 icon: const Icon(
                                     Icons.notifications_paused_outlined),
@@ -797,16 +816,13 @@ class SessionsListState extends State<SessionsList> {
                                 trailing:
                                     " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 5),
                               SessionDetailsModule(
-                                icon: Icon(
-                                  Icons.star_rounded,
-                                  color: sourceXanthous,
-                                  size: 24,
-                                ),
-                                label: "Score:",
-                                value: session.score,
-                                trailing: "",
+                                icon: const Icon(Icons.speed),
+                                label: "Speeding: ",
+                                value: session.speedingCount,
+                                trailing:
+                                    " time${session.speedingCount == 1 ? "" : "s"}",
                               ),
                             ],
                           ),
@@ -855,7 +871,6 @@ class SessionDetailsModule extends StatelessWidget {
     return Row(
       children: [
         icon,
-        const SizedBox(width: 10),
         Column(
           children: [
             Padding(

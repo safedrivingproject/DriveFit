@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -29,10 +30,12 @@ class GeolocationService {
   DateTime currentTimeStamp = DateTime.now();
   //
   int speedCounter = 0;
-  double carVelocityThreshold = 5.0;
+  double carVelocityThreshold = 8.3;
+  double speedingVelocityThreshold = 18.0;
   //
   int additionalDelay = 20;
   bool stationaryAlertsDisabled = false;
+  bool hasReminded = false;
 
   GeolocationService._internal() {
     hasPermission = false;
@@ -47,7 +50,8 @@ class GeolocationService {
     accumulatedDistance = 0.0;
     //
     speedCounter = 0;
-    carVelocityThreshold = 5.0;
+    carVelocityThreshold = 8.3;
+    speedingVelocityThreshold = 18.0;
     //
     additionalDelay = 20;
     _initSettings();
@@ -99,21 +103,17 @@ class GeolocationService {
         ));
   }
 
-  Future<void> getCurrentPosition() async {
-    if (!hasPermission) return;
+  Future<Position?> getCurrentPosition() async {
+    if (!hasPermission) return null;
     Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best);
-    updatePositionList(position);
-    var calcSpeed = calculateSpeed();
-    updateSpeedList(position.speed < calcSpeed ? position.speed : calcSpeed);
+    return position;
   }
 
-  Future<void> getLastKnownPosition() async {
-    if (!hasPermission) return;
+  Future<Position?> getLastKnownPosition() async {
+    if (!hasPermission) return null;
     Position? position = await Geolocator.getLastKnownPosition();
-    if (position != null) updatePositionList(position);
-    var calcSpeed = calculateSpeed();
-    updateSpeedList(position?.speed ?? calcSpeed);
+    return position;
   }
 
   void startGeolocationStream() {
@@ -177,9 +177,23 @@ class GeolocationService {
     } else {
       speedCounter = 0;
     }
-    if (speedCounter > 20) {
+    if (speedCounter > 2 * 10) {
       return true;
     }
+    return false;
+  }
+
+  bool checkSpeeding() {
+    currentCalculatedSpeed = getCurrentSpeed();
+    var liveSpeedList = <double>[];
+    liveSpeedList.insert(0, currentCalculatedSpeed);
+    if (liveSpeedList.length > 10 * 10) {
+      liveSpeedList.removeLast();
+    }
+    if (liveSpeedList.sum > 18 * 10 * 10) {
+      return true;
+    }
+    hasReminded = false;
     return false;
   }
 }

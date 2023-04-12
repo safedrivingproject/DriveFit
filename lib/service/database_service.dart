@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io' as io;
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,7 +12,7 @@ class DatabaseService {
   factory DatabaseService() => _instance;
 
   static Database? _db;
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
   List<SessionData> sessionsCache = [];
   bool needSessionDataUpdate = true;
   FirebaseDatabase database = FirebaseDatabase.instance;
@@ -52,7 +51,7 @@ class DatabaseService {
 
   void _onCreate(Database db, int version) async {
     await db.execute(
-        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL, drowsy_alert_timestamps TEXT NOT NULL, inattentive_alert_timestamps TEXT NOT NULL)");
+        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL, drowsy_alert_timestamps TEXT NOT NULL, inattentive_alert_timestamps TEXT NOT NULL, speeding_count INTEGER NOT NULL)");
   }
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -65,6 +64,10 @@ class DatabaseService {
           "ALTER TABLE sessions ADD COLUMN drowsy_alert_timestamps TEXT NOT NULL");
       await db.execute(
           "ALTER TABLE sessions ADD COLUMN inattentive_alert_timestamps TEXT NOT NULL");
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN speeding_count INTEGER NOT NULL");
     }
   }
 
@@ -103,6 +106,7 @@ class DatabaseService {
       "${session.id}/drowsy_alert_timestamps": session.drowsyAlertTimestamps,
       "${session.id}/inattentive_alert_timestamps":
           session.inattentiveAlertTimestamps,
+      "${session.id}/speeding_count": session.speedingCount,
     });
   }
 
@@ -195,6 +199,7 @@ class SessionData {
   List<String> inattentiveAlertTimestampsList = [];
   String drowsyAlertTimestamps = '';
   String inattentiveAlertTimestamps = '';
+  int speedingCount = 0;
 
   SessionData({
     required this.id,
@@ -207,6 +212,7 @@ class SessionData {
     required this.score,
     required this.drowsyAlertTimestampsList,
     required this.inattentiveAlertTimestampsList,
+    required this.speedingCount,
   });
 
   Map<String, dynamic> toMap() {
@@ -223,6 +229,7 @@ class SessionData {
       'score': score,
       'drowsy_alert_timestamps': drowsyAlertTimestamps,
       'inattentive_alert_timestamps': inattentiveAlertTimestamps,
+      'speeding_count': speedingCount,
     };
     return map;
   }
@@ -240,10 +247,11 @@ class SessionData {
     inattentiveAlertTimestamps = map['inattentive_alert_timestamps'];
     drowsyAlertTimestampsList = drowsyAlertTimestamps.split(", ");
     inattentiveAlertTimestampsList = inattentiveAlertTimestamps.split(", ");
+    speedingCount = map['speeding_count'];
   }
 
   @override
   String toString() {
-    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, drowsyAlertTimestamps: $drowsyAlertTimestampsList, inattentiveAlertTimestamps: $inattentiveAlertTimestampsList, score: $score}';
+    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, drowsyAlertTimestamps: $drowsyAlertTimestampsList, inattentiveAlertTimestamps: $inattentiveAlertTimestampsList, speedingCount: $speedingCount, score: $score}';
   }
 }

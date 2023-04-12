@@ -121,7 +121,7 @@ class NotificationController {
         id: -1,
         channelKey: 'drivefit_alerts',
         title: 'Drive Safely!',
-        body: "Wanna park and take a nap?",
+        body: "If you are tired please park and take a nap!",
         notificationLayout: NotificationLayout.Default,
         fullScreenIntent: true,
         criticalAlert: true,
@@ -149,7 +149,7 @@ class NotificationController {
     );
   }
 
-  static Future<void> createRestReminderNotification() async {
+  static Future<void> createRestNotification() async {
     bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
     if (!isAllowed) isAllowed = await displayNotificationRationale();
     if (!isAllowed) return;
@@ -163,6 +163,25 @@ class NotificationController {
         notificationLayout: NotificationLayout.Default,
         fullScreenIntent: true,
         criticalAlert: false,
+        actionType: ActionType.DisabledAction,
+      ),
+    );
+  }
+
+  static Future<void> createSpeedingNotification() async {
+    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+    if (!isAllowed) isAllowed = await displayNotificationRationale();
+    if (!isAllowed) return;
+
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: -1,
+        channelKey: 'drivefit_alerts',
+        title: 'Please slow down!',
+        body: "You are driving too dangerously!",
+        notificationLayout: NotificationLayout.Default,
+        fullScreenIntent: true,
+        criticalAlert: true,
         actionType: ActionType.DisabledAction,
       ),
     );

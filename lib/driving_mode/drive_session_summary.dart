@@ -269,7 +269,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("You were alerted of drowsiness for: ",
+                            Text("You were found drowsy for: ",
                                 style: Theme.of(context).textTheme.titleSmall),
                             Row(
                               children: [
@@ -316,7 +316,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                   }
                                 },
                               ),
-                            Text("and of inattentiveness for: ",
+                            Text("inattentive for: ",
                                 style: Theme.of(context).textTheme.titleSmall),
                             Row(
                               children: [
@@ -364,6 +364,54 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                   }
                                 },
                               ),
+                            Text("and speeding for: ",
+                                style: Theme.of(context).textTheme.titleSmall),
+                            Row(
+                              children: [
+                                Text(
+                                  '${widget.session.speedingCount} ',
+                                  style:
+                                      Theme.of(context).textTheme.displaySmall,
+                                ),
+                                Text(
+                                  ' time${widget.session.inattentiveAlertCount == 1 ? "" : "s"}',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                              ],
+                            ),
+                            // if (widget
+                            //     .session.inattentiveAlertTimestamps.isNotEmpty)
+                            //   ListView.builder(
+                            //     padding: const EdgeInsetsDirectional.fromSTEB(
+                            //         0, 4, 0, 8),
+                            //     shrinkWrap: true,
+                            //     physics: const NeverScrollableScrollPhysics(),
+                            //     itemCount: widget.session
+                            //         .inattentiveAlertTimestampsList.length,
+                            //     itemBuilder: (context, index) {
+                            //       String inattentiveTimestamp = widget.session
+                            //           .inattentiveAlertTimestampsList[index];
+                            //       if (index == 0) {
+                            //         return Column(
+                            //           crossAxisAlignment:
+                            //               CrossAxisAlignment.start,
+                            //           children: [
+                            //             Text(
+                            //               "Timestamps:",
+                            //               style: Theme.of(context)
+                            //                   .textTheme
+                            //                   .titleSmall,
+                            //             ),
+                            //             Text(formatTime(
+                            //                 onlyHMS, inattentiveTimestamp)),
+                            //           ],
+                            //         );
+                            //       } else {
+                            //         return Text(formatTime(
+                            //             onlyHMS, inattentiveTimestamp));
+                            //       }
+                            //     },
+                            //   ),
                           ],
                         ),
                       ),

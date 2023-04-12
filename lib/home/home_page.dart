@@ -5,10 +5,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
+import 'package:geolocator/geolocator.dart';
 
-import '../service/shared_preferences_service.dart';
+import '/service/shared_preferences_service.dart';
+import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
 import '/service/ranking_service.dart';
+import '/service/weather_service.dart';
 import '/settings/settings_page.dart';
 import 'drive_page.dart';
 import 'history_page.dart';
@@ -27,7 +30,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final DatabaseService databaseService = DatabaseService();
+  final GeolocationService geolocationService = GeolocationService();
   final RankingService rankingService = RankingService();
+  final WeatherService weatherService = WeatherService();
   final ScrollController _scrollController =
       ScrollController(keepScrollOffset: false);
 
@@ -48,11 +53,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   int tipsIndex = 0;
 
   DateTime currentDate = DateTime.now();
-  String expirationDay =
+  String tipExpirationDay =
       DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
           .toString();
 
-  bool hasNewSession = false;
+  bool hasNewSession = true;
 
   late final AnimationController _animationController = AnimationController(
     duration: const Duration(milliseconds: 500),
@@ -74,11 +79,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    initHomePage();
+  }
+
+  Future<void> initHomePage() async {
+    await checkPermissions();
     globals.hasSignedIn = FirebaseAuth.instance.currentUser != null;
     databaseService.updateUserProfile();
     if (globals.hasSignedIn) databaseService.saveUserDataToFirebase();
     selectedPageIndex = 0;
     _loadSettings();
+    getWeather();
     getSessionData();
     rankingService.getScores();
     rankingService.getRank();
@@ -96,23 +107,103 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     });
   }
 
+  void showRequestPermissionsDialog(String permissionType) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) => RequestPermissionDialog(
+              type: permissionType,
+            ));
+  }
+
+  Future<void> checkPermissions() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    String permissionType = "";
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      permissionType = "Services";
+      geolocationService.hasPermission = false;
+      showRequestPermissionsDialog(permissionType);
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        permissionType = "Permissions";
+        geolocationService.hasPermission = false;
+        showRequestPermissionsDialog(permissionType);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      permissionType = "Permissions";
+      geolocationService.hasPermission = false;
+      showRequestPermissionsDialog(permissionType);
+      return;
+    }
+
+    geolocationService.hasPermission = true;
+  }
+
   void _loadSettings() {
     tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
     tipType = SharedPreferencesService.getString('tipType', "Generic");
     databaseService.drivingTip = getTip(tipType, tipsIndex);
     hasNewSession = databaseService.needSessionDataUpdate;
     currentDate = DateTime.now();
-    expirationDay = SharedPreferencesService.getString(
-        'expirationDate',
+    tipExpirationDay = SharedPreferencesService.getString(
+        'tipExpirationDay',
         DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
             .toString());
+    weatherService.weatherExpirationHour = SharedPreferencesService.getString(
+        'weatherExpirationHour',
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day,
+                DateTime.now().hour)
+            .toString());
+    weatherService.currentWeatherConditionCode =
+        SharedPreferencesService.getInt('currentWeatherConditionCode', -1);
+    weatherService.currentWeatherMain =
+        SharedPreferencesService.getString('currentWeatherMain', "Oops...");
+    weatherService.currentWeatherDescription =
+        SharedPreferencesService.getString(
+            'currentWeatherDescription', "No weather information yet :(");
+    weatherService.currentWeatherIconURL =
+        SharedPreferencesService.getString('currentWeatherIconURL', "");
+  }
+
+  Future<void> getWeather() async {
+    if (weatherService.currentWeatherConditionCode != null &&
+        weatherService.currentWeatherConditionCode != -1) {
+      if (currentDate
+          .isBefore(DateTime.parse(weatherService.weatherExpirationHour))) {
+        return;
+      }
+    }
+    weatherService.position = await geolocationService.getCurrentPosition();
+    await weatherService.getCurrentWeather();
+    weatherService.extractWeatherConditionCode();
+    weatherService.extractWeatherDescription();
+    if (currentDate
+            .isAfter(DateTime.parse(weatherService.weatherExpirationHour)) ||
+        currentDate.isAtSameMomentAs(
+            DateTime.parse(weatherService.weatherExpirationHour))) {
+      weatherService.weatherExpirationHour =
+          DateTime.parse(weatherService.weatherExpirationHour)
+              .add(const Duration(hours: 1))
+              .toString();
+      SharedPreferencesService.setString(
+          'weatherExpirationHour', weatherService.weatherExpirationHour);
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> getSessionData() async {
-
     driveSessionsList = await databaseService.getAllSessions();
-  
-   
+
     totalDrowsyAlertCount =
         databaseService.getDrowsyAlertCount(driveSessionsList);
     totalInattentiveAlertCount =
@@ -128,9 +219,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void getTipData() {
-    print(hasNewSession);
     if (!hasNewSession) {
-      if (currentDate.isBefore(DateTime.parse(expirationDay))) {
+      if (currentDate.isBefore(DateTime.parse(tipExpirationDay))) {
         oldTipType = tipType;
         tipType = getTipType();
         SharedPreferencesService.setString('tipType', tipType);
@@ -148,11 +238,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     databaseService.drivingTip = getTip(tipType, tipsIndex);
     SharedPreferencesService.setInt('tipsIndex', tipsIndex);
     hasNewSession = false;
-    if (currentDate.isAfter(DateTime.parse(expirationDay)) ||
-        currentDate.isAtSameMomentAs(DateTime.parse(expirationDay))) {
-      expirationDay =
-          DateTime.parse(expirationDay).add(const Duration(days: 1)).toString();
-      SharedPreferencesService.setString('expirationDate', expirationDay);
+    if (currentDate.isAfter(DateTime.parse(tipExpirationDay)) ||
+        currentDate.isAtSameMomentAs(DateTime.parse(tipExpirationDay))) {
+      tipExpirationDay = DateTime.parse(tipExpirationDay)
+          .add(const Duration(days: 1))
+          .toString();
+      SharedPreferencesService.setString('tipExpirationDay', tipExpirationDay);
     }
   }
 
@@ -167,7 +258,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   String getTipType() {
-    print(latestAlertCount);
     if (latestAlertCount > 3) {
       if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 3) {
         return "Drowsy";
