@@ -31,11 +31,13 @@ class DrivingView extends StatefulWidget {
     required this.calibrationMode,
     this.accelerometerOn = false,
     required this.enableGeolocation,
+    required this.enableSpeedReminders,
   }) : super(key: key);
 
   final bool calibrationMode;
   final bool accelerometerOn;
   final bool enableGeolocation;
+  final bool enableSpeedReminders;
 
   @override
   State<DrivingView> createState() => _DrivingViewState();
@@ -50,6 +52,8 @@ class _DrivingViewState extends State<DrivingView> {
   final AudioPlayer drowsyAudioPlayer = AudioPlayer();
   final AudioPlayer inattentiveAudioPlayer = AudioPlayer();
   final AudioPlayer passengerAudioPlayer = AudioPlayer();
+  final AudioPlayer speedingAudioPlayer = AudioPlayer();
+  final AudioPlayer restAudioPlayer = AudioPlayer();
 
   final FaceDetector _faceDetector = FaceDetector(
     options: FaceDetectorOptions(
@@ -63,6 +67,7 @@ class _DrivingViewState extends State<DrivingView> {
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool carMoving = true;
+  bool speeding = false;
   bool startCalibration = false;
   bool _canProcess = true, _isBusy = false;
   CustomPaint? _customPaint;
@@ -87,6 +92,7 @@ class _DrivingViewState extends State<DrivingView> {
     score: 0,
     drowsyAlertTimestampsList: [],
     inattentiveAlertTimestampsList: [],
+    speedingCount: 0,
   );
   int restReminderTime = 3600;
   bool isValidSession = false;
@@ -202,6 +208,12 @@ class _DrivingViewState extends State<DrivingView> {
     passengerAudioPlayer.setSource(AssetSource("audio/passenger_alert.mp3"));
     passengerAudioPlayer.setVolume(1.0);
     passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    speedingAudioPlayer.setSource(AssetSource("audio/speeding_reminder.mp3"));
+    speedingAudioPlayer.setVolume(1.0);
+    speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    restAudioPlayer.setSource(AssetSource("audio/rest_reminder.mp3"));
+    restAudioPlayer.setVolume(1.0);
+    restAudioPlayer.setReleaseMode(ReleaseMode.stop);
   }
 
   Future<void> saveCurrentPosition(Position? position) async {
@@ -231,6 +243,7 @@ class _DrivingViewState extends State<DrivingView> {
           score: 0,
           drowsyAlertTimestampsList: [],
           inattentiveAlertTimestampsList: [],
+          speedingCount: 0,
         );
         currentSession.startTime = saveCurrentTime(noMillis);
       });
@@ -288,6 +301,9 @@ class _DrivingViewState extends State<DrivingView> {
 
     drowsyAudioPlayer.dispose();
     inattentiveAudioPlayer.dispose();
+    passengerAudioPlayer.dispose();
+    speedingAudioPlayer.dispose();
+    restAudioPlayer.dispose();
 
     _statesController.dispose();
 
@@ -328,8 +344,15 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void sendRestReminder() {
+    restAudioPlayer.resume();
     NotificationController.dismissAlertNotifications();
-    NotificationController.createRestReminderNotification();
+    NotificationController.createRestNotification();
+  }
+
+  void sendSpeedingReminder() {
+    speedingAudioPlayer.resume();
+    NotificationController.dismissAlertNotifications();
+    NotificationController.createSpeedingNotification();
   }
 
   void detectionTimer() async {
@@ -385,6 +408,7 @@ class _DrivingViewState extends State<DrivingView> {
                   .checkHeadUpDown(faceDetectionService.rotXDelay);
               faceDetectionService
                   .checkHeadLeftRight(faceDetectionService.rotYDelay);
+              speeding = geolocationService.checkSpeeding();
             });
           }
         }
@@ -397,6 +421,7 @@ class _DrivingViewState extends State<DrivingView> {
             faceDetectionService.checkHeadLeftRight(
                 faceDetectionService.rotYDelay +
                     (!carMoving ? geolocationService.additionalDelay : 0));
+            speeding = geolocationService.checkSpeeding();
           });
         }
       }
@@ -436,6 +461,13 @@ class _DrivingViewState extends State<DrivingView> {
             }
             faceDetectionService.reminderType = "None";
           });
+        }
+      }
+      if (speeding) {
+        if (geolocationService.hasReminded == false) {
+          sendSpeedingReminder();
+          currentSession.speedingCount++;
+          geolocationService.hasReminded = true;
         }
       }
       if (mounted) {
@@ -1052,7 +1084,8 @@ class _DrivingViewState extends State<DrivingView> {
       updateScores();
       if (globals.hasSignedIn) {
         if (currentSession.drowsyAlertCount > 0 ||
-            currentSession.inattentiveAlertCount > 0) {
+            currentSession.inattentiveAlertCount > 0 ||
+            currentSession.speedingCount > 0) {
           databaseService.saveSessionDataToFirebase(currentSession);
         }
       }
@@ -1095,30 +1128,29 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   int calcDrivingScore() {
-    if ((currentSession.drowsyAlertCount / currentSession.duration) <=
-            (1 / 600) &&
-        (currentSession.inattentiveAlertCount / currentSession.duration) <=
-            (1 / 600)) {
+    var drowsyFreq = currentSession.drowsyAlertCount / currentSession.duration;
+    var inattentiveFreq =
+        currentSession.inattentiveAlertCount / currentSession.duration;
+    var speedingFreq = currentSession.speedingCount / currentSession.duration;
+    if ((drowsyFreq) <= (1 / 600) &&
+        (inattentiveFreq) <= (1 / 600) &&
+        (speedingFreq) <= (1 / 1200)) {
       return 5;
-    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
-            (3 / 600) &&
-        (currentSession.inattentiveAlertCount / currentSession.duration) <=
-            (3 / 600)) {
+    } else if ((drowsyFreq) <= (3 / 600) &&
+        (inattentiveFreq) <= (3 / 600) &&
+        (speedingFreq) <= (3 / 1200)) {
       return 4;
-    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
-            (5 / 600) &&
-        (currentSession.inattentiveAlertCount / currentSession.duration) <=
-            (5 / 600)) {
+    } else if ((drowsyFreq) <= (5 / 600) &&
+        (inattentiveFreq) <= (5 / 600) &&
+        (speedingFreq) <= (5 / 1200)) {
       return 3;
-    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
-            (7 / 600) &&
-        (currentSession.inattentiveAlertCount / currentSession.duration) <=
-            (7 / 600)) {
+    } else if ((drowsyFreq) <= (7 / 600) &&
+        (inattentiveFreq) <= (7 / 600) &&
+        (speedingFreq) <= (7 / 1200)) {
       return 2;
-    } else if ((currentSession.drowsyAlertCount / currentSession.duration) <=
-            (9 / 600) &&
-        (currentSession.inattentiveAlertCount / currentSession.duration) <=
-            (9 / 600)) {
+    } else if ((drowsyFreq) <= (9 / 600) &&
+        (inattentiveFreq) <= (9 / 600) &&
+        (speedingFreq) <= (9 / 1200)) {
       return 1;
     } else {
       return 0;
