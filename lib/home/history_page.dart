@@ -706,13 +706,20 @@ class SessionsListState extends State<SessionsList> {
               width: 1,
             ),
           ),
-          child: Text("Previous Sessions:",
-              style: Theme.of(context).textTheme.titleMedium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Previous Sessions:",
+                  style: Theme.of(context).textTheme.titleMedium),
+              Text("(Click for more details!)",
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
         ),
         if (widget.sessionsList.isNotEmpty)
           ConstrainedBox(
             constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.5),
+                maxHeight: MediaQuery.of(context).size.height * 0.58),
             child: ListView.builder(
               itemCount: widget.sessionsList.length,
               shrinkWrap: true,
@@ -723,7 +730,10 @@ class SessionsListState extends State<SessionsList> {
                   onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(
                         builder: ((context) => DriveSessionSummary(
-                            session: session, isValidSession: true))));
+                              session: session,
+                              isValidSession: true,
+                              fromHistoryPage: true,
+                            ))));
                   },
                   child: Card(
                     margin: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 16),
@@ -747,7 +757,7 @@ class SessionsListState extends State<SessionsList> {
                                 padding: const EdgeInsetsDirectional.fromSTEB(
                                     0, 0, 0, 2),
                                 child: Text(
-                                  ' min ',
+                                  ' m ',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
@@ -759,13 +769,16 @@ class SessionsListState extends State<SessionsList> {
                                 padding: const EdgeInsetsDirectional.fromSTEB(
                                     0, 0, 0, 2),
                                 child: Text(
-                                  ' seconds ',
+                                  ' s ',
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
                               const Spacer(),
                               Text(
-                                (session.distance / 1000).toStringAsFixed(2),
+                                session.distance >= 0
+                                    ? (session.distance / 1000)
+                                        .toStringAsFixed(2)
+                                    : "N/A",
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               Padding(

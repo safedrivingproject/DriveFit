@@ -5,6 +5,7 @@ import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
@@ -118,7 +119,7 @@ class _DrivePageState extends State<DrivePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 0),
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 8),
                     child: Text(
                       'Weather Conditions',
                       textAlign: TextAlign.start,
@@ -153,14 +154,20 @@ class _DrivePageState extends State<DrivePage> {
                                                 BorderRadius.circular(25),
                                             color: lightColorScheme.outline,
                                           ),
-                                          child: Image.network(
-                                            weatherService
+                                          child: CachedNetworkImage(
+                                            imageUrl: weatherService
                                                 .currentWeatherIconURL,
-                                            fit: BoxFit.contain,
+                                            placeholder: (context, url) =>
+                                                const CircularProgressIndicator(),
+                                            errorWidget:
+                                                (context, url, error) => Icon(
+                                              Icons.error,
+                                              color:
+                                                  lightColorScheme.onSecondary,
+                                            ),
                                             height: 50,
                                             width: 50,
-                                          ),
-                                        )
+                                          ))
                                       : const SizedBox(
                                           height: 50,
                                           width: 50,
@@ -371,6 +378,18 @@ class _DrivePageState extends State<DrivePage> {
   }
 
   Widget getCautionMessage() {
+    if (globals.showDebug) {
+      weatherService.enableSpeedReminders = true;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "[DEBUG] Slow down!",
+            description: "The roads are quite slippery in light rain!",
+          ),
+        ],
+      );
+    }
     if (weatherService.currentWeatherConditionCode == -1 ||
         weatherService.currentWeatherConditionCode == null) {
       weatherService.enableSpeedReminders = false;
@@ -394,7 +413,7 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Slow down in Light Rain!",
+            main: "Slow down!",
             description: "The roads are quite slippery in light rain!",
           ),
         ],
@@ -406,19 +425,19 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Slow down in Heavy Rain!!!",
+            main: "Slow down!!!",
             description: "The roads are very slippery in heavy rain!",
           ),
         ],
       );
     } else if (snowCodes
         .contains(weatherService.currentWeatherConditionCode!.toInt())) {
-      weatherService.enableSpeedReminders = true;
+      weatherService.enableSpeedReminders = false;
       return Column(
         children: [
           CautionMessage(
             context: context,
-            main: "It's snowing!",
+            main: "Be careful!",
             description: "Beware of road conditions when it is snowing!",
           ),
         ],
@@ -430,7 +449,7 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "There's a thunderstorm!",
+            main: "Be careful!",
             description: "Beware of road conditions in a thunderstorm!",
           ),
         ],
@@ -442,8 +461,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Potential Low Visibility!",
-            description: "Be careful when driving in low visilibity!",
+            main: "Be careful!",
+            description: "Slow down when driving in low visilibity!",
           ),
         ],
       );
@@ -454,7 +473,7 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Strong Wind!",
+            main: "Slow down!",
             description: "Be careful when driving in strong wind!",
           ),
         ],
@@ -549,6 +568,7 @@ class CautionMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 0, 0),

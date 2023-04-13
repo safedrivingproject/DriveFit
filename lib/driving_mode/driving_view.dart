@@ -93,6 +93,7 @@ class _DrivingViewState extends State<DrivingView> {
     drowsyAlertTimestampsList: [],
     inattentiveAlertTimestampsList: [],
     speedingCount: 0,
+    speedingTimestampsList: [],
   );
   int restReminderTime = 3600;
   bool isValidSession = false;
@@ -161,6 +162,8 @@ class _DrivingViewState extends State<DrivingView> {
             'inattentiveAlarm', ["assets", "audio/double_beep.mp3"]);
         restReminderTime =
             SharedPreferencesService.getInt('restReminderTime', 3600);
+        geolocationService.speedingVelocityThreshold =
+            SharedPreferencesService.getDouble('speedVelocityThreshold', 18.0);
       });
     }
     initAudioPlayers();
@@ -244,6 +247,7 @@ class _DrivingViewState extends State<DrivingView> {
           drowsyAlertTimestampsList: [],
           inattentiveAlertTimestampsList: [],
           speedingCount: 0,
+          speedingTimestampsList: [],
         );
         currentSession.startTime = saveCurrentTime(noMillis);
       });
@@ -294,7 +298,9 @@ class _DrivingViewState extends State<DrivingView> {
 
     _canProcess = false;
     periodicDetectionTimer?.cancel();
+    periodicDetectionTimer = null;
     periodicCalibrationTimer?.cancel();
+    periodicCalibrationTimer = null;
 
     geolocationService.stopGeolocationStream();
     globals.inCalibrationMode = false;
@@ -367,6 +373,7 @@ class _DrivingViewState extends State<DrivingView> {
     }
     await Future.delayed(const Duration(seconds: 4));
 
+    if (periodicDetectionTimer != null) return;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
       updateDuration();
@@ -393,11 +400,26 @@ class _DrivingViewState extends State<DrivingView> {
       if (widget.enableGeolocation) {
         if (mounted) {
           setState(() {
+            geolocationService.insertLiveSpeedList();
+          });
+        }
+        if (mounted) {
+          setState(() {
             carMoving = geolocationService.checkCarMoving();
           });
         }
+        if (widget.enableSpeedReminders) {
+          if (mounted) {
+            setState(() {
+              speeding = geolocationService.checkSpeeding();
+            });
+          }
+        } else {
+          speeding = false;
+        }
       } else {
         carMoving = true;
+        speeding = false;
       }
 
       if (geolocationService.stationaryAlertsDisabled) {
@@ -408,7 +430,6 @@ class _DrivingViewState extends State<DrivingView> {
                   .checkHeadUpDown(faceDetectionService.rotXDelay);
               faceDetectionService
                   .checkHeadLeftRight(faceDetectionService.rotYDelay);
-              speeding = geolocationService.checkSpeeding();
             });
           }
         }
@@ -421,7 +442,6 @@ class _DrivingViewState extends State<DrivingView> {
             faceDetectionService.checkHeadLeftRight(
                 faceDetectionService.rotYDelay +
                     (!carMoving ? geolocationService.additionalDelay : 0));
-            speeding = geolocationService.checkSpeeding();
           });
         }
       }
@@ -433,17 +453,14 @@ class _DrivingViewState extends State<DrivingView> {
         if (faceDetectionService.reminderCount == 10) {
           sendPassengerReminder();
         }
-        if (mounted) {
-          setState(() {
-            if (faceDetectionService.hasReminded == false) {
-              currentSession.drowsyAlertCount++;
-              currentSession.drowsyAlertTimestampsList
-                  .insert(0, noMillis.format(DateTime.now()));
-              faceDetectionService.hasReminded = true;
-            }
-            faceDetectionService.reminderType = "None";
-          });
+        if (faceDetectionService.hasReminded == false) {
+          currentSession.drowsyAlertCount++;
+          currentSession.drowsyAlertTimestampsList
+              .insert(0, noMillis.format(DateTime.now()));
+          faceDetectionService.hasReminded = true;
         }
+        faceDetectionService.reminderType = "None";
+        if (mounted) setState(() {});
       } else if (faceDetectionService.reminderType == "Inattentive") {
         if (faceDetectionService.reminderCount <= 5) {
           sendDistractedReminder();
@@ -451,24 +468,24 @@ class _DrivingViewState extends State<DrivingView> {
         if (faceDetectionService.reminderCount == 6) {
           sendPassengerReminder();
         }
-        if (mounted) {
-          setState(() {
-            if (faceDetectionService.hasReminded == false) {
-              currentSession.inattentiveAlertCount++;
-              currentSession.inattentiveAlertTimestampsList
-                  .insert(0, noMillis.format(DateTime.now()));
-              faceDetectionService.hasReminded = true;
-            }
-            faceDetectionService.reminderType = "None";
-          });
+        if (faceDetectionService.hasReminded == false) {
+          currentSession.inattentiveAlertCount++;
+          currentSession.inattentiveAlertTimestampsList
+              .insert(0, noMillis.format(DateTime.now()));
+          faceDetectionService.hasReminded = true;
         }
+        faceDetectionService.reminderType = "None";
+        if (mounted) setState(() {});
       }
       if (speeding) {
         if (geolocationService.hasReminded == false) {
           sendSpeedingReminder();
           currentSession.speedingCount++;
+          currentSession.speedingTimestampsList
+              .insert(0, noMillis.format(DateTime.now()));
           geolocationService.hasReminded = true;
         }
+        if (mounted) setState(() {});
       }
       if (mounted) {
         setState(() {
@@ -503,16 +520,16 @@ class _DrivingViewState extends State<DrivingView> {
       }
       if (caliSeconds < 0) {
         if (mounted) {
+          SharedPreferencesService.setBool('hasCalibrated', true);
+          SharedPreferencesService.setDouble(
+              'neutralRotX', faceDetectionService.neutralRotX);
+          SharedPreferencesService.setDouble(
+              'neutralRotY', faceDetectionService.neutralRotY);
+          SharedPreferencesService.setDouble(
+              'rotYLeftOffset', faceDetectionService.rotYLeftOffset);
+          SharedPreferencesService.setDouble(
+              'rotYRightOffset', faceDetectionService.rotYRightOffset);
           setState(() {
-            SharedPreferencesService.setBool('hasCalibrated', true);
-            SharedPreferencesService.setDouble(
-                'neutralRotX', faceDetectionService.neutralRotX);
-            SharedPreferencesService.setDouble(
-                'neutralRotY', faceDetectionService.neutralRotY);
-            SharedPreferencesService.setDouble(
-                'rotYLeftOffset', faceDetectionService.rotYLeftOffset);
-            SharedPreferencesService.setDouble(
-                'rotYRightOffset', faceDetectionService.rotYRightOffset);
             startCalibration = false;
           });
           showSnackBar("Calibration complete!");
@@ -545,16 +562,13 @@ class _DrivingViewState extends State<DrivingView> {
         if (liveRotYList.length > 10) {
           liveRotYList.removeAt(0);
         }
-        if (mounted) {
-          setState(() {
-            faceDetectionService.neutralRotX = average(liveRotXList);
-            faceDetectionService.neutralRotY = average(liveRotYList);
-            globals.neutralAccelX = _rawAccelX;
-            globals.neutralAccelY = _rawAccelY;
-            globals.neutralAccelZ = _rawAccelZ;
-            calcRotYOffsets();
-          });
-        }
+        faceDetectionService.neutralRotX = average(liveRotXList);
+        faceDetectionService.neutralRotY = average(liveRotYList);
+        globals.neutralAccelX = _rawAccelX;
+        globals.neutralAccelY = _rawAccelY;
+        globals.neutralAccelZ = _rawAccelZ;
+        calcRotYOffsets();
+        if (mounted) setState(() {});
       }
     });
   }
@@ -625,18 +639,15 @@ class _DrivingViewState extends State<DrivingView> {
         interval: Sensors.SENSOR_DELAY_GAME,
       );
       _accelSubscription = stream.listen((sensorEvent) {
-        if (mounted) {
-          setState(() {
-            accelData = sensorEvent.data;
-            _rawAccelX = accelData[0];
-            _rawAccelY = accelData[1];
-            _rawAccelZ = accelData[2];
-            accelX = _rawAccelX - globals.neutralAccelX;
-            accelY = _rawAccelY - globals.neutralAccelY;
-            accelZ = _rawAccelZ - globals.neutralAccelZ;
-            globals.resultantAccel = calcResultantAccel();
-          });
-        }
+        accelData = sensorEvent.data;
+        _rawAccelX = accelData[0];
+        _rawAccelY = accelData[1];
+        _rawAccelZ = accelData[2];
+        accelX = _rawAccelX - globals.neutralAccelX;
+        accelY = _rawAccelY - globals.neutralAccelY;
+        accelZ = _rawAccelZ - globals.neutralAccelZ;
+        globals.resultantAccel = calcResultantAccel();
+        if (mounted) setState(() {});
       });
     }
   }
@@ -722,9 +733,7 @@ class _DrivingViewState extends State<DrivingView> {
     }
 
     _isBusy = false;
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   /// *******************************************************
@@ -825,6 +834,10 @@ class _DrivingViewState extends State<DrivingView> {
                             DataValueWidget(
                                 text: "inattentiveAlertCount",
                                 intValue: currentSession.inattentiveAlertCount),
+                            DataValueWidget(
+                              text: "speedingCount",
+                              intValue: currentSession.speedingCount,
+                            ),
                             DataValueWidget(
                                 text: "carMoving", boolValue: carMoving),
                             if (widget.accelerometerOn == true)
@@ -1020,17 +1033,17 @@ class _DrivingViewState extends State<DrivingView> {
                 else if (widget.calibrationMode == false)
                   Stack(
                     children: [
-                      Column(
-                        children: [
-                          const Spacer(),
-                          if (!globals.showDebug)
+                      if (!globals.showDebug)
+                        Column(
+                          children: [
+                            const Spacer(),
                             PageCenterText(
                               showCameraPreview: showCameraPreview,
                               isReminding: isReminding,
                             ),
-                          const Spacer(),
-                        ],
-                      ),
+                            const Spacer(),
+                          ],
+                        ),
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -1073,6 +1086,7 @@ class _DrivingViewState extends State<DrivingView> {
 
   void stopDrivingMode() {
     if (!canExit) return;
+    periodicDetectionTimer?.cancel();
     FlutterForegroundTask.updateService(
       notificationTitle: 'Going to drive?',
       notificationText: 'Tap to start DriveFit!',
@@ -1099,6 +1113,7 @@ class _DrivingViewState extends State<DrivingView> {
         return DriveSessionSummary(
           session: currentSession,
           isValidSession: isValidSession,
+          fromHistoryPage: false,
         );
       },
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -1164,16 +1179,24 @@ class _DrivingViewState extends State<DrivingView> {
         currentSession.duration = DateTime.parse(currentSession.endTime)
             .difference(DateTime.parse(currentSession.startTime))
             .inSeconds;
-        currentSession.distance += geolocationService.accumulatedDistance;
+        if (currentSession.distance > -1) {
+          currentSession.distance += geolocationService.accumulatedDistance;
+        }
         currentSession.score = calcDrivingScore();
         currentSession.drowsyAlertTimestamps =
             currentSession.drowsyAlertTimestampsList.join(", ");
+        currentSession.inattentiveAlertTimestamps =
+            currentSession.inattentiveAlertTimestampsList.join(", ");
       });
     }
   }
 
   bool _validateSession() {
     if (globals.showDebug) return true;
+    if (currentSession.distance == -1) {
+      if (currentSession.duration < 60) return false;
+      return true;
+    }
     if (currentSession.distance < 500 || currentSession.duration < 60) {
       return false;
     }

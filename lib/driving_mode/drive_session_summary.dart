@@ -6,15 +6,20 @@ import 'package:intl/intl.dart';
 import '/service/database_service.dart';
 import '/service/ranking_service.dart';
 import '/home/new_rank_screen.dart';
+import '/global_variables.dart' as globals;
 
 import '/theme/custom_color.g.dart';
 
 class DriveSessionSummary extends StatefulWidget {
   const DriveSessionSummary(
-      {super.key, required this.session, required this.isValidSession});
+      {super.key,
+      required this.session,
+      required this.isValidSession,
+      required this.fromHistoryPage});
 
   final SessionData session;
   final bool isValidSession;
+  final bool fromHistoryPage;
 
   @override
   State<DriveSessionSummary> createState() => _DriveSessionSummaryState();
@@ -22,6 +27,7 @@ class DriveSessionSummary extends StatefulWidget {
 
 class _DriveSessionSummaryState extends State<DriveSessionSummary> {
   final RankingService rankingService = RankingService();
+  final DatabaseService databaseService = DatabaseService();
 
   var opacityTweenSequence = <TweenSequenceItem<double>>[
     TweenSequenceItem<double>(
@@ -48,6 +54,16 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
         widget.session.drowsyAlertTimestamps.split(", ");
     widget.session.inattentiveAlertTimestampsList =
         widget.session.inattentiveAlertTimestamps.split(", ");
+    widget.session.speedingTimestampsList =
+        widget.session.speedingTimestamps.split(", ");
+  }
+
+  void showSnackBar(String text) {
+    var snackBar = SnackBar(
+      content: Text(text),
+      duration: const Duration(seconds: 1),
+    );
+    globals.snackbarKey.currentState?.showSnackBar(snackBar);
   }
 
   @override
@@ -57,9 +73,72 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
 
     return WillPopScope(
       onWillPop: () async {
+        if (widget.fromHistoryPage) {
+          return true;
+        }
         return false;
       },
       child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          leading: widget.fromHistoryPage
+              ? IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                )
+              : null,
+          actions: [
+            if (widget.fromHistoryPage)
+              IconButton(
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text("Are you sure?"),
+                          content: const Text(
+                              "Data of this session can not be recovered."),
+                          actions: [
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                databaseService
+                                    .deleteSessionLocal(widget.session);
+                                if (globals.hasSignedIn) {
+                                  databaseService
+                                      .deleteSessionFirebase(widget.session);
+                                }
+                                if (mounted) setState(() {});
+                                showSnackBar("Data Deleted!");
+                                goToHome();
+                              },
+                              child: const Text("Delete"),
+                            ),
+                          ],
+                        );
+                      });
+                },
+                icon: const Icon(Icons.delete),
+              ),
+          ],
+        ),
         body: Container(
           color: lightColorScheme.surfaceVariant,
           child: Column(
@@ -178,41 +257,34 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                     style:
                                         Theme.of(context).textTheme.titleSmall),
                                 const SizedBox(width: 10),
-                                Expanded(
-                                  child: Wrap(
-                                    crossAxisAlignment: WrapCrossAlignment.end,
+                                RichText(
+                                  text: TextSpan(
                                     children: [
-                                      Text(
-                                        '${Duration(seconds: widget.session.duration).inMinutes}',
+                                      TextSpan(
+                                        text:
+                                            "${Duration(seconds: widget.session.duration).inMinutes}",
                                         style: Theme.of(context)
                                             .textTheme
                                             .displaySmall,
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsetsDirectional
-                                            .fromSTEB(0, 0, 0, 4),
-                                        child: Text(
-                                          ' min ',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge,
-                                        ),
+                                      TextSpan(
+                                        text: " m ",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge,
                                       ),
-                                      Text(
-                                        '${Duration(seconds: widget.session.duration).inSeconds - (Duration(seconds: widget.session.duration).inMinutes * 60)}',
+                                      TextSpan(
+                                        text:
+                                            "${Duration(seconds: widget.session.duration).inSeconds - (Duration(seconds: widget.session.duration).inMinutes * 60)}",
                                         style: Theme.of(context)
                                             .textTheme
                                             .displaySmall,
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsetsDirectional
-                                            .fromSTEB(0, 0, 0, 4),
-                                        child: Text(
-                                          ' seconds ',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge,
-                                        ),
+                                      TextSpan(
+                                        text: " s ",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge,
                                       ),
                                     ],
                                   ),
@@ -226,12 +298,11 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                     style:
                                         Theme.of(context).textTheme.titleSmall),
                                 const SizedBox(width: 10),
-                                Expanded(
-                                  child: Wrap(
-                                    crossAxisAlignment: WrapCrossAlignment.end,
+                                RichText(
+                                  text: TextSpan(
                                     children: [
-                                      Text(
-                                        widget.session.distance >= 0.01
+                                      TextSpan(
+                                        text: widget.session.distance >= 0
                                             ? (widget.session.distance / 1000)
                                                 .toStringAsFixed(2)
                                             : "N/A",
@@ -239,15 +310,13 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                             .textTheme
                                             .displaySmall,
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsetsDirectional
-                                            .fromSTEB(0, 0, 0, 4),
-                                        child: Text(
-                                          ' km ',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge,
-                                        ),
+                                      TextSpan(
+                                        text: widget.session.distance >= 0
+                                            ? " km "
+                                            : "",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge,
                                       ),
                                     ],
                                   ),
@@ -271,23 +340,28 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                           children: [
                             Text("You were found drowsy for: ",
                                 style: Theme.of(context).textTheme.titleSmall),
-                            Row(
-                              children: [
-                                Text(
-                                  '${widget.session.drowsyAlertCount} ',
-                                  style:
-                                      Theme.of(context).textTheme.displaySmall,
-                                ),
-                                Text(
-                                  ' time${widget.session.drowsyAlertCount == 1 ? "" : "s"}',
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ],
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: "${widget.session.drowsyAlertCount} ",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displaySmall,
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        " time${widget.session.drowsyAlertCount == 1 ? "" : "s"}",
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
+                              ),
                             ),
                             if (widget.session.drowsyAlertTimestamps.isNotEmpty)
                               ListView.builder(
                                 padding: const EdgeInsetsDirectional.fromSTEB(
-                                    0, 4, 0, 8),
+                                    8, 4, 0, 8),
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: widget
@@ -318,24 +392,30 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                               ),
                             Text("inattentive for: ",
                                 style: Theme.of(context).textTheme.titleSmall),
-                            Row(
-                              children: [
-                                Text(
-                                  '${widget.session.inattentiveAlertCount} ',
-                                  style:
-                                      Theme.of(context).textTheme.displaySmall,
-                                ),
-                                Text(
-                                  ' time${widget.session.inattentiveAlertCount == 1 ? "" : "s"}',
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ],
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text:
+                                        "${widget.session.inattentiveAlertCount} ",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displaySmall,
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        " time${widget.session.inattentiveAlertCount == 1 ? "" : "s"}",
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
+                              ),
                             ),
                             if (widget
                                 .session.inattentiveAlertTimestamps.isNotEmpty)
                               ListView.builder(
                                 padding: const EdgeInsetsDirectional.fromSTEB(
-                                    0, 4, 0, 8),
+                                    8, 4, 0, 8),
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: widget.session
@@ -366,52 +446,57 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                               ),
                             Text("and speeding for: ",
                                 style: Theme.of(context).textTheme.titleSmall),
-                            Row(
-                              children: [
-                                Text(
-                                  '${widget.session.speedingCount} ',
-                                  style:
-                                      Theme.of(context).textTheme.displaySmall,
-                                ),
-                                Text(
-                                  ' time${widget.session.inattentiveAlertCount == 1 ? "" : "s"}',
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ],
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: "${widget.session.speedingCount} ",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .displaySmall,
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        " time${widget.session.speedingCount == 1 ? "" : "s"}",
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
+                              ),
                             ),
-                            // if (widget
-                            //     .session.inattentiveAlertTimestamps.isNotEmpty)
-                            //   ListView.builder(
-                            //     padding: const EdgeInsetsDirectional.fromSTEB(
-                            //         0, 4, 0, 8),
-                            //     shrinkWrap: true,
-                            //     physics: const NeverScrollableScrollPhysics(),
-                            //     itemCount: widget.session
-                            //         .inattentiveAlertTimestampsList.length,
-                            //     itemBuilder: (context, index) {
-                            //       String inattentiveTimestamp = widget.session
-                            //           .inattentiveAlertTimestampsList[index];
-                            //       if (index == 0) {
-                            //         return Column(
-                            //           crossAxisAlignment:
-                            //               CrossAxisAlignment.start,
-                            //           children: [
-                            //             Text(
-                            //               "Timestamps:",
-                            //               style: Theme.of(context)
-                            //                   .textTheme
-                            //                   .titleSmall,
-                            //             ),
-                            //             Text(formatTime(
-                            //                 onlyHMS, inattentiveTimestamp)),
-                            //           ],
-                            //         );
-                            //       } else {
-                            //         return Text(formatTime(
-                            //             onlyHMS, inattentiveTimestamp));
-                            //       }
-                            //     },
-                            //   ),
+                            const SizedBox(height: 8),
+                            if (widget.session.speedingTimestamps.isNotEmpty)
+                              ListView.builder(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    8, 4, 0, 8),
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: widget
+                                    .session.speedingTimestampsList.length,
+                                itemBuilder: (context, index) {
+                                  String speedingTimestamp = widget
+                                      .session.speedingTimestampsList[index];
+                                  if (index == 0) {
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Timestamps:",
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall,
+                                        ),
+                                        Text(formatTime(
+                                            onlyHMS, speedingTimestamp)),
+                                      ],
+                                    );
+                                  } else {
+                                    return Text(
+                                        formatTime(onlyHMS, speedingTimestamp));
+                                  }
+                                },
+                              ),
                           ],
                         ),
                       ),
@@ -419,6 +504,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                   ],
                 ),
               ),
+              const Spacer(),
               if (widget.isValidSession == false)
                 Container(
                   padding:
@@ -459,7 +545,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                     }
                   },
                   child: Text(
-                    "Return to home page",
+                    "Ok!",
                     style: Theme.of(context)
                         .textTheme
                         .labelLarge
@@ -477,8 +563,6 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
 
   bool checkForNewRank() {
     rankingService.getRank();
-    print(
-        "${rankingService.previousRankIndex}, ${rankingService.currentRankIndex}");
     if (rankingService.currentRankIndex > rankingService.previousRankIndex) {
       return true;
     }
