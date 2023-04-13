@@ -22,6 +22,7 @@ class GeolocationService {
   //
   List<PositionValue> positionList = [];
   List<double> speedList = [];
+  List<double> liveSpeedList = [];
   double currentLatitude = 0.0,
       currentLongitude = 0.0,
       currentSpeed = 0.0,
@@ -41,6 +42,7 @@ class GeolocationService {
     hasPermission = false;
     permissionType = "";
     positionStreamStarted = false;
+    liveSpeedList = [];
     //
     currentLatitude = 0.0;
     currentLongitude = 0.0;
@@ -127,8 +129,7 @@ class GeolocationService {
         print(
             '${position.latitude.toString()}, ${position.longitude.toString()}');
         var calcSpeed = calculateSpeed();
-        updateSpeedList(
-            position.speed < calcSpeed ? position.speed : calcSpeed);
+        updateSpeedList(calcSpeed > 70 ? position.speed : calcSpeed);
         print(calcSpeed);
       }
     });
@@ -170,27 +171,23 @@ class GeolocationService {
     return speedList[0];
   }
 
-  bool checkCarMoving() {
+  void insertLiveSpeedList() {
     currentCalculatedSpeed = getCurrentSpeed();
-    if (currentCalculatedSpeed > carVelocityThreshold) {
-      speedCounter++;
-    } else {
-      speedCounter = 0;
+    liveSpeedList.insert(0, currentCalculatedSpeed);
+    if (liveSpeedList.length > 5 * 10) {
+      liveSpeedList.removeLast();
     }
-    if (speedCounter > 2 * 10) {
+  }
+
+  bool checkCarMoving() {
+    if (liveSpeedList.sum > carVelocityThreshold * 5 * 10) {
       return true;
     }
     return false;
   }
 
   bool checkSpeeding() {
-    currentCalculatedSpeed = getCurrentSpeed();
-    var liveSpeedList = <double>[];
-    liveSpeedList.insert(0, currentCalculatedSpeed);
-    if (liveSpeedList.length > 10 * 10) {
-      liveSpeedList.removeLast();
-    }
-    if (liveSpeedList.sum > 18 * 10 * 10) {
+    if (liveSpeedList.sum > speedingVelocityThreshold * 5 * 10) {
       return true;
     }
     hasReminded = false;

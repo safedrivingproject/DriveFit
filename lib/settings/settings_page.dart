@@ -67,7 +67,7 @@ class _SettingsPageState extends State<SettingsPage> {
         carVelocityThresholdMS =
             SharedPreferencesService.getDouble('carVelocityThreshold', 8.33);
         carVelocityThresholdKMH =
-            (carVelocityThresholdMS! * 3.6).roundToDouble() + 5.0;
+            (carVelocityThresholdMS! * 3.6).roundToDouble();
         drowsyAlarmValue = SharedPreferencesService.getStringList(
             'drowsyAlarm', ["asset", "audio/car_horn_high.mp3"]);
         inattentiveAlarmValue = SharedPreferencesService.getStringList(
@@ -76,6 +76,8 @@ class _SettingsPageState extends State<SettingsPage> {
             SharedPreferencesService.getInt('restReminderTime', 3600);
         speedingVelocityThresholdMS = SharedPreferencesService.getDouble(
             'speedingVelocityThreshold', 18.0);
+        speedingVelocityThresholdKMH =
+            (speedingVelocityThresholdMS! * 3.6).roundToDouble();
       });
     }
   }
@@ -134,7 +136,7 @@ class _SettingsPageState extends State<SettingsPage> {
       } else if (convertSpeed) {
         if (mounted) {
           setState(() {
-            _doubleValue = (double.tryParse(controller.text) ?? 30.0) - 5.0;
+            _doubleValue = (double.tryParse(controller.text) ?? 30.0);
             _speedValue = (_doubleValue / 3.6);
           });
         }
@@ -1012,16 +1014,13 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                if (mounted) {
-                                  setState(() {
-                                    _clearSPData();
-                                    _loadDefaultSettings();
-                                    databaseService.deleteDataLocal();
-                                    if (globals.hasSignedIn) {
-                                      databaseService.deleteDataFirebase();
-                                    }
-                                  });
+                                _clearSPData();
+                                _loadDefaultSettings();
+                                databaseService.deleteAllDataLocal();
+                                if (globals.hasSignedIn) {
+                                  databaseService.deleteAllDataFirebase();
                                 }
+                                if (mounted) setState(() {});
                                 showSnackBar("Data Cleared!");
                                 Navigator.of(context).pop();
                               },

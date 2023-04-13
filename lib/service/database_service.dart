@@ -12,7 +12,7 @@ class DatabaseService {
   factory DatabaseService() => _instance;
 
   static Database? _db;
-  static const _databaseVersion = 4;
+  static const _databaseVersion = 5;
   List<SessionData> sessionsCache = [];
   bool needSessionDataUpdate = true;
   FirebaseDatabase database = FirebaseDatabase.instance;
@@ -51,7 +51,7 @@ class DatabaseService {
 
   void _onCreate(Database db, int version) async {
     await db.execute(
-        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL, drowsy_alert_timestamps TEXT NOT NULL, inattentive_alert_timestamps TEXT NOT NULL, speeding_count INTEGER NOT NULL)");
+        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL, drowsy_alert_timestamps TEXT NOT NULL, inattentive_alert_timestamps TEXT NOT NULL, speeding_count INTEGER NOT NULL, speeding_timestamps TEXT NOT NULL)");
   }
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -68,6 +68,10 @@ class DatabaseService {
     if (oldVersion < 4) {
       await db.execute(
           "ALTER TABLE sessions ADD COLUMN speeding_count INTEGER NOT NULL");
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN speeding_timestamps TEXT NOT NULL");
     }
   }
 
@@ -93,6 +97,7 @@ class DatabaseService {
         session.drowsyAlertTimestampsList.join(", ");
     session.inattentiveAlertTimestamps =
         session.inattentiveAlertTimestampsList.join(", ");
+    session.speedingTimestamps = session.speedingTimestampsList.join(", ");
     DatabaseReference ref =
         FirebaseDatabase.instance.ref("users/$uid/sessions");
     await ref.update({
@@ -107,6 +112,7 @@ class DatabaseService {
       "${session.id}/inattentive_alert_timestamps":
           session.inattentiveAlertTimestamps,
       "${session.id}/speeding_count": session.speedingCount,
+      "${session.id}/speeding_timestamps": session.speedingTimestamps,
     });
   }
 
@@ -174,14 +180,27 @@ class DatabaseService {
     return sessionsCache;
   }
 
-  Future<void> deleteDataLocal() async {
+  Future<void> deleteAllDataLocal() async {
     var dbClient = await db;
     await dbClient?.delete("sessions");
     needSessionDataUpdate = true;
   }
 
-  Future<void> deleteDataFirebase() async {
+  Future<void> deleteSessionLocal(SessionData session) async {
+    var dbClient = await db;
+    await dbClient
+        ?.delete("sessions", where: 'id = ?', whereArgs: [session.id]);
+    needSessionDataUpdate = true;
+  }
+
+  Future<void> deleteAllDataFirebase() async {
     DatabaseReference ref = FirebaseDatabase.instance.ref("users/$uid");
+    await ref.remove();
+  }
+
+  Future<void> deleteSessionFirebase(SessionData session) async {
+    DatabaseReference ref =
+        FirebaseDatabase.instance.ref("users/$uid/sessions/${session.id}");
     await ref.remove();
   }
 }
@@ -197,8 +216,10 @@ class SessionData {
   int score = 0;
   List<String> drowsyAlertTimestampsList = [];
   List<String> inattentiveAlertTimestampsList = [];
+  List<String> speedingTimestampsList = [];
   String drowsyAlertTimestamps = '';
   String inattentiveAlertTimestamps = '';
+  String speedingTimestamps = '';
   int speedingCount = 0;
 
   SessionData({
@@ -213,11 +234,13 @@ class SessionData {
     required this.drowsyAlertTimestampsList,
     required this.inattentiveAlertTimestampsList,
     required this.speedingCount,
+    required this.speedingTimestampsList,
   });
 
   Map<String, dynamic> toMap() {
     drowsyAlertTimestamps = drowsyAlertTimestampsList.join(", ");
     inattentiveAlertTimestamps = inattentiveAlertTimestampsList.join(", ");
+    speedingTimestamps = speedingTimestampsList.join(", ");
     var map = <String, dynamic>{
       'id': id,
       'start_time': startTime,
@@ -230,6 +253,7 @@ class SessionData {
       'drowsy_alert_timestamps': drowsyAlertTimestamps,
       'inattentive_alert_timestamps': inattentiveAlertTimestamps,
       'speeding_count': speedingCount,
+      'speeding_timestamps': speedingTimestamps,
     };
     return map;
   }
@@ -248,10 +272,12 @@ class SessionData {
     drowsyAlertTimestampsList = drowsyAlertTimestamps.split(", ");
     inattentiveAlertTimestampsList = inattentiveAlertTimestamps.split(", ");
     speedingCount = map['speeding_count'];
+    speedingTimestamps = map['speeding_timestamps'];
+    speedingTimestampsList = speedingTimestamps.split(", ");
   }
 
   @override
   String toString() {
-    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, drowsyAlertTimestamps: $drowsyAlertTimestampsList, inattentiveAlertTimestamps: $inattentiveAlertTimestampsList, speedingCount: $speedingCount, score: $score}';
+    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, drowsyAlertTimestamps: $drowsyAlertTimestampsList, inattentiveAlertTimestamps: $inattentiveAlertTimestampsList, speedingCount: $speedingCount, speedingTimestamps: $speedingTimestampsList: $score}';
   }
 }

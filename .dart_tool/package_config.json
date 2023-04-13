@@ -86,6 +86,24 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "cached_network_image",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/cached_network_image-3.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "cached_network_image_platform_interface",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/cached_network_image_platform_interface-2.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
+      "name": "cached_network_image_web",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/cached_network_image_web-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.18"
+    },
+    {
       "name": "camera",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/camera-0.10.3+2",
       "packageUri": "lib/",
@@ -326,6 +344,18 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "flutter_blurhash",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_blurhash-0.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.15"
+    },
+    {
+      "name": "flutter_cache_manager",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_cache_manager-3.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "flutter_foreground_task",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_foreground_task-4.1.0",
       "packageUri": "lib/",
@@ -494,6 +524,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "octo_image",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/octo_image-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "path",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/path-1.8.2",
       "packageUri": "lib/",
@@ -548,6 +584,12 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "pedantic",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/pedantic-1.11.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "percent_indicator",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/percent_indicator-4.2.3",
       "packageUri": "lib/",
@@ -588,6 +630,12 @@
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/quiver-3.2.1",
       "packageUri": "lib/",
       "languageVersion": "2.17"
+    },
+    {
+      "name": "rxdart",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/rxdart-0.27.7",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
     },
     {
       "name": "settings_ui",
@@ -788,7 +836,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-04-12T08:59:54.464233Z",
+  "generated": "2023-04-13T14:03:58.713841Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }
