@@ -1,5 +1,6 @@
-import 'dart:async';
+import 'dart:math';
 
+import 'package:drive_fit/home/tips.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:flutter/material.dart';
@@ -246,7 +247,10 @@ class _DrivePageState extends State<DrivePage> {
                   Padding(
                     padding:
                         const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
-                    child: AutoSizeText(databaseService.drivingTip ?? "",
+                    child: AutoSizeText(
+                        databaseService.drivingTip ??
+                            genericTipsList[
+                                Random().nextInt(genericTipsList.length)],
                         maxLines: 1,
                         textAlign: TextAlign.start,
                         style: Theme.of(context).textTheme.headlineSmall),
@@ -384,7 +388,7 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "[DEBUG] Slow down!",
+            main: "Slow down!",
             description: "The roads are quite slippery in light rain!",
           ),
         ],

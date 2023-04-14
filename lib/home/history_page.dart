@@ -719,7 +719,8 @@ class SessionsListState extends State<SessionsList> {
         if (widget.sessionsList.isNotEmpty)
           ConstrainedBox(
             constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.58),
+                maxHeight: MediaQuery.of(context).size.height * 0.58,
+                minHeight: 0.0),
             child: ListView.builder(
               itemCount: widget.sessionsList.length,
               shrinkWrap: true,
@@ -802,10 +803,28 @@ class SessionsListState extends State<SessionsList> {
                                 '${session.score}',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
-                              Icon(
-                                Icons.star_rounded,
-                                color: sourceXanthous,
-                                size: 24,
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    4, 0, 0, 0),
+                                child: SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.03,
+                                  child: ListView.builder(
+                                    itemCount: session.score,
+                                    shrinkWrap: true,
+                                    scrollDirection: Axis.horizontal,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                      return Icon(
+                                        Icons.star_rounded,
+                                        color: sourceXanthous,
+                                        size: 24,
+                                      );
+                                    },
+                                  ),
+                                ),
                               ),
                             ],
                           ),
