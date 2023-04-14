@@ -23,6 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final _carVelocityController = TextEditingController();
   final _additionalDelayController = TextEditingController();
   final _restReminderController = TextEditingController();
+  final _speedingVelocityController = TextEditingController();
   final _statesController = MaterialStatesController();
   bool? enableGeolocation,
       stationaryAlertsDisabled,
@@ -34,6 +35,8 @@ class _SettingsPageState extends State<SettingsPage> {
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThresholdMS = 8.33, carVelocityThresholdKMH = 30.0;
+  double? speedingVelocityThresholdMS = 16.6,
+      speedingVelocityThresholdKMH = 60.0;
   int? restReminderTime = 3600;
   List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
   List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
@@ -64,13 +67,17 @@ class _SettingsPageState extends State<SettingsPage> {
         carVelocityThresholdMS =
             SharedPreferencesService.getDouble('carVelocityThreshold', 8.33);
         carVelocityThresholdKMH =
-            (carVelocityThresholdMS! * 3.6).roundToDouble() + 5.0;
+            (carVelocityThresholdMS! * 3.6).roundToDouble();
         drowsyAlarmValue = SharedPreferencesService.getStringList(
             'drowsyAlarm', ["asset", "audio/car_horn_high.mp3"]);
         inattentiveAlarmValue = SharedPreferencesService.getStringList(
             'inattentiveAlarm', ["asset", "audio/double_beep.mp3"]);
         restReminderTime =
             SharedPreferencesService.getInt('restReminderTime', 3600);
+        speedingVelocityThresholdMS = SharedPreferencesService.getDouble(
+            'speedingVelocityThreshold', 16.6);
+        speedingVelocityThresholdKMH =
+            (speedingVelocityThresholdMS! * 3.6).roundToDouble();
       });
     }
   }
@@ -97,6 +104,9 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     _restReminderController.addListener(() {
       onFieldChanged(_restReminderController, false, false, true);
+    });
+    _speedingVelocityController.addListener(() {
+      onFieldChanged(_speedingVelocityController, false, true, false);
     });
   }
 
@@ -126,7 +136,7 @@ class _SettingsPageState extends State<SettingsPage> {
       } else if (convertSpeed) {
         if (mounted) {
           setState(() {
-            _doubleValue = (double.tryParse(controller.text) ?? 30.0) - 5.0;
+            _doubleValue = (double.tryParse(controller.text) ?? 30.0);
             _speedValue = (_doubleValue / 3.6);
           });
         }
@@ -148,6 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _carVelocityController.dispose();
     _additionalDelayController.dispose();
     _restReminderController.dispose();
+    _speedingVelocityController.dispose();
     _statesController.dispose();
     super.dispose();
   }
@@ -866,6 +877,93 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                     );
                   }),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Choose Speeding Velocity Threshold",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                          "${(speedingVelocityThresholdKMH!).toStringAsFixed(1)} km/h"),
+                    ],
+                  ),
+                  description: const Text(
+                      "The required speed to trigger speeding reminders in bad weather."),
+                  leading: const Icon(Icons.speed_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _speedingVelocityController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return 'Invalid value.';
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Threshold (in km/h)',
+                                hintText: 'e.g. 65.0'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("Setting unchanged.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    speedingVelocityThresholdMS = _speedValue;
+                                    speedingVelocityThresholdKMH = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'speedingVelocityThreshold',
+                                        _speedValue);
+                                  });
+                                }
+                                showSnackBar("Setting updated.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Save"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
             ],
           ),
           SettingsSection(
@@ -916,13 +1014,13 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                if (mounted) {
-                                  setState(() {
-                                    _clearSPData();
-                                    _loadDefaultSettings();
-                                    databaseService.deleteData();
-                                  });
+                                _clearSPData();
+                                _loadDefaultSettings();
+                                databaseService.deleteAllDataLocal();
+                                if (globals.hasSignedIn) {
+                                  databaseService.deleteAllDataFirebase();
                                 }
+                                if (mounted) setState(() {});
                                 showSnackBar("Data Cleared!");
                                 Navigator.of(context).pop();
                               },

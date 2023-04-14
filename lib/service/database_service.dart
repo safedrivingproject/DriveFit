@@ -4,15 +4,22 @@ import 'package:collection/collection.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService.internal();
   factory DatabaseService() => _instance;
 
   static Database? _db;
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 5;
   List<SessionData> sessionsCache = [];
   bool needSessionDataUpdate = true;
+  FirebaseDatabase database = FirebaseDatabase.instance;
+  String? uid = FirebaseAuth.instance.currentUser?.uid;
+  String? username = FirebaseAuth.instance.currentUser?.displayName;
+
+  String? drivingTip;
 
   Future<Database?> get db async {
     if (_db != null) return _db;
@@ -37,24 +44,76 @@ class DatabaseService {
     return db;
   }
 
+  void updateUserProfile() {
+    uid = FirebaseAuth.instance.currentUser?.uid;
+    username = FirebaseAuth.instance.currentUser?.displayName;
+  }
+
   void _onCreate(Database db, int version) async {
     await db.execute(
-        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL)");
+        "CREATE TABLE sessions(id INTEGER PRIMARY KEY, start_time TEXT NOT NULL, end_time TEXT NOT NULL, duration INTEGER NOT NULL, distance DOUBLE NOT NULL, drowsy_alerts INTEGER NOT NULL, inattentive_alerts INTEGER NOT NULL, score INTEGER NOT NULL, drowsy_alert_timestamps TEXT NOT NULL, inattentive_alert_timestamps TEXT NOT NULL, speeding_count INTEGER NOT NULL, speeding_timestamps TEXT NOT NULL)");
   }
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db
-          .execute("ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL");
+          .execute("ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL DEFAULT 0.0");
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN drowsy_alert_timestamps TEXT NOT NULL DEFAULT ''");
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN inattentive_alert_timestamps TEXT NOT NULL DEFAULT ''");
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN speeding_count INTEGER NOT NULL DEFAULT 0");
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN speeding_timestamps TEXT NOT NULL DEFAULT ''");
     }
   }
 
-  Future<int> saveSessionData(SessionData session) async {
+  Future<int> saveSessionDataToLocal(SessionData session) async {
     var dbClient = await db;
     if (dbClient == null) return 0;
     int id = await dbClient.insert("sessions", session.toMap());
     needSessionDataUpdate = true;
     return id;
+  }
+
+  Future<void> saveUserDataToFirebase() async {
+    DatabaseReference ref = FirebaseDatabase.instance.ref("users");
+    await ref.update({
+      "$uid/name": "$username",
+    });
+  }
+
+  Future<void> saveSessionDataToFirebase(
+    SessionData session,
+  ) async {
+    session.drowsyAlertTimestamps =
+        session.drowsyAlertTimestampsList.join(", ");
+    session.inattentiveAlertTimestamps =
+        session.inattentiveAlertTimestampsList.join(", ");
+    session.speedingTimestamps = session.speedingTimestampsList.join(", ");
+    DatabaseReference ref =
+        FirebaseDatabase.instance.ref("users/$uid/sessions");
+    await ref.update({
+      "${session.id}/start_time": session.startTime,
+      "${session.id}/end_time": session.endTime,
+      "${session.id}/duration": session.duration,
+      "${session.id}/distance": session.distance,
+      "${session.id}/score": session.score,
+      "${session.id}/drowsy_alert_count": session.drowsyAlertCount,
+      "${session.id}/inattentive_alert_count": session.inattentiveAlertCount,
+      "${session.id}/drowsy_alert_timestamps": session.drowsyAlertTimestamps,
+      "${session.id}/inattentive_alert_timestamps":
+          session.inattentiveAlertTimestamps,
+      "${session.id}/speeding_count": session.speedingCount,
+      "${session.id}/speeding_timestamps": session.speedingTimestamps,
+    });
   }
 
   int getRowCount(List<SessionData> sessions) {
@@ -121,10 +180,28 @@ class DatabaseService {
     return sessionsCache;
   }
 
-  Future<void> deleteData() async {
+  Future<void> deleteAllDataLocal() async {
     var dbClient = await db;
     await dbClient?.delete("sessions");
     needSessionDataUpdate = true;
+  }
+
+  Future<void> deleteSessionLocal(SessionData session) async {
+    var dbClient = await db;
+    await dbClient
+        ?.delete("sessions", where: 'id = ?', whereArgs: [session.id]);
+    needSessionDataUpdate = true;
+  }
+
+  Future<void> deleteAllDataFirebase() async {
+    DatabaseReference ref = FirebaseDatabase.instance.ref("users/$uid");
+    await ref.remove();
+  }
+
+  Future<void> deleteSessionFirebase(SessionData session) async {
+    DatabaseReference ref =
+        FirebaseDatabase.instance.ref("users/$uid/sessions/${session.id}");
+    await ref.remove();
   }
 }
 
@@ -137,6 +214,13 @@ class SessionData {
   int drowsyAlertCount = 0;
   int inattentiveAlertCount = 0;
   int score = 0;
+  List<String> drowsyAlertTimestampsList = [];
+  List<String> inattentiveAlertTimestampsList = [];
+  List<String> speedingTimestampsList = [];
+  String drowsyAlertTimestamps = '';
+  String inattentiveAlertTimestamps = '';
+  String speedingTimestamps = '';
+  int speedingCount = 0;
 
   SessionData({
     required this.id,
@@ -147,9 +231,16 @@ class SessionData {
     required this.drowsyAlertCount,
     required this.inattentiveAlertCount,
     required this.score,
+    required this.drowsyAlertTimestampsList,
+    required this.inattentiveAlertTimestampsList,
+    required this.speedingCount,
+    required this.speedingTimestampsList,
   });
 
   Map<String, dynamic> toMap() {
+    drowsyAlertTimestamps = drowsyAlertTimestampsList.join(", ");
+    inattentiveAlertTimestamps = inattentiveAlertTimestampsList.join(", ");
+    speedingTimestamps = speedingTimestampsList.join(", ");
     var map = <String, dynamic>{
       'id': id,
       'start_time': startTime,
@@ -159,6 +250,10 @@ class SessionData {
       'drowsy_alerts': drowsyAlertCount,
       'inattentive_alerts': inattentiveAlertCount,
       'score': score,
+      'drowsy_alert_timestamps': drowsyAlertTimestamps,
+      'inattentive_alert_timestamps': inattentiveAlertTimestamps,
+      'speeding_count': speedingCount,
+      'speeding_timestamps': speedingTimestamps,
     };
     return map;
   }
@@ -172,10 +267,17 @@ class SessionData {
     drowsyAlertCount = map['drowsy_alerts'];
     inattentiveAlertCount = map['inattentive_alerts'];
     score = map['score'];
+    drowsyAlertTimestamps = map['drowsy_alert_timestamps'];
+    inattentiveAlertTimestamps = map['inattentive_alert_timestamps'];
+    drowsyAlertTimestampsList = drowsyAlertTimestamps.split(", ");
+    inattentiveAlertTimestampsList = inattentiveAlertTimestamps.split(", ");
+    speedingCount = map['speeding_count'];
+    speedingTimestamps = map['speeding_timestamps'];
+    speedingTimestampsList = speedingTimestamps.split(", ");
   }
 
   @override
   String toString() {
-    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, score: $score}';
+    return 'Session{id: $id, startTime: $startTime, endTime: $endTime, duration: $duration, distance: $distance, drowsyAlertCount: $drowsyAlertCount, inattentiveAlertCount: $inattentiveAlertCount, drowsyAlertTimestamps: $drowsyAlertTimestampsList, inattentiveAlertTimestamps: $inattentiveAlertTimestampsList, speedingCount: $speedingCount, speedingTimestamps: $speedingTimestampsList: $score}';
   }
 }

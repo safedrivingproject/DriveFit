@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   awesome_notifications
+  desktop_webview_auth
   dynamic_color
   geolocator_windows
 )

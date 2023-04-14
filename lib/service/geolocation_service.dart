@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -21,6 +22,7 @@ class GeolocationService {
   //
   List<PositionValue> positionList = [];
   List<double> speedList = [];
+  List<double> liveSpeedList = [];
   double currentLatitude = 0.0,
       currentLongitude = 0.0,
       currentSpeed = 0.0,
@@ -29,15 +31,17 @@ class GeolocationService {
   DateTime currentTimeStamp = DateTime.now();
   //
   int speedCounter = 0;
-  double carVelocityThreshold = 5.0;
+  double carVelocityThreshold = 8.3;
+  double speedingVelocityThreshold = 16.6;
   //
-  int additionalDelay = 20;
   bool stationaryAlertsDisabled = false;
+  bool hasReminded = false;
 
   GeolocationService._internal() {
     hasPermission = false;
     permissionType = "";
     positionStreamStarted = false;
+    liveSpeedList = [];
     //
     currentLatitude = 0.0;
     currentLongitude = 0.0;
@@ -47,9 +51,9 @@ class GeolocationService {
     accumulatedDistance = 0.0;
     //
     speedCounter = 0;
-    carVelocityThreshold = 5.0;
+    carVelocityThreshold = 8.3;
+    speedingVelocityThreshold = 16.6;
     //
-    additionalDelay = 20;
     _initSettings();
   }
 
@@ -99,21 +103,17 @@ class GeolocationService {
         ));
   }
 
-  Future<void> getCurrentPosition() async {
-    if (!hasPermission) return;
+  Future<Position?> getCurrentPosition() async {
+    if (!hasPermission) return null;
     Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best);
-    updatePositionList(position);
-    var calcSpeed = calculateSpeed();
-    updateSpeedList(position.speed < calcSpeed ? position.speed : calcSpeed);
+    return position;
   }
 
-  Future<void> getLastKnownPosition() async {
-    if (!hasPermission) return;
+  Future<Position?> getLastKnownPosition() async {
+    if (!hasPermission) return null;
     Position? position = await Geolocator.getLastKnownPosition();
-    if (position != null) updatePositionList(position);
-    var calcSpeed = calculateSpeed();
-    updateSpeedList(position?.speed ?? calcSpeed);
+    return position;
   }
 
   void startGeolocationStream() {
@@ -127,8 +127,7 @@ class GeolocationService {
         print(
             '${position.latitude.toString()}, ${position.longitude.toString()}');
         var calcSpeed = calculateSpeed();
-        updateSpeedList(
-            position.speed < calcSpeed ? position.speed : calcSpeed);
+        updateSpeedList(calcSpeed > 25 ? position.speed : calcSpeed);
         print(calcSpeed);
       }
     });
@@ -170,16 +169,26 @@ class GeolocationService {
     return speedList[0];
   }
 
-  bool checkCarMoving() {
+  void insertLiveSpeedList() {
     currentCalculatedSpeed = getCurrentSpeed();
-    if (currentCalculatedSpeed > carVelocityThreshold) {
-      speedCounter++;
-    } else {
-      speedCounter = 0;
+    liveSpeedList.insert(0, currentCalculatedSpeed);
+    if (liveSpeedList.length > 5 * 10) {
+      liveSpeedList.removeLast();
     }
-    if (speedCounter > 20) {
+  }
+
+  bool checkCarMoving() {
+    if (liveSpeedList.sum > carVelocityThreshold * 5 * 10) {
       return true;
     }
+    return false;
+  }
+
+  bool checkSpeeding() {
+    if (liveSpeedList.sum > speedingVelocityThreshold * 5 * 10) {
+      return true;
+    }
+    hasReminded = false;
     return false;
   }
 }

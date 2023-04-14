@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
+import '../driving_mode/drive_session_summary.dart';
 import '/theme/color_schemes.g.dart';
 import '/theme/custom_color.g.dart';
 import '../service/database_service.dart';
@@ -705,105 +706,160 @@ class SessionsListState extends State<SessionsList> {
               width: 1,
             ),
           ),
-          child: Text("Previous Sessions:",
-              style: Theme.of(context).textTheme.titleMedium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Previous Sessions:",
+                  style: Theme.of(context).textTheme.titleMedium),
+              Text("(Click for more details!)",
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
         ),
         if (widget.sessionsList.isNotEmpty)
           ConstrainedBox(
             constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.5),
+                maxHeight: MediaQuery.of(context).size.height * 0.58,
+                minHeight: 0.0),
             child: ListView.builder(
               itemCount: widget.sessionsList.length,
               shrinkWrap: true,
               physics: const BouncingScrollPhysics(),
               itemBuilder: (BuildContext context, int index) {
                 SessionData session = widget.sessionsList[index];
-                return Card(
-                  margin: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${Duration(seconds: session.duration).inMinutes}',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 0, 0, 2),
-                              child: Text(
-                                ' min ',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: ((context) => DriveSessionSummary(
+                              session: session,
+                              isValidSession: true,
+                              fromHistoryPage: true,
+                            ))));
+                  },
+                  child: Card(
+                    margin: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${formatTime(DateFormat.yMMMd(), session.startTime)} ${formatTime(DateFormat.jm(), session.startTime)} - ${formatTime(DateFormat.jm(), session.endTime)}",
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${Duration(seconds: session.duration).inMinutes}',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                            ),
-                            Text(
-                              '${Duration(seconds: session.duration).inSeconds - (Duration(seconds: session.duration).inMinutes * 60)}',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 0, 0, 2),
-                              child: Text(
-                                ' seconds ',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 0, 0, 2),
+                                child: Text(
+                                  ' m ',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                               ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              (session.distance / 1000).toStringAsFixed(2),
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 0, 0, 2),
-                              child: Text(
-                                ' km ',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                              Text(
+                                '${Duration(seconds: session.duration).inSeconds - (Duration(seconds: session.duration).inMinutes * 60)}',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            SessionDetailsModule(
-                              icon: const Icon(Icons.info_outline_rounded),
-                              label: "Drowsy:",
-                              value: session.drowsyAlertCount,
-                              trailing:
-                                  " time${session.drowsyAlertCount == 1 ? "" : "s"}",
-                            ),
-                            const SizedBox(width: 10),
-                            SessionDetailsModule(
-                              icon: const Icon(
-                                  Icons.notifications_paused_outlined),
-                              label: "Inattentive:",
-                              value: session.inattentiveAlertCount,
-                              trailing:
-                                  " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
-                            ),
-                            const SizedBox(width: 10),
-                            SessionDetailsModule(
-                              icon: Icon(
-                                Icons.star_rounded,
-                                color: sourceXanthous,
-                                size: 24,
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 0, 0, 2),
+                                child: Text(
+                                  ' s ',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
                               ),
-                              label: "Score:",
-                              value: session.score,
-                              trailing: "",
-                            ),
-                          ],
-                        ),
-                      ],
+                              const Spacer(),
+                              Text(
+                                session.distance >= 0
+                                    ? (session.distance / 1000)
+                                        .toStringAsFixed(2)
+                                    : "N/A",
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 0, 0, 2),
+                                child: Text(
+                                  ' km ',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Score: ',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Text(
+                                '${session.score}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    4, 0, 0, 0),
+                                child: SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.03,
+                                  child: ListView.builder(
+                                    itemCount: session.score,
+                                    shrinkWrap: true,
+                                    scrollDirection: Axis.horizontal,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                      return Icon(
+                                        Icons.star_rounded,
+                                        color: sourceXanthous,
+                                        size: 24,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              SessionDetailsModule(
+                                icon: const Icon(Icons.info_outline_rounded),
+                                label: "Drowsy:",
+                                value: session.drowsyAlertCount,
+                                trailing:
+                                    " time${session.drowsyAlertCount == 1 ? "" : "s"}",
+                              ),
+                              const SizedBox(width: 5),
+                              SessionDetailsModule(
+                                icon: const Icon(
+                                    Icons.notifications_paused_outlined),
+                                label: "Inattentive:",
+                                value: session.inattentiveAlertCount,
+                                trailing:
+                                    " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
+                              ),
+                              const SizedBox(width: 5),
+                              SessionDetailsModule(
+                                icon: const Icon(Icons.speed),
+                                label: "Speeding: ",
+                                value: session.speedingCount,
+                                trailing:
+                                    " time${session.speedingCount == 1 ? "" : "s"}",
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -847,7 +903,6 @@ class SessionDetailsModule extends StatelessWidget {
     return Row(
       children: [
         icon,
-        const SizedBox(width: 10),
         Column(
           children: [
             Padding(

@@ -1,18 +1,20 @@
-import 'dart:async';
 import 'dart:math';
 
+import 'package:drive_fit/home/tips.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
+import '/service/weather_service.dart';
 import '/service/shared_preferences_service.dart';
 import '/driving_mode/driving_view.dart';
+import 'weather_codes.dart';
 import '../global_variables.dart' as globals;
-import 'tips.dart';
 
 class DrivePage extends StatefulWidget {
   const DrivePage({
@@ -28,18 +30,9 @@ class DrivePage extends StatefulWidget {
 class _DrivePageState extends State<DrivePage> {
   final GeolocationService geolocationService = GeolocationService();
   final DatabaseService databaseService = DatabaseService();
+  final WeatherService weatherService = WeatherService();
   final MaterialStatesController _statesController = MaterialStatesController();
   List<SessionData> driveSessionsList = [];
-
-  int totalAlertCount = 0,
-      totalDrowsyAlertCount = 0,
-      totalInattentiveAlertCount = 0;
-  int latestAlertCount = 0,
-      latestDrowsyAlertCount = 0,
-      latestInattentiveAlertCount = 0;
-  String tipType = "Generic";
-  String drivingTip = "";
-  int tipsIndex = 0;
 
   DateTime currentDate = DateTime.now();
   String expirationDay =
@@ -68,110 +61,13 @@ class _DrivePageState extends State<DrivePage> {
     globals.hasCalibrated =
         SharedPreferencesService.getBool('hasCalibrated', false);
     globals.showDebug = SharedPreferencesService.getBool('showDebug', true);
-    tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
     _statesController.update(MaterialState.disabled, !globals.hasCalibrated);
     canPress = globals.hasCalibrated;
     hasNewSession = databaseService.needSessionDataUpdate;
-    currentDate = DateTime.now();
-    expirationDay = SharedPreferencesService.getString(
-        'expirationDate',
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
-            .toString());
   }
 
   void getSessionData() {
     driveSessionsList = widget.sessionsList;
-    totalDrowsyAlertCount =
-        databaseService.getDrowsyAlertCount(driveSessionsList);
-    totalInattentiveAlertCount =
-        databaseService.getInattentiveAlertCount(driveSessionsList);
-    totalAlertCount = totalDrowsyAlertCount + totalInattentiveAlertCount;
-    if (driveSessionsList.isNotEmpty) {
-      latestDrowsyAlertCount = driveSessionsList[0].drowsyAlertCount;
-      latestInattentiveAlertCount = driveSessionsList[0].inattentiveAlertCount;
-      latestAlertCount = latestDrowsyAlertCount + latestInattentiveAlertCount;
-    }
-  }
-
-  void getTipData() {
-    if (!hasNewSession) {
-      if (currentDate.isBefore(DateTime.parse(expirationDay))) {
-        tipType = getTipType(driveSessionsList);
-        drivingTip = getTip(tipType, tipsIndex);
-        return;
-      }
-    }
-    tipType = getTipType(driveSessionsList);
-    if (tipType == "Drowsy") {
-      tipsIndex = Random().nextInt(drowsyTipsList.length);
-    } else if (tipType == "Inattentive") {
-      tipsIndex = Random().nextInt(inattentiveTipsList.length);
-    } else {
-      tipsIndex = Random().nextInt(genericTipsList.length);
-    }
-    drivingTip = getTip(tipType, tipsIndex);
-    SharedPreferencesService.setInt('tipsIndex', tipsIndex);
-    hasNewSession = false;
-    if (currentDate.isAfter(DateTime.parse(expirationDay)) ||
-        currentDate.isAtSameMomentAs(DateTime.parse(expirationDay))) {
-      expirationDay =
-          DateTime.parse(expirationDay).add(const Duration(days: 1)).toString();
-      SharedPreferencesService.setString('expirationDate', expirationDay);
-    }
-  }
-
-  String getTipType(List<SessionData> session) {
-    if (latestAlertCount > 3) {
-      if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 3) {
-        return "Drowsy";
-      } else if (latestInattentiveAlertCount - latestDrowsyAlertCount > 3) {
-        return "Inattentive";
-      }
-    }
-    return "Generic";
-  }
-
-  String getTip(String tipType, int index) {
-    if (tipType == "Drowsy") {
-      return drowsyTipsList[index];
-    } else if (tipType == "Inattentive") {
-      return inattentiveTipsList[index];
-    }
-    return genericTipsList[index];
-  }
-
-  Future<void> checkPermissions() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-    String permissionType = "";
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      permissionType = "Services";
-      geolocationService.hasPermission = false;
-      showRequestPermissionsDialog(permissionType);
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        permissionType = "Permissions";
-        geolocationService.hasPermission = false;
-        showRequestPermissionsDialog(permissionType);
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      permissionType = "Permissions";
-      geolocationService.hasPermission = false;
-      showRequestPermissionsDialog(permissionType);
-      return;
-    }
-
-    geolocationService.hasPermission = true;
   }
 
   void showRequestPermissionsDialog(String permissionType) {
@@ -188,335 +84,449 @@ class _DrivePageState extends State<DrivePage> {
     if (!_isInitialized) {
       _loadSettings();
       getSessionData();
-      getTipData();
       if (mounted) setState(() {});
     }
     _isInitialized = true;
-    checkPermissions();
   }
 
   Widget _body() {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
 
-    return ListView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            decoration: BoxDecoration(
-              color: lightColorScheme.onPrimary,
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 4,
-                  color: Color(0x33000000),
-                  offset: Offset(0, 2),
-                )
-              ],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 0),
-                  child: Text(
-                    'Road & Weather Conditions',
-                    textAlign: TextAlign.start,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    scrollDirection: Axis.vertical,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  8, 0, 8, 0),
-                              child: Icon(
-                                Icons.cloud_queue,
-                                color: lightColorScheme.onBackground,
-                                size: 28,
-                              ),
-                            ),
-                            Text(
-                              'Slippery roads',
-                              textAlign: TextAlign.start,
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  8, 0, 8, 0),
-                              child: Icon(
-                                Icons.waves,
-                                color: lightColorScheme.onBackground,
-                                size: 28,
-                              ),
-                            ),
-                            Text(
-                              'Strong Wind',
-                              textAlign: TextAlign.start,
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 0, 0),
-                  child: Text(
-                    'Caution',
-                    textAlign: TextAlign.start,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    scrollDirection: Axis.vertical,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  8, 4, 8, 0),
-                              child: Icon(
-                                Icons.speed,
-                                color: lightColorScheme.onBackground,
-                                size: 28,
-                              ),
-                            ),
-                            Text('Slow down',
-                                textAlign: TextAlign.start,
-                                style:
-                                    Theme.of(context).textTheme.headlineSmall),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(8, 8, 8, 0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: AutoSizeText(
-                                'The roads are especially slippery today from the rain.',
-                                textAlign: TextAlign.start,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                maxLines: 2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            decoration: BoxDecoration(
-              color: lightColorScheme.onPrimary,
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 4,
-                  color: Color(0x33000000),
-                  offset: Offset(0, 2),
-                )
-              ],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 0),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Today\'s tip',
-                        textAlign: TextAlign.start,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
-                        child: Icon(
-                          Icons.lightbulb,
-                          color: sourceXanthous,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
-                  child: AutoSizeText(drivingTip,
-                      maxLines: 1,
+    return SizedBox(
+      height: MediaQuery.of(context).size.height -
+          kToolbarHeight -
+          kBottomNavigationBarHeight * 2,
+      width: MediaQuery.of(context).size.width,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 14, 0, 14),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                color: lightColorScheme.onPrimary,
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Color(0x33000000),
+                    offset: Offset(0, 2),
+                  )
+                ],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 8),
+                    child: Text(
+                      'Weather Conditions',
                       textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.headlineSmall),
-                ),
-              ],
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      scrollDirection: Axis.vertical,
+                      physics: const BouncingScrollPhysics(
+                          decelerationRate: ScrollDecelerationRate.fast),
+                      children: [
+                        Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Padding(
+                                  padding: const EdgeInsetsDirectional.fromSTEB(
+                                      0, 0, 8, 0),
+                                  child: (weatherService
+                                          .currentWeatherIconURL.isNotEmpty)
+                                      ? Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(25),
+                                            color: lightColorScheme.outline,
+                                          ),
+                                          child: CachedNetworkImage(
+                                            imageUrl: weatherService
+                                                .currentWeatherIconURL,
+                                            placeholder: (context, url) =>
+                                                const CircularProgressIndicator(),
+                                            errorWidget:
+                                                (context, url, error) => Icon(
+                                              Icons.error,
+                                              color:
+                                                  lightColorScheme.onSecondary,
+                                            ),
+                                            height: 50,
+                                            width: 50,
+                                          ))
+                                      : const SizedBox(
+                                          height: 50,
+                                          width: 50,
+                                        )),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    weatherService.currentWeatherMain ??
+                                        "Oops...",
+                                    textAlign: TextAlign.start,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall,
+                                  ),
+                                  Text(
+                                    weatherService.currentWeatherDescription ??
+                                        "No weather information yet :(",
+                                    textAlign: TextAlign.start,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  getCautionMessage(),
+                ],
+              ),
             ),
           ),
-        ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.04),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 0),
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                color: lightColorScheme.onPrimary,
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 4,
+                    color: Color(0x33000000),
+                    offset: Offset(0, 2),
+                  )
+                ],
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 0),
+                    child: Row(
+                      children: [
+                        Text(
+                          "Today's tip",
+                          textAlign: TextAlign.start,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
+                          child: Icon(
+                            Icons.lightbulb,
+                            color: sourceXanthous,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
+                    child: AutoSizeText(
+                        databaseService.drivingTip ??
+                            genericTipsList[
+                                Random().nextInt(genericTipsList.length)],
+                        maxLines: 1,
+                        textAlign: TextAlign.start,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 0),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                  shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(16.0))),
+                  backgroundColor: globals.hasCalibrated
+                      ? lightColorScheme.surfaceVariant
+                      : lightColorScheme.primary,
+                  minimumSize: const Size.fromHeight(50.0),
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0)),
+              icon: Icon(
+                Icons.architecture,
+                color: globals.hasCalibrated
+                    ? lightColorScheme.primary
+                    : lightColorScheme.background,
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    barrierColor: lightColorScheme.primary,
+                    transitionDuration: const Duration(milliseconds: 1500),
+                    pageBuilder: (BuildContext context,
+                        Animation<double> animation,
+                        Animation<double> secondaryAnimation) {
+                      return const DrivingView(
+                        calibrationMode: true,
+                        enableGeolocation: false,
+                        enableSpeedReminders: false,
+                      );
+                    },
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(
+                        opacity: TweenSequence<double>(opacityTweenSequence)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
+                  ),
+                );
+              },
+              label: Text(
+                "Calibrate",
+                style: globals.hasCalibrated
+                    ? Theme.of(context)
+                        .textTheme
+                        .labelLarge
+                        ?.copyWith(color: lightColorScheme.primary)
+                    : Theme.of(context)
+                        .textTheme
+                        .labelLarge
+                        ?.copyWith(color: lightColorScheme.onPrimary),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 32),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
                 shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                backgroundColor: globals.hasCalibrated
-                    ? lightColorScheme.surfaceVariant
-                    : lightColorScheme.primary,
                 minimumSize: const Size.fromHeight(50.0),
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0)),
-            icon: Icon(
-              Icons.architecture,
-              color: globals.hasCalibrated
-                  ? lightColorScheme.primary
-                  : lightColorScheme.background,
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                PageRouteBuilder(
-                  barrierColor: lightColorScheme.primary,
-                  transitionDuration: const Duration(milliseconds: 1500),
-                  pageBuilder: (BuildContext context,
-                      Animation<double> animation,
-                      Animation<double> secondaryAnimation) {
-                    return const DrivingView(
-                      calibrationMode: true,
-                      enableGeolocation: false,
-                    );
-                  },
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: TweenSequence<double>(opacityTweenSequence)
-                          .animate(animation),
-                      child: child,
-                    );
-                  },
-                ),
-              );
-            },
-            label: Text(
-              "Calibrate",
-              style: globals.hasCalibrated
-                  ? Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: lightColorScheme.primary)
-                  : Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: lightColorScheme.onPrimary),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 32),
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(16.0))),
-              minimumSize: const Size.fromHeight(50.0),
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
-              backgroundColor: globals.hasCalibrated
-                  ? lightColorScheme.primary
-                  : lightColorScheme.surfaceVariant,
-            ),
-            icon: const Icon(
-              Icons.directions_car_outlined,
-            ),
-            statesController: _statesController,
-            onPressed: () {
-              if (!canPress) return;
-              Navigator.of(context).push(
-                PageRouteBuilder(
-                  barrierColor: lightColorScheme.primary,
-                  transitionDuration: const Duration(milliseconds: 1500),
-                  pageBuilder: (BuildContext context,
-                      Animation<double> animation,
-                      Animation<double> secondaryAnimation) {
-                    return DrivingView(
-                      calibrationMode: false,
-                      enableGeolocation:
-                          globals.enableGeolocation ? true : false,
-                    );
-                  },
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                    return FadeTransition(
-                      opacity: TweenSequence<double>(opacityTweenSequence)
-                          .animate(animation),
-                      child: child,
-                    );
-                  },
-                ),
-              );
-            },
-            label: Text(
-              "Start Driving",
-              style: globals.hasCalibrated
-                  ? Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: lightColorScheme.onPrimary)
-                  : Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: lightColorScheme.outline),
-              textAlign: TextAlign.center,
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
+                backgroundColor: globals.hasCalibrated
+                    ? lightColorScheme.primary
+                    : lightColorScheme.surfaceVariant,
+              ),
+              icon: const Icon(
+                Icons.directions_car_outlined,
+              ),
+              statesController: _statesController,
+              onPressed: () {
+                if (!canPress) return;
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    barrierColor: lightColorScheme.primary,
+                    transitionDuration: const Duration(milliseconds: 1500),
+                    pageBuilder: (BuildContext context,
+                        Animation<double> animation,
+                        Animation<double> secondaryAnimation) {
+                      return DrivingView(
+                        calibrationMode: false,
+                        enableGeolocation: globals.enableGeolocation,
+                        enableSpeedReminders:
+                            weatherService.enableSpeedReminders,
+                      );
+                    },
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(
+                        opacity: TweenSequence<double>(opacityTweenSequence)
+                            .animate(animation),
+                        child: child,
+                      );
+                    },
+                  ),
+                );
+              },
+              label: Text(
+                "Start Driving",
+                style: globals.hasCalibrated
+                    ? Theme.of(context)
+                        .textTheme
+                        .labelLarge
+                        ?.copyWith(color: lightColorScheme.onPrimary)
+                    : Theme.of(context)
+                        .textTheme
+                        .labelLarge
+                        ?.copyWith(color: lightColorScheme.outline),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 70),
+        ],
+      ),
     );
+  }
+
+  Widget getCautionMessage() {
+    if (globals.showDebug) {
+      weatherService.enableSpeedReminders = true;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Slow down!",
+            description: "The roads are quite slippery in light rain!",
+          ),
+        ],
+      );
+    }
+    if (weatherService.currentWeatherConditionCode == -1 ||
+        weatherService.currentWeatherConditionCode == null) {
+      weatherService.enableSpeedReminders = false;
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Text(
+              "No weather information available :(",
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+    if (lightRainCodes
+        .contains(weatherService.currentWeatherConditionCode!.toInt())) {
+      weatherService.enableSpeedReminders = true;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Slow down!",
+            description: "The roads are quite slippery in light rain!",
+          ),
+        ],
+      );
+    } else if (heavyRainCodes
+        .contains(weatherService.currentWeatherConditionCode!.toInt())) {
+      weatherService.enableSpeedReminders = true;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Slow down!!!",
+            description: "The roads are very slippery in heavy rain!",
+          ),
+        ],
+      );
+    } else if (snowCodes
+        .contains(weatherService.currentWeatherConditionCode!.toInt())) {
+      weatherService.enableSpeedReminders = false;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Be careful!",
+            description: "Beware of road conditions when it is snowing!",
+          ),
+        ],
+      );
+    } else if (thunderstormCodes
+        .contains(weatherService.currentWeatherConditionCode!.toInt())) {
+      weatherService.enableSpeedReminders = false;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Be careful!",
+            description: "Beware of road conditions in a thunderstorm!",
+          ),
+        ],
+      );
+    } else if (visibilityCodes
+        .contains(weatherService.currentWeatherConditionCode!.toInt())) {
+      weatherService.enableSpeedReminders = false;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Be careful!",
+            description: "Slow down when driving in low visilibity!",
+          ),
+        ],
+      );
+    } else if (windCodes
+        .contains(weatherService.currentWeatherConditionCode!.toInt())) {
+      weatherService.enableSpeedReminders = true;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "Slow down!",
+            description: "Be careful when driving in strong wind!",
+          ),
+        ],
+      );
+    } else {
+      weatherService.enableSpeedReminders = false;
+      return Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 4),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: lightColorScheme.primary,
+                      size: 28,
+                    ),
+                  ),
+                  Text("You're good to go!",
+                      textAlign: TextAlign.start,
+                      style: Theme.of(context).textTheme.headlineSmall),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AutoSizeText(
+                      "Drive Safely!",
+                      textAlign: TextAlign.start,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      maxLines: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -543,6 +553,78 @@ class _DrivePageState extends State<DrivePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class CautionMessage extends StatelessWidget {
+  const CautionMessage({
+    super.key,
+    required this.context,
+    required this.main,
+    required this.description,
+  });
+
+  final BuildContext context;
+  final String main;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 0, 0),
+          child: Text(
+            'Caution',
+            textAlign: TextAlign.start,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.max,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 4),
+                      child: Icon(
+                        Icons.warning_outlined,
+                        color: lightColorScheme.onBackground,
+                        size: 28,
+                      ),
+                    ),
+                    Text(main,
+                        textAlign: TextAlign.start,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AutoSizeText(
+                        description,
+                        textAlign: TextAlign.start,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
