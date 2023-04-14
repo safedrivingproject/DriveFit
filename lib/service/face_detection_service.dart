@@ -31,9 +31,11 @@ class FaceDetectionService {
     eyeCounter = 0;
     rotXCounter = 0;
     rotYCounter = 0;
+    liveFaceList = [];
     //
     rotXDelay = 10;
     rotYDelay = 25;
+    additionalDelay = 20;
     //
     reminderCount = 0;
     reminderType = "None";
@@ -58,8 +60,10 @@ class FaceDetectionService {
   int eyeCounter = 0;
   int rotXCounter = 0;
   int rotYCounter = 0;
+  List<Map<String, double>> liveFaceList = [];
   //
   int rotXDelay = 10, rotYDelay = 25;
+  int additionalDelay = 20;
   //
   int reminderCount = 0;
   String reminderType = "None";
@@ -73,6 +77,9 @@ class FaceDetectionService {
   /// FUNCTIONS
   /// *******************************************
   /// *******************************************
+
+  void insertLiveFaceList() {}
+
   void checkHasFace() {
     if (faces.isEmpty) {
       hasFaceCounter++;
@@ -80,7 +87,7 @@ class FaceDetectionService {
       hasFaceCounter = 0;
       hasFace = true;
     }
-    if (hasFaceCounter > 30) {
+    if (hasFaceCounter > 50) {
       hasFace = false;
     }
   }
@@ -93,11 +100,6 @@ class FaceDetectionService {
       } else {
         eyeCounter = 0;
       }
-      // if (reminderCount >= 4) {
-      //   hasReminded = false;
-      //   reminderType = "None";
-      //   return;
-      // }
       if (eyeCounter > 10) {
         reminderType = "Drowsy";
         isReminding = true;
@@ -113,7 +115,6 @@ class FaceDetectionService {
         leftEyeOpenProb != null &&
         rightEyeOpenProb != null) {
       if (rotX! > (neutralRotX - rotXOffset) &&
-          rotX! < (neutralRotX + rotXOffset) &&
           rotY! > (neutralRotY - rotYRightOffset) &&
           rotY! < (neutralRotY + rotYLeftOffset) &&
           leftEyeOpenProb! > eyeProbThreshold &&
@@ -126,18 +127,12 @@ class FaceDetectionService {
     }
   }
 
-  void checkHeadUpDown(int delay) {
-    if (rotX! < (neutralRotX - rotXOffset) ||
-        rotX! > (neutralRotX + rotXOffset)) {
+  void checkHeadDown(int delay) {
+    if (rotX! < (neutralRotX - rotXOffset)) {
       rotXCounter++;
     } else {
       rotXCounter = 0;
     }
-    // if (reminderCount >= 4) {
-    //   hasReminded = false;
-    //   reminderType = "None";
-    //   return;
-    // }
     if (rotXCounter > delay) {
       reminderType = "Drowsy";
       isReminding = true;
@@ -153,11 +148,6 @@ class FaceDetectionService {
     } else {
       rotYCounter = 0;
     }
-    // if (reminderCount >= 4) {
-    //   hasReminded = false;
-    //   reminderType = "None";
-    //   return;
-    // }
     if (rotYCounter > delay) {
       reminderType = "Inattentive";
       isReminding = true;

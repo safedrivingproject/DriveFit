@@ -334,7 +334,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                               BorderRadius.all(Radius.circular(16.0))),
                       child: Padding(
                         padding:
-                            const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 8),
+                            const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -464,7 +464,6 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 8),
                             if (widget.session.speedingTimestamps.isNotEmpty)
                               ListView.builder(
                                 padding: const EdgeInsetsDirectional.fromSTEB(

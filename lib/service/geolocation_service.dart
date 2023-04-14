@@ -32,9 +32,8 @@ class GeolocationService {
   //
   int speedCounter = 0;
   double carVelocityThreshold = 8.3;
-  double speedingVelocityThreshold = 18.0;
+  double speedingVelocityThreshold = 16.6;
   //
-  int additionalDelay = 20;
   bool stationaryAlertsDisabled = false;
   bool hasReminded = false;
 
@@ -53,9 +52,8 @@ class GeolocationService {
     //
     speedCounter = 0;
     carVelocityThreshold = 8.3;
-    speedingVelocityThreshold = 18.0;
+    speedingVelocityThreshold = 16.6;
     //
-    additionalDelay = 20;
     _initSettings();
   }
 
@@ -129,7 +127,7 @@ class GeolocationService {
         print(
             '${position.latitude.toString()}, ${position.longitude.toString()}');
         var calcSpeed = calculateSpeed();
-        updateSpeedList(calcSpeed > 70 ? position.speed : calcSpeed);
+        updateSpeedList(calcSpeed > 25 ? position.speed : calcSpeed);
         print(calcSpeed);
       }
     });

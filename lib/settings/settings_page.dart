@@ -35,8 +35,8 @@ class _SettingsPageState extends State<SettingsPage> {
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
   double? carVelocityThresholdMS = 8.33, carVelocityThresholdKMH = 30.0;
-  double? speedingVelocityThresholdMS = 18.0,
-      speedingVelocityThresholdKMH = 65.0;
+  double? speedingVelocityThresholdMS = 16.6,
+      speedingVelocityThresholdKMH = 60.0;
   int? restReminderTime = 3600;
   List<String> drowsyAlarmValue = ["asset", "audio/car_horn_high.mp3"];
   List<String> inattentiveAlarmValue = ["asset", "audio/double_beep.mp3"];
@@ -75,7 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
         restReminderTime =
             SharedPreferencesService.getInt('restReminderTime', 3600);
         speedingVelocityThresholdMS = SharedPreferencesService.getDouble(
-            'speedingVelocityThreshold', 18.0);
+            'speedingVelocityThreshold', 16.6);
         speedingVelocityThresholdKMH =
             (speedingVelocityThresholdMS! * 3.6).roundToDouble();
       });

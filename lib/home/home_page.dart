@@ -235,8 +235,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     tipType = getTipType();
     SharedPreferencesService.setString('tipType', tipType);
     generateNewTipIndex();
-    databaseService.drivingTip = getTip(tipType, tipsIndex);
     SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+    databaseService.drivingTip = getTip(tipType, tipsIndex);
     hasNewSession = false;
     if (currentDate.isAfter(DateTime.parse(tipExpirationDay)) ||
         currentDate.isAtSameMomentAs(DateTime.parse(tipExpirationDay))) {
@@ -258,10 +258,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   String getTipType() {
-    if (latestAlertCount > 3) {
-      if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 3) {
+    if (latestAlertCount > 2) {
+      if ((latestDrowsyAlertCount - latestInattentiveAlertCount) > 2) {
         return "Drowsy";
-      } else if (latestInattentiveAlertCount - latestDrowsyAlertCount > 3) {
+      } else if (latestInattentiveAlertCount - latestDrowsyAlertCount > 2) {
         return "Inattentive";
       }
     }

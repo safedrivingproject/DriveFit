@@ -136,7 +136,7 @@ class _DrivingViewState extends State<DrivingView> {
             SharedPreferencesService.getBool('showCameraPreview', false);
         geolocationService.stationaryAlertsDisabled =
             SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
-        geolocationService.additionalDelay =
+        faceDetectionService.additionalDelay =
             SharedPreferencesService.getInt('additionalDelay', 20);
         globals.showDebug =
             SharedPreferencesService.getBool('showDebug', false);
@@ -163,7 +163,7 @@ class _DrivingViewState extends State<DrivingView> {
         restReminderTime =
             SharedPreferencesService.getInt('restReminderTime', 3600);
         geolocationService.speedingVelocityThreshold =
-            SharedPreferencesService.getDouble('speedVelocityThreshold', 18.0);
+            SharedPreferencesService.getDouble('speedVelocityThreshold', 16.6);
       });
     }
     initAudioPlayers();
@@ -382,21 +382,6 @@ class _DrivingViewState extends State<DrivingView> {
         sendRestReminder();
       }
 
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkHasFace();
-        });
-      }
-
-      if (!faceDetectionService.hasFace) return;
-
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkEyesClosed();
-          faceDetectionService.checkNormalPosition();
-        });
-      }
-
       if (widget.enableGeolocation) {
         if (mounted) {
           setState(() {
@@ -422,12 +407,38 @@ class _DrivingViewState extends State<DrivingView> {
         speeding = false;
       }
 
+      if (speeding) {
+        if (geolocationService.hasReminded == false) {
+          sendSpeedingReminder();
+          currentSession.speedingCount++;
+          currentSession.speedingTimestampsList
+              .insert(0, noMillis.format(DateTime.now()));
+          geolocationService.hasReminded = true;
+        }
+        if (mounted) setState(() {});
+      }
+
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkHasFace();
+        });
+      }
+
+      if (!faceDetectionService.hasFace) return;
+
+      if (mounted) {
+        setState(() {
+          faceDetectionService.checkEyesClosed();
+          faceDetectionService.checkNormalPosition();
+        });
+      }
+
       if (geolocationService.stationaryAlertsDisabled) {
         if (carMoving) {
           if (mounted) {
             setState(() {
               faceDetectionService
-                  .checkHeadUpDown(faceDetectionService.rotXDelay);
+                  .checkHeadDown(faceDetectionService.rotXDelay);
               faceDetectionService
                   .checkHeadLeftRight(faceDetectionService.rotYDelay);
             });
@@ -436,12 +447,11 @@ class _DrivingViewState extends State<DrivingView> {
       } else {
         if (mounted) {
           setState(() {
-            faceDetectionService.checkHeadUpDown(
-                faceDetectionService.rotXDelay +
-                    (!carMoving ? geolocationService.additionalDelay : 0));
+            faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay +
+                (!carMoving ? faceDetectionService.additionalDelay : 0));
             faceDetectionService.checkHeadLeftRight(
                 faceDetectionService.rotYDelay +
-                    (!carMoving ? geolocationService.additionalDelay : 0));
+                    (!carMoving ? faceDetectionService.additionalDelay : 0));
           });
         }
       }
@@ -693,30 +703,17 @@ class _DrivingViewState extends State<DrivingView> {
       faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
       Size size = const Size(1.0, 1.0);
-      if (inputImage.inputImageData?.size != null &&
-          inputImage.inputImageData?.imageRotation != null) {
+      InputImageRotation? imageRotation =
+          inputImage.inputImageData?.imageRotation;
+      Size? imageSize = inputImage.inputImageData?.size;
+      if (imageSize != null && imageRotation != null) {
         globals.faceCenterX = calcFaceCenterX(
-            translateX(
-                face.boundingBox.left,
-                inputImage.inputImageData!.imageRotation,
-                size,
-                inputImage.inputImageData!.size),
-            translateX(
-                face.boundingBox.right,
-                inputImage.inputImageData!.imageRotation,
-                size,
-                inputImage.inputImageData!.size));
+            translateX(face.boundingBox.left, imageRotation, size, imageSize),
+            translateX(face.boundingBox.right, imageRotation, size, imageSize));
         globals.faceCenterY = calcFaceCenterY(
+            translateY(face.boundingBox.top, imageRotation, size, imageSize),
             translateY(
-                face.boundingBox.top,
-                inputImage.inputImageData!.imageRotation,
-                size,
-                inputImage.inputImageData!.size),
-            translateY(
-                face.boundingBox.bottom,
-                inputImage.inputImageData!.imageRotation,
-                size,
-                inputImage.inputImageData!.size));
+                face.boundingBox.bottom, imageRotation, size, imageSize));
         final painter = FaceDetectorPainter(
             faceDetectionService.faces,
             inputImage.inputImageData!.size,

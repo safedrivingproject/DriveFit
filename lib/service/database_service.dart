@@ -57,21 +57,21 @@ class DatabaseService {
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db
-          .execute("ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL");
+          .execute("ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL DEFAULT 0.0");
     }
     if (oldVersion < 3) {
       await db.execute(
-          "ALTER TABLE sessions ADD COLUMN drowsy_alert_timestamps TEXT NOT NULL");
+          "ALTER TABLE sessions ADD COLUMN drowsy_alert_timestamps TEXT NOT NULL DEFAULT ''");
       await db.execute(
-          "ALTER TABLE sessions ADD COLUMN inattentive_alert_timestamps TEXT NOT NULL");
+          "ALTER TABLE sessions ADD COLUMN inattentive_alert_timestamps TEXT NOT NULL DEFAULT ''");
     }
     if (oldVersion < 4) {
       await db.execute(
-          "ALTER TABLE sessions ADD COLUMN speeding_count INTEGER NOT NULL");
+          "ALTER TABLE sessions ADD COLUMN speeding_count INTEGER NOT NULL DEFAULT 0");
     }
     if (oldVersion < 5) {
       await db.execute(
-          "ALTER TABLE sessions ADD COLUMN speeding_timestamps TEXT NOT NULL");
+          "ALTER TABLE sessions ADD COLUMN speeding_timestamps TEXT NOT NULL DEFAULT ''");
     }
   }
 

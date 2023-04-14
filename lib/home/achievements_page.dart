@@ -98,25 +98,51 @@ class _AchievementsPageState extends State<AchievementsPage>
       );
     } else if (rankIndex > 0) {
       String previousRankName = rankList[rankIndex - 1]["name"];
-      return Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.05,
-          height: MediaQuery.of(context).size.width * 0.05,
-          clipBehavior: Clip.antiAlias,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+            ),
           ),
-          child: Image(
-            image: AssetImage("./assets/cars/$previousRankName.png"),
-            fit: BoxFit.cover,
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: Image(
+                image: AssetImage("./assets/cars/$previousRankName.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
-    return Padding(
-      padding: const EdgeInsets.all(4.0),
-      child: Container(height: MediaQuery.of(context).size.width * 0.05),
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.width * 0.05,
+            width: MediaQuery.of(context).size.width * 0.05,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.width * 0.05,
+            width: MediaQuery.of(context).size.width * 0.05,
+          ),
+        ),
+      ],
     );
   }
 
@@ -161,25 +187,50 @@ class _AchievementsPageState extends State<AchievementsPage>
       );
     } else if (rankIndex < rankList.length - 1) {
       String followingRankName = rankList[rankIndex + 1]["name"];
-      return Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.05,
-          height: MediaQuery.of(context).size.width * 0.05,
-          clipBehavior: Clip.antiAlias,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
+      return Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+              clipBehavior: Clip.antiAlias,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              child: Image(
+                image: AssetImage("./assets/cars/$followingRankName.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
-          child: Image(
-            image: AssetImage("./assets/cars/$followingRankName.png"),
-            fit: BoxFit.cover,
+          Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.05,
+              height: MediaQuery.of(context).size.width * 0.05,
+            ),
           ),
-        ),
+        ],
       );
     }
-    return Padding(
-      padding: const EdgeInsets.all(4.0),
-      child: Container(height: MediaQuery.of(context).size.width * 0.05),
+    return Row(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.width * 0.05,
+            width: MediaQuery.of(context).size.width * 0.05,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(4.0),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.width * 0.05,
+            width: MediaQuery.of(context).size.width * 0.05,
+          ),
+        ),
+      ],
     );
   }
 

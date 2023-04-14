@@ -5,12 +5,7 @@ import 'package:flutter/material.dart';
 const appName = 'Drive Fit';
 
 double faceCenterX = 0.5, faceCenterY = 0.5;
-double neutralRotX = 5, neutralRotY = -25;
 double neutralAccelX = 0.0, neutralAccelY = 9.8, neutralAccelZ = 0.0;
-double rotXOffset = 15,
-    rotYLeftOffset = 25,
-    rotYRightOffset = 15,
-    eyeProbThreshold = 0.3;
 double resultantAccel = 0;
 
 bool hasCalibrated = false;
@@ -26,5 +21,5 @@ bool inCalibrationMode = false;
 
 bool hasSignedIn = false;
 
-final GlobalKey<ScaffoldMessengerState> snackbarKey =
+GlobalKey<ScaffoldMessengerState> snackbarKey =
     GlobalKey<ScaffoldMessengerState>();
