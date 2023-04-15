@@ -1,3 +1,4 @@
+import '/env.dart';
 import 'package:flutter/material.dart';
 
 import '/global_variables.dart' as globals;
@@ -25,8 +26,7 @@ class WeatherService {
 
   bool enableSpeedReminders = false;
 
-  WeatherFactory weatherFactory =
-      WeatherFactory("***REMOVED***");
+  WeatherFactory weatherFactory = WeatherFactory(Env.owmApiKey);
 
   WeatherService._internal();
 

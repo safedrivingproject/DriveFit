@@ -66,6 +66,7 @@ class _DrivingViewState extends State<DrivingView> {
 
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
+  bool cancelTimer = false;
   bool carMoving = true;
   bool speeding = false;
   bool startCalibration = false;
@@ -265,8 +266,9 @@ class _DrivingViewState extends State<DrivingView> {
 
     _loadSettings();
 
-    periodicCalibrationTimer?.cancel();
-    periodicDetectionTimer?.cancel();
+    cancelTimer = true;
+    periodicCalibrationTimer = null;
+    periodicDetectionTimer = null;
 
     _initSessionData();
 
@@ -297,9 +299,8 @@ class _DrivingViewState extends State<DrivingView> {
     _disableWakeLock();
 
     _canProcess = false;
-    periodicDetectionTimer?.cancel();
+    cancelTimer = true;
     periodicDetectionTimer = null;
-    periodicCalibrationTimer?.cancel();
     periodicCalibrationTimer = null;
 
     geolocationService.stopGeolocationStream();
@@ -376,6 +377,11 @@ class _DrivingViewState extends State<DrivingView> {
     if (periodicDetectionTimer != null) return;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (cancelTimer) {
+        cancelTimer = false;
+        timer.cancel();
+      }
+
       updateDuration();
       if (currentSession.duration > 0 &&
           currentSession.duration % restReminderTime == 0) {
@@ -524,6 +530,10 @@ class _DrivingViewState extends State<DrivingView> {
     }
     periodicCalibrationTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (cancelTimer) {
+        cancelTimer = false;
+        timer.cancel();
+      }
       timeCounter++;
       if (timeCounter % 10 == 0) {
         caliSeconds--;
@@ -1083,7 +1093,8 @@ class _DrivingViewState extends State<DrivingView> {
 
   void stopDrivingMode() {
     if (!canExit) return;
-    periodicDetectionTimer?.cancel();
+    cancelTimer = true;
+    periodicDetectionTimer = null;
     FlutterForegroundTask.updateService(
       notificationTitle: 'Going to drive?',
       notificationText: 'Tap to start DriveFit!',
