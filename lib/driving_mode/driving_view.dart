@@ -67,7 +67,7 @@ class _DrivingViewState extends State<DrivingView> {
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
   bool cancelTimer = false;
-  bool carMoving = true;
+  bool carMoving = false;
   bool speeding = false;
   bool startCalibration = false;
   bool _canProcess = true, _isBusy = false;
@@ -156,7 +156,7 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.rotYDelay =
             SharedPreferencesService.getInt('rotYDelay', 25);
         geolocationService.carVelocityThreshold =
-            SharedPreferencesService.getDouble('carVelocityThreshold', 8.3);
+            SharedPreferencesService.getDouble('carVelocityThreshold', 4.16);
         globals.drowsyAlarmValue = SharedPreferencesService.getStringList(
             'drowsyAlarm', ["assets", "audio/car_horn_high.mp3"]);
         globals.inattentiveAlarmValue = SharedPreferencesService.getStringList(
@@ -266,9 +266,11 @@ class _DrivingViewState extends State<DrivingView> {
 
     _loadSettings();
 
-    cancelTimer = true;
+    periodicCalibrationTimer?.cancel();
     periodicCalibrationTimer = null;
+    periodicDetectionTimer?.cancel();
     periodicDetectionTimer = null;
+    cancelTimer = false;
 
     _initSessionData();
 

@@ -34,7 +34,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool isInvalid = false;
   double? neutralRotX = 5, neutralRotY = -25;
   int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
-  double? carVelocityThresholdMS = 8.33, carVelocityThresholdKMH = 30.0;
+  double? carVelocityThresholdMS = 4.16, carVelocityThresholdKMH = 15.0;
   double? speedingVelocityThresholdMS = 16.6,
       speedingVelocityThresholdKMH = 60.0;
   int? restReminderTime = 3600;
@@ -65,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
         rotXDelay = SharedPreferencesService.getInt('rotXDelay', 10);
         rotYDelay = SharedPreferencesService.getInt('rotYDelay', 25);
         carVelocityThresholdMS =
-            SharedPreferencesService.getDouble('carVelocityThreshold', 8.33);
+            SharedPreferencesService.getDouble('carVelocityThreshold', 4.16);
         carVelocityThresholdKMH =
             (carVelocityThresholdMS! * 3.6).roundToDouble();
         drowsyAlarmValue = SharedPreferencesService.getStringList(

@@ -31,7 +31,7 @@ class GeolocationService {
   DateTime currentTimeStamp = DateTime.now();
   //
   int speedCounter = 0;
-  double carVelocityThreshold = 8.3;
+  double carVelocityThreshold = 4.16;
   double speedingVelocityThreshold = 16.6;
   //
   bool stationaryAlertsDisabled = false;
@@ -51,7 +51,7 @@ class GeolocationService {
     accumulatedDistance = 0.0;
     //
     speedCounter = 0;
-    carVelocityThreshold = 8.3;
+    carVelocityThreshold = 4.16;
     speedingVelocityThreshold = 16.6;
     //
     _initSettings();

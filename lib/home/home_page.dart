@@ -159,11 +159,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'tipExpirationDay',
         DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
             .toString());
-    weatherService.weatherExpirationHour = SharedPreferencesService.getString(
-        'weatherExpirationHour',
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day,
-                DateTime.now().hour)
-            .toString());
+    weatherService.weatherExpirationMinutes =
+        SharedPreferencesService.getString(
+            'weatherExpirationMinutes',
+            DateTime(DateTime.now().year, DateTime.now().month,
+                    DateTime.now().day, DateTime.now().hour)
+                .toString());
     weatherService.currentWeatherConditionCode =
         SharedPreferencesService.getInt('currentWeatherConditionCode', -1);
     weatherService.currentWeatherMain =
@@ -179,7 +180,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (weatherService.currentWeatherConditionCode != null &&
         weatherService.currentWeatherConditionCode != -1) {
       if (currentDate
-          .isBefore(DateTime.parse(weatherService.weatherExpirationHour))) {
+          .isBefore(DateTime.parse(weatherService.weatherExpirationMinutes))) {
         return;
       }
     }
@@ -188,15 +189,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     weatherService.extractWeatherConditionCode();
     weatherService.extractWeatherDescription();
     if (currentDate
-            .isAfter(DateTime.parse(weatherService.weatherExpirationHour)) ||
+            .isAfter(DateTime.parse(weatherService.weatherExpirationMinutes)) ||
         currentDate.isAtSameMomentAs(
-            DateTime.parse(weatherService.weatherExpirationHour))) {
-      weatherService.weatherExpirationHour =
-          DateTime.parse(weatherService.weatherExpirationHour)
-              .add(const Duration(hours: 1))
+            DateTime.parse(weatherService.weatherExpirationMinutes))) {
+      weatherService.weatherExpirationMinutes =
+          DateTime.parse(weatherService.weatherExpirationMinutes)
+              .add(const Duration(minutes: 30))
               .toString();
       SharedPreferencesService.setString(
-          'weatherExpirationHour', weatherService.weatherExpirationHour);
+          'weatherExpirationMinutes', weatherService.weatherExpirationMinutes);
     }
     if (mounted) setState(() {});
   }
