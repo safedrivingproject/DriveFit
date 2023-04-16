@@ -2,6 +2,7 @@ import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import '../service/database_service.dart';
+import '../service/navigation.dart';
 import 'home_page.dart';
 import '/global_variables.dart' as globals;
 
@@ -71,69 +72,118 @@ class LoginPage extends StatelessWidget {
                     padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
                   ),
                   onPressed: () {
-                    Navigator.of(context).push(PageRouteBuilder(
-                        pageBuilder: (BuildContext context,
-                                Animation<double> animation,
-                                Animation<double> secondaryAnimation) =>
-                            SignInScreen(
-                              actions: [
-                                EmailLinkSignInAction((context) {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: ((context) =>
-                                              EmailLinkSignInScreen(
-                                                actions: [
-                                                  AuthStateChangeAction<
-                                                          SignedIn>(
-                                                      (context, state) {
-                                                    databaseService
-                                                        .updateUserProfile();
-                                                    showSnackBar("Signed in!");
-                                                    Navigator.pushReplacement(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                const HomePage()));
-                                                    Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (context) =>
-                                                              profileScreen,
-                                                        ));
-                                                  }),
-                                                ],
-                                              ))));
-                                }),
-                                AuthStateChangeAction<SignedIn>(
-                                    (context, state) {
-                                  databaseService.updateUserProfile();
-                                  showSnackBar("Signed in!");
-                                  Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const HomePage()));
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => profileScreen,
-                                      ));
-                                }),
-                              ],
-                            ),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                .chain(CurveTween(curve: Curves.easeInOutExpo))
-                                .animate(animation),
-                            child: child,
-                          );
-                        },
-                        transitionDuration: const Duration(milliseconds: 500),
-                        reverseTransitionDuration:
-                            const Duration(milliseconds: 500)));
+                    FadeNavigator.push(
+                        context,
+                        SignInScreen(
+                          actions: [
+                            EmailLinkSignInAction((context) {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: ((context) =>
+                                          EmailLinkSignInScreen(
+                                            actions: [
+                                              AuthStateChangeAction<SignedIn>(
+                                                  (context, state) {
+                                                databaseService
+                                                    .updateUserProfile();
+                                                showSnackBar("Signed in!");
+                                                Navigator.pushReplacement(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            const HomePage()));
+                                                Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          profileScreen,
+                                                    ));
+                                              }),
+                                            ],
+                                          ))));
+                            }),
+                            AuthStateChangeAction<SignedIn>((context, state) {
+                              databaseService.updateUserProfile();
+                              showSnackBar("Signed in!");
+                              Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const HomePage()));
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => profileScreen,
+                                  ));
+                            }),
+                          ],
+                        ),
+                        FadeNavigator.opacityTweenSequence,
+                        Colors.transparent,
+                        const Duration(milliseconds: 500));
+                    // Navigator.of(context).push(PageRouteBuilder(
+                    //     pageBuilder: (BuildContext context,
+                    //             Animation<double> animation,
+                    //             Animation<double> secondaryAnimation) =>
+                    //         SignInScreen(
+                    //           actions: [
+                    //             EmailLinkSignInAction((context) {
+                    //               Navigator.push(
+                    //                   context,
+                    //                   MaterialPageRoute(
+                    //                       builder: ((context) =>
+                    //                           EmailLinkSignInScreen(
+                    //                             actions: [
+                    //                               AuthStateChangeAction<
+                    //                                       SignedIn>(
+                    //                                   (context, state) {
+                    //                                 databaseService
+                    //                                     .updateUserProfile();
+                    //                                 showSnackBar("Signed in!");
+                    //                                 Navigator.pushReplacement(
+                    //                                     context,
+                    //                                     MaterialPageRoute(
+                    //                                         builder: (context) =>
+                    //                                             const HomePage()));
+                    //                                 Navigator.push(
+                    //                                     context,
+                    //                                     MaterialPageRoute(
+                    //                                       builder: (context) =>
+                    //                                           profileScreen,
+                    //                                     ));
+                    //                               }),
+                    //                             ],
+                    //                           ))));
+                    //             }),
+                    //             AuthStateChangeAction<SignedIn>(
+                    //                 (context, state) {
+                    //               databaseService.updateUserProfile();
+                    //               showSnackBar("Signed in!");
+                    //               Navigator.pushReplacement(
+                    //                   context,
+                    //                   MaterialPageRoute(
+                    //                       builder: (context) =>
+                    //                           const HomePage()));
+                    //               Navigator.push(
+                    //                   context,
+                    //                   MaterialPageRoute(
+                    //                     builder: (context) => profileScreen,
+                    //                   ));
+                    //             }),
+                    //           ],
+                    //         ),
+                    //     transitionsBuilder:
+                    //         (context, animation, secondaryAnimation, child) {
+                    //       return FadeTransition(
+                    //         opacity: Tween<double>(begin: 0.0, end: 1.0)
+                    //             .chain(CurveTween(curve: Curves.easeInOutExpo))
+                    //             .animate(animation),
+                    //         child: child,
+                    //       );
+                    //     },
+                    //     transitionDuration: const Duration(milliseconds: 500),
+                    //     reverseTransitionDuration:
+                    //         const Duration(milliseconds: 500)));
                   },
                   child: Text(
                     "Go to Sign in",

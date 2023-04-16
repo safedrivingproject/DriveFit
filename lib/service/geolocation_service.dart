@@ -22,7 +22,7 @@ class GeolocationService {
   //
   List<PositionValue> positionList = [];
   List<double> speedList = [];
-  List<double> liveSpeedList = [];
+  List<double> speedDifference = [];
   double currentLatitude = 0.0,
       currentLongitude = 0.0,
       currentSpeed = 0.0,
@@ -41,7 +41,6 @@ class GeolocationService {
     hasPermission = false;
     permissionType = "";
     positionStreamStarted = false;
-    liveSpeedList = [];
     //
     currentLatitude = 0.0;
     currentLongitude = 0.0;
@@ -124,11 +123,8 @@ class GeolocationService {
             .listen((Position? position) {
       if (position != null) {
         updatePositionList(position);
-        print(
-            '${position.latitude.toString()}, ${position.longitude.toString()}');
         var calcSpeed = calculateSpeed();
         updateSpeedList(calcSpeed > 25 ? position.speed : calcSpeed);
-        print(calcSpeed);
       }
     });
     positionStreamStarted = true;
@@ -161,6 +157,11 @@ class GeolocationService {
   }
 
   void updateSpeedList(double speed) {
+    if (speedList.isNotEmpty) {
+      speedDifference.insert(0, speed - speedList[0]);
+    } else {
+      speedDifference.insert(0, 0.0);
+    }
     speedList.insert(0, speed);
   }
 
@@ -169,27 +170,28 @@ class GeolocationService {
     return speedList[0];
   }
 
-  void insertLiveSpeedList() {
-    currentCalculatedSpeed = getCurrentSpeed();
-    liveSpeedList.insert(0, currentCalculatedSpeed);
-    if (liveSpeedList.length > 5 * 10) {
-      liveSpeedList.removeLast();
-    }
-  }
-
   bool checkCarMoving() {
-    if (liveSpeedList.sum > carVelocityThreshold * 5 * 10) {
+    if (speedDifference.length > 2) {
+      if (speedDifference.take(3).sum < -1 * 3) {
+        return false;
+      }
+    }
+    if (speedList.take(5).sum > carVelocityThreshold * 5) {
       return true;
     }
     return false;
   }
 
   bool checkSpeeding() {
-    if (liveSpeedList.sum > speedingVelocityThreshold * 5 * 10) {
+    if (speedList.take(10).sum > speedingVelocityThreshold * 10) {
       return true;
     }
     hasReminded = false;
     return false;
+  }
+
+  void debugAddSpeed() {
+    speedList.insert(0, 20);
   }
 }
 

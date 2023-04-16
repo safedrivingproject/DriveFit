@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:file_picker/file_picker.dart';
 
+import '../service/navigation.dart';
 import '/home/home_page.dart';
 import '../service/database_service.dart';
 import '../service/shared_preferences_service.dart';
@@ -26,6 +27,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final _speedingVelocityController = TextEditingController();
   final _statesController = MaterialStatesController();
   bool? enableGeolocation,
+      globalSpeedingReminders,
       stationaryAlertsDisabled,
       showCameraPreview,
       useHighCameraResolution,
@@ -33,7 +35,7 @@ class _SettingsPageState extends State<SettingsPage> {
       hasCalibrated;
   bool isInvalid = false;
   double? neutralRotX = 5, neutralRotY = -25;
-  int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
+  int? rotXDelay = 15, rotYDelay = 25, additionalDelay = 50;
   double? carVelocityThresholdMS = 4.16, carVelocityThresholdKMH = 15.0;
   double? speedingVelocityThresholdMS = 16.6,
       speedingVelocityThresholdKMH = 60.0;
@@ -49,10 +51,12 @@ class _SettingsPageState extends State<SettingsPage> {
       setState(() {
         enableGeolocation =
             SharedPreferencesService.getBool('enableGeolocation', true);
+        globalSpeedingReminders =
+            SharedPreferencesService.getBool('globalSpeedingReminders', false);
         stationaryAlertsDisabled =
             SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
         additionalDelay =
-            SharedPreferencesService.getInt('additionalDelay', 20);
+            SharedPreferencesService.getInt('additionalDelay', 50);
         showCameraPreview =
             SharedPreferencesService.getBool('showCameraPreview', false);
         useHighCameraResolution =
@@ -62,7 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
             SharedPreferencesService.getBool('hasCalibrated', false);
         neutralRotX = SharedPreferencesService.getDouble('neutralRotX', 5.0);
         neutralRotY = SharedPreferencesService.getDouble('neutralRotY', -25.0);
-        rotXDelay = SharedPreferencesService.getInt('rotXDelay', 10);
+        rotXDelay = SharedPreferencesService.getInt('rotXDelay', 15);
         rotYDelay = SharedPreferencesService.getInt('rotYDelay', 25);
         carVelocityThresholdMS =
             SharedPreferencesService.getDouble('carVelocityThreshold', 4.16);
@@ -175,23 +179,29 @@ class _SettingsPageState extends State<SettingsPage> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                Navigator.of(context).pushReplacement(PageRouteBuilder(
-                    pageBuilder: (BuildContext context,
-                            Animation<double> animation,
-                            Animation<double> secondaryAnimation) =>
-                        const HomePage(title: globals.appName, index: 0),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: Tween<double>(begin: 0.0, end: 1.0)
-                            .chain(CurveTween(curve: Curves.easeInOutExpo))
-                            .animate(animation),
-                        child: child,
-                      );
-                    },
-                    transitionDuration: const Duration(milliseconds: 500),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 500)));
+                FadeNavigator.pushReplacement(
+                    context,
+                    const HomePage(index: 0),
+                    FadeNavigator.opacityTweenSequence,
+                    Colors.transparent,
+                    const Duration(milliseconds: 500));
+                // Navigator.of(context).pushReplacement(PageRouteBuilder(
+                //     pageBuilder: (BuildContext context,
+                //             Animation<double> animation,
+                //             Animation<double> secondaryAnimation) =>
+                //         const HomePage(title: globals.appName, index: 0),
+                //     transitionsBuilder:
+                //         (context, animation, secondaryAnimation, child) {
+                //       return FadeTransition(
+                //         opacity: Tween<double>(begin: 0.0, end: 1.0)
+                //             .chain(CurveTween(curve: Curves.easeInOutExpo))
+                //             .animate(animation),
+                //         child: child,
+                //       );
+                //     },
+                //     transitionDuration: const Duration(milliseconds: 500),
+                //     reverseTransitionDuration:
+                //         const Duration(milliseconds: 500)));
               },
             )),
         body: SettingsList(sections: [
@@ -309,6 +319,110 @@ class _SettingsPageState extends State<SettingsPage> {
                                     additionalDelay = _intValue;
                                     SharedPreferencesService.setInt(
                                         'additionalDelay', _intValue);
+                                  });
+                                }
+                                showSnackBar("Setting updated.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Save"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
+              SettingsTile.switchTile(
+                enabled: enableGeolocation == true,
+                title: const Text("Always enable speeding alerts"),
+                description: const Text(
+                    "You would get reminded for high speed no matter the weather (not recommended.)"),
+                leading: const Icon(Icons.notification_important_outlined),
+                initialValue: globalSpeedingReminders,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      globalSpeedingReminders = value;
+                      SharedPreferencesService.setBool(
+                          'globalSpeedingReminders', value);
+                    });
+                  }
+                },
+              ),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          "Choose Speeding Velocity Threshold",
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                          "${(speedingVelocityThresholdKMH!).toStringAsFixed(1)} km/h"),
+                    ],
+                  ),
+                  description: const Text(
+                      "The required speed to trigger speeding reminders in bad weather."),
+                  leading: const Icon(Icons.speed_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Edit value'),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _speedingVelocityController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return 'Invalid value.';
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Threshold (in km/h)',
+                                hintText: 'e.g. 65.0'),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("Setting unchanged.");
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("Cancel"),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("Invalid value.");
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    speedingVelocityThresholdMS = _speedValue;
+                                    speedingVelocityThresholdKMH = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'speedingVelocityThreshold',
+                                        _speedValue);
                                   });
                                 }
                                 showSnackBar("Setting updated.");
@@ -865,93 +979,6 @@ class _SettingsPageState extends State<SettingsPage> {
                                     restReminderTime = _intValue;
                                     SharedPreferencesService.setInt(
                                         'restReminderTime', _intValue);
-                                  });
-                                }
-                                showSnackBar("Setting updated.");
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text("Save"),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  }),
-              SettingsTile.navigation(
-                  title: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          "Choose Speeding Velocity Threshold",
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                          "${(speedingVelocityThresholdKMH!).toStringAsFixed(1)} km/h"),
-                    ],
-                  ),
-                  description: const Text(
-                      "The required speed to trigger speeding reminders in bad weather."),
-                  leading: const Icon(Icons.speed_outlined),
-                  onPressed: (context) async {
-                    showDialog(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: const Text('Edit value'),
-                          content: TextFormField(
-                            autofocus: true,
-                            autovalidateMode: AutovalidateMode.always,
-                            controller: _speedingVelocityController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                signed: false, decimal: true),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                  RegExp(r"[0-9.]"))
-                            ],
-                            validator: (String? value) {
-                              if (value == null ||
-                                  RegExp(r'^\d*(?:\.\d*){2,}$')
-                                      .hasMatch(value)) {
-                                return 'Invalid value.';
-                              } else {
-                                return null;
-                              }
-                            },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Threshold (in km/h)',
-                                hintText: 'e.g. 65.0'),
-                          ),
-                          actions: <Widget>[
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                  textStyle:
-                                      Theme.of(context).textTheme.labelLarge),
-                              onPressed: () {
-                                showSnackBar("Setting unchanged.");
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text("Cancel"),
-                            ),
-                            FilledButton(
-                              style: TextButton.styleFrom(
-                                  textStyle:
-                                      Theme.of(context).textTheme.labelLarge),
-                              statesController: _statesController,
-                              onPressed: () {
-                                if (isInvalid) {
-                                  showSnackBar("Invalid value.");
-                                  Navigator.of(context).pop();
-                                  return;
-                                }
-                                if (mounted) {
-                                  setState(() {
-                                    speedingVelocityThresholdMS = _speedValue;
-                                    speedingVelocityThresholdKMH = _doubleValue;
-                                    SharedPreferencesService.setDouble(
-                                        'speedingVelocityThreshold',
-                                        _speedValue);
                                   });
                                 }
                                 showSnackBar("Setting updated.");

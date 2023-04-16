@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:wakelock/wakelock.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
+import '../service/navigation.dart';
 import '/theme/color_schemes.g.dart';
 import 'camera_view.dart';
 import '../notifications/notification_controller.dart';
@@ -108,17 +109,6 @@ class _DrivingViewState extends State<DrivingView> {
   String text = "Stop service";
 
   bool isReminding = false;
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 50.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 50.0,
-    ),
-  ];
 
   /// *******************************************************
   /// *******************************************************
@@ -138,7 +128,7 @@ class _DrivingViewState extends State<DrivingView> {
         geolocationService.stationaryAlertsDisabled =
             SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
         faceDetectionService.additionalDelay =
-            SharedPreferencesService.getInt('additionalDelay', 20);
+            SharedPreferencesService.getInt('additionalDelay', 50);
         globals.showDebug =
             SharedPreferencesService.getBool('showDebug', false);
         globals.hasCalibrated =
@@ -152,7 +142,7 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.rotYRightOffset =
             SharedPreferencesService.getDouble('rotYRightOffset', 10.0);
         faceDetectionService.rotXDelay =
-            SharedPreferencesService.getInt('rotXDelay', 10);
+            SharedPreferencesService.getInt('rotXDelay', 15);
         faceDetectionService.rotYDelay =
             SharedPreferencesService.getInt('rotYDelay', 25);
         geolocationService.carVelocityThreshold =
@@ -266,6 +256,7 @@ class _DrivingViewState extends State<DrivingView> {
 
     _loadSettings();
 
+    cancelTimer = true;
     periodicCalibrationTimer?.cancel();
     periodicCalibrationTimer = null;
     periodicDetectionTimer?.cancel();
@@ -302,8 +293,10 @@ class _DrivingViewState extends State<DrivingView> {
 
     _canProcess = false;
     cancelTimer = true;
-    periodicDetectionTimer = null;
+    periodicCalibrationTimer?.cancel();
     periodicCalibrationTimer = null;
+    periodicDetectionTimer?.cancel();
+    periodicDetectionTimer = null;
 
     geolocationService.stopGeolocationStream();
     globals.inCalibrationMode = false;
@@ -391,22 +384,10 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       if (widget.enableGeolocation) {
-        if (mounted) {
-          setState(() {
-            geolocationService.insertLiveSpeedList();
-          });
-        }
-        if (mounted) {
-          setState(() {
-            carMoving = geolocationService.checkCarMoving();
-          });
-        }
+        carMoving = geolocationService.checkCarMoving();
+
         if (widget.enableSpeedReminders) {
-          if (mounted) {
-            setState(() {
-              speeding = geolocationService.checkSpeeding();
-            });
-          }
+          speeding = geolocationService.checkSpeeding();
         } else {
           speeding = false;
         }
@@ -426,42 +407,24 @@ class _DrivingViewState extends State<DrivingView> {
         if (mounted) setState(() {});
       }
 
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkHasFace();
-        });
-      }
+      faceDetectionService.checkHasFace();
 
       if (!faceDetectionService.hasFace) return;
 
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkEyesClosed();
-          faceDetectionService.checkNormalPosition();
-        });
-      }
+      faceDetectionService.checkEyesClosed();
+      faceDetectionService.checkNormalPosition();
 
       if (geolocationService.stationaryAlertsDisabled) {
         if (carMoving) {
-          if (mounted) {
-            setState(() {
-              faceDetectionService
-                  .checkHeadDown(faceDetectionService.rotXDelay);
-              faceDetectionService
-                  .checkHeadLeftRight(faceDetectionService.rotYDelay);
-            });
-          }
+          faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay);
+          faceDetectionService
+              .checkHeadLeftRight(faceDetectionService.rotYDelay);
         }
       } else {
-        if (mounted) {
-          setState(() {
-            faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay +
-                (!carMoving ? faceDetectionService.additionalDelay : 0));
-            faceDetectionService.checkHeadLeftRight(
-                faceDetectionService.rotYDelay +
-                    (!carMoving ? faceDetectionService.additionalDelay : 0));
-          });
-        }
+        faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay +
+            (!carMoving ? faceDetectionService.additionalDelay : 0));
+        faceDetectionService.checkHeadLeftRight(faceDetectionService.rotYDelay +
+            (!carMoving ? faceDetectionService.additionalDelay : 0));
       }
 
       if (faceDetectionService.reminderType == "Drowsy") {
@@ -478,7 +441,6 @@ class _DrivingViewState extends State<DrivingView> {
           faceDetectionService.hasReminded = true;
         }
         faceDetectionService.reminderType = "None";
-        if (mounted) setState(() {});
       } else if (faceDetectionService.reminderType == "Inattentive") {
         if (faceDetectionService.reminderCount <= 5) {
           sendDistractedReminder();
@@ -493,23 +455,10 @@ class _DrivingViewState extends State<DrivingView> {
           faceDetectionService.hasReminded = true;
         }
         faceDetectionService.reminderType = "None";
-        if (mounted) setState(() {});
       }
-      if (speeding) {
-        if (geolocationService.hasReminded == false) {
-          sendSpeedingReminder();
-          currentSession.speedingCount++;
-          currentSession.speedingTimestampsList
-              .insert(0, noMillis.format(DateTime.now()));
-          geolocationService.hasReminded = true;
-        }
-        if (mounted) setState(() {});
-      }
-      if (mounted) {
-        setState(() {
-          isReminding = faceDetectionService.isReminding;
-        });
-      }
+
+      isReminding = faceDetectionService.isReminding;
+      if (mounted) setState(() {});
     });
   }
 
@@ -555,24 +504,30 @@ class _DrivingViewState extends State<DrivingView> {
             startCalibration = false;
           });
           showSnackBar("Calibration complete!");
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              barrierColor: lightColorScheme.primary,
-              transitionDuration: const Duration(milliseconds: 1500),
-              pageBuilder: (BuildContext context, Animation<double> animation,
-                  Animation<double> secondaryAnimation) {
-                return const HomePage(index: 0);
-              },
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: TweenSequence<double>(opacityTweenSequence)
-                      .animate(animation),
-                  child: child,
-                );
-              },
-            ),
-          );
+          FadeNavigator.pushReplacement(
+              context,
+              const HomePage(index: 0),
+              FadeNavigator.opacityTweenSequence,
+              lightColorScheme.primary,
+              const Duration(milliseconds: 1500));
+          // Navigator.of(context).pushReplacement(
+          //   PageRouteBuilder(
+          //     barrierColor: lightColorScheme.primary,
+          //     transitionDuration: const Duration(milliseconds: 1500),
+          //     pageBuilder: (BuildContext context, Animation<double> animation,
+          //         Animation<double> secondaryAnimation) {
+          //       return const HomePage(index: 0);
+          //     },
+          //     transitionsBuilder:
+          //         (context, animation, secondaryAnimation, child) {
+          //       return FadeTransition(
+          //         opacity: TweenSequence<double>(opacityTweenSequence)
+          //             .animate(animation),
+          //         child: child,
+          //       );
+          //     },
+          //   ),
+          // );
           timer.cancel();
         }
       } else {
@@ -932,7 +887,7 @@ class _DrivingViewState extends State<DrivingView> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 20),
+                                  const SizedBox(width: 10),
                                   if (geolocationService.speedList.isNotEmpty)
                                     Expanded(
                                       child: SizedBox(
@@ -943,6 +898,49 @@ class _DrivingViewState extends State<DrivingView> {
                                           itemBuilder: (context, index) {
                                             final speedItem = geolocationService
                                                 .speedList[index];
+                                            return Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 4.0),
+                                              color: lightColorScheme.secondary,
+                                              alignment: Alignment.center,
+                                              child: Center(
+                                                child: SizedBox(
+                                                  child: Wrap(
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        speedItem.toString(),
+                                                        style: const TextStyle(
+                                                            color:
+                                                                Colors.white),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          shrinkWrap: true,
+                                          physics:
+                                              const AlwaysScrollableScrollPhysics(),
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 10),
+                                  if (geolocationService
+                                      .speedDifference.isNotEmpty)
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 150,
+                                        child: ListView.builder(
+                                          itemCount: geolocationService
+                                              .speedDifference.length,
+                                          itemBuilder: (context, index) {
+                                            final speedItem = geolocationService
+                                                .speedDifference[index];
                                             return Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -991,6 +989,27 @@ class _DrivingViewState extends State<DrivingView> {
                                   ),
                                 ),
                               ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                backgroundColor: lightColorScheme.primary,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: () {
+                                geolocationService.debugAddSpeed();
+                              },
+                              child: Text(
+                                "Add speed (debug)",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                        color: lightColorScheme.onPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1115,25 +1134,36 @@ class _DrivingViewState extends State<DrivingView> {
       }
     }
     if (mounted) setState(() {});
-    Navigator.of(context).pushReplacement(PageRouteBuilder(
-      barrierColor: lightColorScheme.primary,
-      transitionDuration: const Duration(seconds: 1),
-      pageBuilder: (BuildContext context, Animation<double> animation,
-          Animation<double> secondaryAnimation) {
-        return DriveSessionSummary(
+    FadeNavigator.pushReplacement(
+        context,
+        DriveSessionSummary(
           session: currentSession,
           isValidSession: isValidSession,
           fromHistoryPage: false,
-        );
-      },
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity:
-              TweenSequence<double>(opacityTweenSequence).animate(animation),
-          child: child,
-        );
-      },
-    ));
+          sessionIndex: 0,
+        ),
+        FadeNavigator.opacityTweenSequence,
+        lightColorScheme.primary,
+        const Duration(milliseconds: 1500));
+    // Navigator.of(context).pushReplacement(PageRouteBuilder(
+    //   barrierColor: lightColorScheme.primary,
+    //   transitionDuration: const Duration(seconds: 1),
+    //   pageBuilder: (BuildContext context, Animation<double> animation,
+    //       Animation<double> secondaryAnimation) {
+    //     return DriveSessionSummary(
+    //       session: currentSession,
+    //       isValidSession: isValidSession,
+    //       fromHistoryPage: false,
+    //     );
+    //   },
+    //   transitionsBuilder: (context, animation, secondaryAnimation, child) {
+    //     return FadeTransition(
+    //       opacity:
+    //           TweenSequence<double>(opacityTweenSequence).animate(animation),
+    //       child: child,
+    //     );
+    //   },
+    // ));
   }
 
   /// *******************************************************

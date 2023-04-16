@@ -28,6 +28,18 @@ class RankingService {
     SharedPreferencesService.setInt('driveScore', driveScore);
   }
 
+  void removeSessionScore(int score, int sessionListIndex) {
+    driveScore -= score;
+    SharedPreferencesService.setInt('driveScore', driveScore);
+    if (score == 5) {
+      if (sessionListIndex < scoreStreak) {
+        scoreStreak -= 1;
+      }
+    }
+    if (scoreStreak < 0) scoreStreak = 0;
+    SharedPreferencesService.setInt('scoreStreak', scoreStreak);
+  }
+
   void updateScoreStreak(int score) {
     if (score != 5) {
       scoreStreak = 0;

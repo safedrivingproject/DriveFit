@@ -7,6 +7,7 @@ import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../service/navigation.dart';
 import '/service/shared_preferences_service.dart';
 import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
@@ -64,20 +65,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     vsync: this,
   );
 
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 80.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 20.0,
-    ),
-  ];
-
   @override
   void initState() {
+    
     super.initState();
     initHomePage();
   }
@@ -383,23 +373,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   icon: const Icon(Icons.settings),
                   color: lightColorScheme.background,
                   onPressed: () {
-                    Navigator.of(context).push(PageRouteBuilder(
-                        pageBuilder: (BuildContext context,
-                                Animation<double> animation,
-                                Animation<double> secondaryAnimation) =>
-                            const SettingsPage(title: "Settings"),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                .chain(CurveTween(curve: Curves.easeInOutExpo))
-                                .animate(animation),
-                            child: child,
-                          );
-                        },
-                        transitionDuration: const Duration(milliseconds: 500),
-                        reverseTransitionDuration:
-                            const Duration(milliseconds: 500)));
+                    FadeNavigator.push(
+                        context,
+                        const SettingsPage(title: "Settings"),
+                        FadeNavigator.opacityTweenSequence,
+                        Colors.transparent,
+                        const Duration(milliseconds: 500));
+                    // Navigator.of(context).push(PageRouteBuilder(
+                    //     pageBuilder: (BuildContext context,
+                    //             Animation<double> animation,
+                    //             Animation<double> secondaryAnimation) =>
+                    //         const SettingsPage(title: "Settings"),
+                    //     transitionsBuilder:
+                    //         (context, animation, secondaryAnimation, child) {
+                    //       return FadeTransition(
+                    //         opacity: Tween<double>(begin: 0.0, end: 1.0)
+                    //             .chain(CurveTween(curve: Curves.easeInOutExpo))
+                    //             .animate(animation),
+                    //         child: child,
+                    //       );
+                    //     },
+                    //     transitionDuration: const Duration(milliseconds: 500),
+                    //     reverseTransitionDuration:
+                    //         const Duration(milliseconds: 500)));
                   },
                 ),
                 actions: [
@@ -408,70 +404,104 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     color: lightColorScheme.background,
                     onPressed: () {
                       if (globals.hasSignedIn) {
-                        Navigator.of(context).push(PageRouteBuilder(
-                            pageBuilder: (BuildContext context,
-                                    Animation<double> animation,
-                                    Animation<double> secondaryAnimation) =>
-                                ProfileScreen(
-                                  appBar: AppBar(
-                                    title: Text(
-                                      "Your Profile",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge,
-                                    ),
-                                    centerTitle: true,
-                                  ),
-                                  actions: [
-                                    SignedOutAction((context) {
-                                      globals.hasSignedIn = false;
-                                      databaseService.updateUserProfile();
-                                      showSnackBar("Signed out!");
-                                      Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const HomePage()));
-                                    })
-                                  ],
-                                  actionCodeSettings: ActionCodeSettings(
-                                      url:
-                                          "https://drivefituser.page.link/home"),
+                        FadeNavigator.push(
+                            context,
+                            ProfileScreen(
+                              appBar: AppBar(
+                                title: Text(
+                                  "Your Profile",
+                                  style: Theme.of(context).textTheme.titleLarge,
                                 ),
-                            transitionsBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                    .chain(
-                                        CurveTween(curve: Curves.easeInOutExpo))
-                                    .animate(animation),
-                                child: child,
-                              );
-                            },
-                            transitionDuration:
-                                const Duration(milliseconds: 500),
-                            reverseTransitionDuration:
-                                const Duration(milliseconds: 500)));
+                                centerTitle: true,
+                              ),
+                              actions: [
+                                SignedOutAction((context) {
+                                  globals.hasSignedIn = false;
+                                  databaseService.updateUserProfile();
+                                  showSnackBar("Signed out!");
+                                  Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const HomePage()));
+                                })
+                              ],
+                              actionCodeSettings: ActionCodeSettings(
+                                  url: "https://drivefituser.page.link/home"),
+                            ),
+                            FadeNavigator.opacityTweenSequence,
+                            Colors.transparent,
+                            const Duration(milliseconds: 500));
+                        // Navigator.of(context).push(PageRouteBuilder(
+                        //     pageBuilder: (BuildContext context,
+                        //             Animation<double> animation,
+                        //             Animation<double> secondaryAnimation) =>
+                        //         ProfileScreen(
+                        //           appBar: AppBar(
+                        //             title: Text(
+                        //               "Your Profile",
+                        //               style: Theme.of(context)
+                        //                   .textTheme
+                        //                   .titleLarge,
+                        //             ),
+                        //             centerTitle: true,
+                        //           ),
+                        //           actions: [
+                        //             SignedOutAction((context) {
+                        //               globals.hasSignedIn = false;
+                        //               databaseService.updateUserProfile();
+                        //               showSnackBar("Signed out!");
+                        //               Navigator.pushReplacement(
+                        //                   context,
+                        //                   MaterialPageRoute(
+                        //                       builder: (context) =>
+                        //                           const HomePage()));
+                        //             })
+                        //           ],
+                        //           actionCodeSettings: ActionCodeSettings(
+                        //               url:
+                        //                   "https://drivefituser.page.link/home"),
+                        //         ),
+                        //     transitionsBuilder: (context, animation,
+                        //         secondaryAnimation, child) {
+                        //       return FadeTransition(
+                        //         opacity: Tween<double>(begin: 0.0, end: 1.0)
+                        //             .chain(
+                        //                 CurveTween(curve: Curves.easeInOutExpo))
+                        //             .animate(animation),
+                        //         child: child,
+                        //       );
+                        //     },
+                        //     transitionDuration:
+                        //         const Duration(milliseconds: 500),
+                        //     reverseTransitionDuration:
+                        //         const Duration(milliseconds: 500)));
                       } else {
-                        Navigator.of(context).push(PageRouteBuilder(
-                            pageBuilder: (BuildContext context,
-                                    Animation<double> animation,
-                                    Animation<double> secondaryAnimation) =>
-                                LoginPage(),
-                            transitionsBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                    .chain(
-                                        CurveTween(curve: Curves.easeInOutExpo))
-                                    .animate(animation),
-                                child: child,
-                              );
-                            },
-                            transitionDuration:
-                                const Duration(milliseconds: 500),
-                            reverseTransitionDuration:
-                                const Duration(milliseconds: 500)));
+                        FadeNavigator.push(
+                            context,
+                            LoginPage(),
+                            FadeNavigator.opacityTweenSequence,
+                            Colors.transparent,
+                            const Duration(milliseconds: 500));
+                        // Navigator.of(context).push(PageRouteBuilder(
+                        //     pageBuilder: (BuildContext context,
+                        //             Animation<double> animation,
+                        //             Animation<double> secondaryAnimation) =>
+                        //         LoginPage(),
+                        //     transitionsBuilder: (context, animation,
+                        //         secondaryAnimation, child) {
+                        //       return FadeTransition(
+                        //         opacity: Tween<double>(begin: 0.0, end: 1.0)
+                        //             .chain(
+                        //                 CurveTween(curve: Curves.easeInOutExpo))
+                        //             .animate(animation),
+                        //         child: child,
+                        //       );
+                        //     },
+                        //     transitionDuration:
+                        //         const Duration(milliseconds: 500),
+                        //     reverseTransitionDuration:
+                        //         const Duration(milliseconds: 500)));
                       }
                     },
                   ),

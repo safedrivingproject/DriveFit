@@ -7,6 +7,7 @@ import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
+import '../service/navigation.dart';
 import '/service/rank_list.dart';
 
 import '/theme/custom_color.g.dart';
@@ -32,18 +33,6 @@ class _NewRankScreenState extends State<NewRankScreen>
     vsync: this,
   );
   late Animation<double> animation;
-
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 50.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 50.0,
-    ),
-  ];
 
   final Animatable<double> levelUpTweenSequence =
       TweenSequence<double>(<TweenSequenceItem<double>>[
@@ -201,23 +190,29 @@ class _NewRankScreenState extends State<NewRankScreen>
                       minimumSize: const Size.fromHeight(50),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pushReplacement(PageRouteBuilder(
-                        barrierColor: lightColorScheme.primary,
-                        transitionDuration: const Duration(seconds: 1),
-                        pageBuilder: (BuildContext context,
-                            Animation<double> animation,
-                            Animation<double> secondaryAnimation) {
-                          return const HomePage(index: 2);
-                        },
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: TweenSequence<double>(opacityTweenSequence)
-                                .animate(animation),
-                            child: child,
-                          );
-                        },
-                      ));
+                      FadeNavigator.pushReplacement(
+                          context,
+                          const HomePage(index: 2),
+                          FadeNavigator.opacityTweenSequence,
+                          lightColorScheme.primary,
+                          const Duration(milliseconds: 1500));
+                      // Navigator.of(context).pushReplacement(PageRouteBuilder(
+                      //   barrierColor: lightColorScheme.primary,
+                      //   transitionDuration: const Duration(seconds: 1),
+                      //   pageBuilder: (BuildContext context,
+                      //       Animation<double> animation,
+                      //       Animation<double> secondaryAnimation) {
+                      //     return const HomePage(index: 2);
+                      //   },
+                      //   transitionsBuilder:
+                      //       (context, animation, secondaryAnimation, child) {
+                      //     return FadeTransition(
+                      //       opacity: TweenSequence<double>(opacityTweenSequence)
+                      //           .animate(animation),
+                      //       child: child,
+                      //     );
+                      //   },
+                      // ));
                     },
                     child: Text(
                       "Yay!",

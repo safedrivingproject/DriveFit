@@ -1,4 +1,5 @@
 import 'package:drive_fit/home/home_page.dart';
+import 'package:drive_fit/service/navigation.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,11 +16,13 @@ class DriveSessionSummary extends StatefulWidget {
       {super.key,
       required this.session,
       required this.isValidSession,
-      required this.fromHistoryPage});
+      required this.fromHistoryPage,
+      required this.sessionIndex});
 
   final SessionData session;
   final bool isValidSession;
   final bool fromHistoryPage;
+  final int sessionIndex;
 
   @override
   State<DriveSessionSummary> createState() => _DriveSessionSummaryState();
@@ -28,18 +31,6 @@ class DriveSessionSummary extends StatefulWidget {
 class _DriveSessionSummaryState extends State<DriveSessionSummary> {
   final RankingService rankingService = RankingService();
   final DatabaseService databaseService = DatabaseService();
-
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 50.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 50.0,
-    ),
-  ];
 
   DateFormat onlyHMS = DateFormat("HH:mm:ss");
 
@@ -125,6 +116,8 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                   databaseService
                                       .deleteSessionFirebase(widget.session);
                                 }
+                                rankingService.removeSessionScore(
+                                    widget.session.score, widget.sessionIndex);
                                 if (mounted) setState(() {});
                                 showSnackBar("Data Deleted!");
                                 goToHome();
@@ -333,8 +326,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                           borderRadius:
                               BorderRadius.all(Radius.circular(16.0))),
                       child: Padding(
-                        padding:
-                            const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -569,40 +561,52 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
   }
 
   void goToHome() {
-    Navigator.of(context).pushReplacement(PageRouteBuilder(
-      barrierColor: lightColorScheme.primary,
-      transitionDuration: const Duration(seconds: 1),
-      pageBuilder: (BuildContext context, Animation<double> animation,
-          Animation<double> secondaryAnimation) {
-        return const HomePage(index: 1);
-      },
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity:
-              TweenSequence<double>(opacityTweenSequence).animate(animation),
-          child: child,
-        );
-      },
-    ));
+    FadeNavigator.pushReplacement(
+        context,
+        const HomePage(index: 1),
+        FadeNavigator.opacityTweenSequence,
+        lightColorScheme.primary,
+        const Duration(milliseconds: 500));
+    // Navigator.of(context).pushReplacement(PageRouteBuilder(
+    //   barrierColor: lightColorScheme.primary,
+    //   transitionDuration: const Duration(seconds: 1),
+    //   pageBuilder: (BuildContext context, Animation<double> animation,
+    //       Animation<double> secondaryAnimation) {
+    //     return const HomePage(index: 1);
+    //   },
+    //   transitionsBuilder: (context, animation, secondaryAnimation, child) {
+    //     return FadeTransition(
+    //       opacity:
+    //           TweenSequence<double>(opacityTweenSequence).animate(animation),
+    //       child: child,
+    //     );
+    //   },
+    // ));
   }
 
   void goToNewRankPage() {
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        barrierColor: lightColorScheme.primary,
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (BuildContext context, Animation<double> animation,
-            Animation<double> secondaryAnimation) {
-          return NewRankScreen(rankIndex: rankingService.currentRankIndex);
-        },
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity:
-                TweenSequence<double>(opacityTweenSequence).animate(animation),
-            child: child,
-          );
-        },
-      ),
-    );
+    FadeNavigator.pushReplacement(
+        context,
+        NewRankScreen(rankIndex: rankingService.currentRankIndex),
+        FadeNavigator.opacityTweenSequence,
+        lightColorScheme.primary,
+        const Duration(milliseconds: 500));
+    // Navigator.of(context).pushReplacement(
+    //   PageRouteBuilder(
+    //     barrierColor: lightColorScheme.primary,
+    //     transitionDuration: const Duration(milliseconds: 500),
+    //     pageBuilder: (BuildContext context, Animation<double> animation,
+    //         Animation<double> secondaryAnimation) {
+    //       return NewRankScreen(rankIndex: rankingService.currentRankIndex);
+    //     },
+    //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
+    //       return FadeTransition(
+    //         opacity:
+    //             TweenSequence<double>(opacityTweenSequence).animate(animation),
+    //         child: child,
+    //       );
+    //     },
+    //   ),
+    // );
   }
 }

@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../service/navigation.dart';
 import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
 import '/service/weather_service.dart';
@@ -43,21 +44,11 @@ class _DrivePageState extends State<DrivePage> {
   bool hasNewSession = false;
   bool _isInitialized = false;
 
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 80.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 20.0,
-    ),
-  ];
-
   void _loadSettings() {
     globals.enableGeolocation =
         SharedPreferencesService.getBool('enableGeolocation', true);
+    globals.globalSpeedReminders =
+        SharedPreferencesService.getBool('globalSpeedReminders', false);
     globals.hasCalibrated =
         SharedPreferencesService.getBool('hasCalibrated', false);
     globals.showDebug = SharedPreferencesService.getBool('showDebug', true);
@@ -278,29 +269,16 @@ class _DrivePageState extends State<DrivePage> {
                     : lightColorScheme.background,
               ),
               onPressed: () {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    barrierColor: lightColorScheme.primary,
-                    transitionDuration: const Duration(milliseconds: 1500),
-                    pageBuilder: (BuildContext context,
-                        Animation<double> animation,
-                        Animation<double> secondaryAnimation) {
-                      return const DrivingView(
-                        calibrationMode: true,
-                        enableGeolocation: false,
-                        enableSpeedReminders: false,
-                      );
-                    },
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: TweenSequence<double>(opacityTweenSequence)
-                            .animate(animation),
-                        child: child,
-                      );
-                    },
-                  ),
-                );
+                FadeNavigator.push(
+                    context,
+                    const DrivingView(
+                      calibrationMode: true,
+                      enableGeolocation: false,
+                      enableSpeedReminders: false,
+                    ),
+                    FadeNavigator.opacityTweenSequence,
+                    lightColorScheme.primary,
+                    const Duration(milliseconds: 1500));
               },
               label: Text(
                 "Calibrate",
@@ -335,30 +313,16 @@ class _DrivePageState extends State<DrivePage> {
               statesController: _statesController,
               onPressed: () {
                 if (!canPress) return;
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    barrierColor: lightColorScheme.primary,
-                    transitionDuration: const Duration(milliseconds: 1500),
-                    pageBuilder: (BuildContext context,
-                        Animation<double> animation,
-                        Animation<double> secondaryAnimation) {
-                      return DrivingView(
-                        calibrationMode: false,
-                        enableGeolocation: globals.enableGeolocation,
-                        enableSpeedReminders:
-                            weatherService.enableSpeedReminders,
-                      );
-                    },
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: TweenSequence<double>(opacityTweenSequence)
-                            .animate(animation),
-                        child: child,
-                      );
-                    },
-                  ),
-                );
+                FadeNavigator.push(
+                    context,
+                    DrivingView(
+                      calibrationMode: false,
+                      enableGeolocation: globals.enableGeolocation,
+                      enableSpeedReminders: globals.globalSpeedReminders ? true : weatherService.enableSpeedReminders,
+                    ),
+                    FadeNavigator.opacityTweenSequence,
+                    lightColorScheme.primary,
+                    const Duration(milliseconds: 1500));
               },
               label: Text(
                 "Start Driving",

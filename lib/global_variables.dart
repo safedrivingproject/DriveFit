@@ -11,6 +11,7 @@ double resultantAccel = 0;
 bool hasCalibrated = false;
 bool useAccelerometer = false;
 bool enableGeolocation = true;
+bool globalSpeedReminders = false;
 bool showDebug = false;
 bool showCameraPreview = false;
 bool useHighCameraResolution = false;

@@ -734,6 +734,7 @@ class SessionsListState extends State<SessionsList> {
                               session: session,
                               isValidSession: true,
                               fromHistoryPage: true,
+                              sessionIndex: index,
                             ))));
                   },
                   child: Card(

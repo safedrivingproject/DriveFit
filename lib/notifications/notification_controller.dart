@@ -23,7 +23,7 @@ class NotificationController {
               defaultColor: lightColorScheme.primary,
               ledColor: Colors.red),
         ],
-        debug: true);
+        debug: false);
 
     // Get initial notification action is optional
     initialAction = await AwesomeNotifications()
