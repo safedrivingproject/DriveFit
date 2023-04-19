@@ -346,14 +346,14 @@ class _DrivePageState extends State<DrivePage> {
   }
 
   Widget getCautionMessage() {
-    if (globals.showDebug) {
+    if (globals.globalSpeedReminders) {
       weatherService.enableSpeedReminders = true;
       return Column(
         children: [
           CautionMessage(
             context: context,
             main: "Slow down!",
-            description: "The roads are quite slippery in light rain!",
+            description: "'Always enable speeding reminders' is on.",
           ),
         ],
       );

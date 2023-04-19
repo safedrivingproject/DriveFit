@@ -67,7 +67,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void initState() {
-    
     super.initState();
     initHomePage();
   }
@@ -379,23 +378,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         FadeNavigator.opacityTweenSequence,
                         Colors.transparent,
                         const Duration(milliseconds: 500));
-                    // Navigator.of(context).push(PageRouteBuilder(
-                    //     pageBuilder: (BuildContext context,
-                    //             Animation<double> animation,
-                    //             Animation<double> secondaryAnimation) =>
-                    //         const SettingsPage(title: "Settings"),
-                    //     transitionsBuilder:
-                    //         (context, animation, secondaryAnimation, child) {
-                    //       return FadeTransition(
-                    //         opacity: Tween<double>(begin: 0.0, end: 1.0)
-                    //             .chain(CurveTween(curve: Curves.easeInOutExpo))
-                    //             .animate(animation),
-                    //         child: child,
-                    //       );
-                    //     },
-                    //     transitionDuration: const Duration(milliseconds: 500),
-                    //     reverseTransitionDuration:
-                    //         const Duration(milliseconds: 500)));
                   },
                 ),
                 actions: [
@@ -432,50 +414,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             FadeNavigator.opacityTweenSequence,
                             Colors.transparent,
                             const Duration(milliseconds: 500));
-                        // Navigator.of(context).push(PageRouteBuilder(
-                        //     pageBuilder: (BuildContext context,
-                        //             Animation<double> animation,
-                        //             Animation<double> secondaryAnimation) =>
-                        //         ProfileScreen(
-                        //           appBar: AppBar(
-                        //             title: Text(
-                        //               "Your Profile",
-                        //               style: Theme.of(context)
-                        //                   .textTheme
-                        //                   .titleLarge,
-                        //             ),
-                        //             centerTitle: true,
-                        //           ),
-                        //           actions: [
-                        //             SignedOutAction((context) {
-                        //               globals.hasSignedIn = false;
-                        //               databaseService.updateUserProfile();
-                        //               showSnackBar("Signed out!");
-                        //               Navigator.pushReplacement(
-                        //                   context,
-                        //                   MaterialPageRoute(
-                        //                       builder: (context) =>
-                        //                           const HomePage()));
-                        //             })
-                        //           ],
-                        //           actionCodeSettings: ActionCodeSettings(
-                        //               url:
-                        //                   "https://drivefituser.page.link/home"),
-                        //         ),
-                        //     transitionsBuilder: (context, animation,
-                        //         secondaryAnimation, child) {
-                        //       return FadeTransition(
-                        //         opacity: Tween<double>(begin: 0.0, end: 1.0)
-                        //             .chain(
-                        //                 CurveTween(curve: Curves.easeInOutExpo))
-                        //             .animate(animation),
-                        //         child: child,
-                        //       );
-                        //     },
-                        //     transitionDuration:
-                        //         const Duration(milliseconds: 500),
-                        //     reverseTransitionDuration:
-                        //         const Duration(milliseconds: 500)));
                       } else {
                         FadeNavigator.push(
                             context,
@@ -483,25 +421,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             FadeNavigator.opacityTweenSequence,
                             Colors.transparent,
                             const Duration(milliseconds: 500));
-                        // Navigator.of(context).push(PageRouteBuilder(
-                        //     pageBuilder: (BuildContext context,
-                        //             Animation<double> animation,
-                        //             Animation<double> secondaryAnimation) =>
-                        //         LoginPage(),
-                        //     transitionsBuilder: (context, animation,
-                        //         secondaryAnimation, child) {
-                        //       return FadeTransition(
-                        //         opacity: Tween<double>(begin: 0.0, end: 1.0)
-                        //             .chain(
-                        //                 CurveTween(curve: Curves.easeInOutExpo))
-                        //             .animate(animation),
-                        //         child: child,
-                        //       );
-                        //     },
-                        //     transitionDuration:
-                        //         const Duration(milliseconds: 500),
-                        //     reverseTransitionDuration:
-                        //         const Duration(milliseconds: 500)));
                       }
                     },
                   ),

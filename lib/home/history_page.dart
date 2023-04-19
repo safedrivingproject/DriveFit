@@ -102,26 +102,31 @@ class _HistoryPageState extends State<HistoryPage> {
                     Padding(
                       padding:
                           const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
-                      child: Text('safe trips',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                  color: lightColorScheme.inverseSurface)),
+                      child: Text(
+                        'safe trips',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: lightColorScheme.inverseSurface),
+                        maxLines: 1,
+                      ),
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 10),
                     Text(totalAlerts.toString(),
                         style: Theme.of(context).textTheme.displayLarge),
                     Expanded(
                       child: Padding(
                         padding:
                             const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
-                        child: Text('reminders',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                    color: lightColorScheme.inverseSurface)),
+                        child: Text(
+                          'reminders',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                  color: lightColorScheme.inverseSurface),
+                          maxLines: 1,
+                        ),
                       ),
                     ),
                   ],

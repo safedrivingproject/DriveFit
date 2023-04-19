@@ -196,23 +196,6 @@ class _NewRankScreenState extends State<NewRankScreen>
                           FadeNavigator.opacityTweenSequence,
                           lightColorScheme.primary,
                           const Duration(milliseconds: 1500));
-                      // Navigator.of(context).pushReplacement(PageRouteBuilder(
-                      //   barrierColor: lightColorScheme.primary,
-                      //   transitionDuration: const Duration(seconds: 1),
-                      //   pageBuilder: (BuildContext context,
-                      //       Animation<double> animation,
-                      //       Animation<double> secondaryAnimation) {
-                      //     return const HomePage(index: 2);
-                      //   },
-                      //   transitionsBuilder:
-                      //       (context, animation, secondaryAnimation, child) {
-                      //     return FadeTransition(
-                      //       opacity: TweenSequence<double>(opacityTweenSequence)
-                      //           .animate(animation),
-                      //       child: child,
-                      //     );
-                      //   },
-                      // ));
                     },
                     child: Text(
                       "Yay!",

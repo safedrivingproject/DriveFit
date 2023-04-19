@@ -567,21 +567,6 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
         FadeNavigator.opacityTweenSequence,
         lightColorScheme.primary,
         const Duration(milliseconds: 500));
-    // Navigator.of(context).pushReplacement(PageRouteBuilder(
-    //   barrierColor: lightColorScheme.primary,
-    //   transitionDuration: const Duration(seconds: 1),
-    //   pageBuilder: (BuildContext context, Animation<double> animation,
-    //       Animation<double> secondaryAnimation) {
-    //     return const HomePage(index: 1);
-    //   },
-    //   transitionsBuilder: (context, animation, secondaryAnimation, child) {
-    //     return FadeTransition(
-    //       opacity:
-    //           TweenSequence<double>(opacityTweenSequence).animate(animation),
-    //       child: child,
-    //     );
-    //   },
-    // ));
   }
 
   void goToNewRankPage() {
@@ -591,22 +576,5 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
         FadeNavigator.opacityTweenSequence,
         lightColorScheme.primary,
         const Duration(milliseconds: 500));
-    // Navigator.of(context).pushReplacement(
-    //   PageRouteBuilder(
-    //     barrierColor: lightColorScheme.primary,
-    //     transitionDuration: const Duration(milliseconds: 500),
-    //     pageBuilder: (BuildContext context, Animation<double> animation,
-    //         Animation<double> secondaryAnimation) {
-    //       return NewRankScreen(rankIndex: rankingService.currentRankIndex);
-    //     },
-    //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-    //       return FadeTransition(
-    //         opacity:
-    //             TweenSequence<double>(opacityTweenSequence).animate(animation),
-    //         child: child,
-    //       );
-    //     },
-    //   ),
-    // );
   }
 }

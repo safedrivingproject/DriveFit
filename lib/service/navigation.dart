@@ -4,12 +4,12 @@ class FadeNavigator {
   static final opacityTweenSequence = <TweenSequenceItem<double>>[
     TweenSequenceItem<double>(
       tween: ConstantTween<double>(0.0),
-      weight: 20.0,
+      weight: 60.0,
     ),
     TweenSequenceItem<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0)
           .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 80.0,
+      weight: 40.0,
     ),
   ];
 

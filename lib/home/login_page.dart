@@ -121,69 +121,6 @@ class LoginPage extends StatelessWidget {
                         FadeNavigator.opacityTweenSequence,
                         Colors.transparent,
                         const Duration(milliseconds: 500));
-                    // Navigator.of(context).push(PageRouteBuilder(
-                    //     pageBuilder: (BuildContext context,
-                    //             Animation<double> animation,
-                    //             Animation<double> secondaryAnimation) =>
-                    //         SignInScreen(
-                    //           actions: [
-                    //             EmailLinkSignInAction((context) {
-                    //               Navigator.push(
-                    //                   context,
-                    //                   MaterialPageRoute(
-                    //                       builder: ((context) =>
-                    //                           EmailLinkSignInScreen(
-                    //                             actions: [
-                    //                               AuthStateChangeAction<
-                    //                                       SignedIn>(
-                    //                                   (context, state) {
-                    //                                 databaseService
-                    //                                     .updateUserProfile();
-                    //                                 showSnackBar("Signed in!");
-                    //                                 Navigator.pushReplacement(
-                    //                                     context,
-                    //                                     MaterialPageRoute(
-                    //                                         builder: (context) =>
-                    //                                             const HomePage()));
-                    //                                 Navigator.push(
-                    //                                     context,
-                    //                                     MaterialPageRoute(
-                    //                                       builder: (context) =>
-                    //                                           profileScreen,
-                    //                                     ));
-                    //                               }),
-                    //                             ],
-                    //                           ))));
-                    //             }),
-                    //             AuthStateChangeAction<SignedIn>(
-                    //                 (context, state) {
-                    //               databaseService.updateUserProfile();
-                    //               showSnackBar("Signed in!");
-                    //               Navigator.pushReplacement(
-                    //                   context,
-                    //                   MaterialPageRoute(
-                    //                       builder: (context) =>
-                    //                           const HomePage()));
-                    //               Navigator.push(
-                    //                   context,
-                    //                   MaterialPageRoute(
-                    //                     builder: (context) => profileScreen,
-                    //                   ));
-                    //             }),
-                    //           ],
-                    //         ),
-                    //     transitionsBuilder:
-                    //         (context, animation, secondaryAnimation, child) {
-                    //       return FadeTransition(
-                    //         opacity: Tween<double>(begin: 0.0, end: 1.0)
-                    //             .chain(CurveTween(curve: Curves.easeInOutExpo))
-                    //             .animate(animation),
-                    //         child: child,
-                    //       );
-                    //     },
-                    //     transitionDuration: const Duration(milliseconds: 500),
-                    //     reverseTransitionDuration:
-                    //         const Duration(milliseconds: 500)));
                   },
                   child: Text(
                     "Go to Sign in",

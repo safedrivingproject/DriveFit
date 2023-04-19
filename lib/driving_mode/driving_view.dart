@@ -134,7 +134,7 @@ class _DrivingViewState extends State<DrivingView> {
         globals.hasCalibrated =
             SharedPreferencesService.getBool('hasCalibrated', false);
         faceDetectionService.neutralRotX =
-            SharedPreferencesService.getDouble('neutralRotX', 5.0);
+            SharedPreferencesService.getDouble('neutralRotX', 0.0);
         faceDetectionService.neutralRotY =
             SharedPreferencesService.getDouble('neutralRotY', -25.0);
         faceDetectionService.rotYLeftOffset =
@@ -359,6 +359,7 @@ class _DrivingViewState extends State<DrivingView> {
 
   void detectionTimer() async {
     canExit = false;
+    faceDetectionService.clearPreviousFilteredFace();
     WidgetsBinding.instance.scheduleFrameCallback((_) {
       _statesController.update(MaterialState.disabled, true);
     });
@@ -411,6 +412,9 @@ class _DrivingViewState extends State<DrivingView> {
 
       if (!faceDetectionService.hasFace) return;
 
+      faceDetectionService.runLowPassFilter();
+      faceDetectionService.updatePreviousFilteredFace();
+
       faceDetectionService.checkEyesClosed();
       faceDetectionService.checkNormalPosition();
 
@@ -426,6 +430,9 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.checkHeadLeftRight(faceDetectionService.rotYDelay +
             (!carMoving ? faceDetectionService.additionalDelay : 0));
       }
+      print(
+          "${faceDetectionService.filteredRotX}, ${faceDetectionService.filteredRotY}");
+      print(faceDetectionService.rotYCounter);
 
       if (faceDetectionService.reminderType == "Drowsy") {
         if (faceDetectionService.reminderCount <= 5) {
@@ -510,28 +517,10 @@ class _DrivingViewState extends State<DrivingView> {
               FadeNavigator.opacityTweenSequence,
               lightColorScheme.primary,
               const Duration(milliseconds: 1500));
-          // Navigator.of(context).pushReplacement(
-          //   PageRouteBuilder(
-          //     barrierColor: lightColorScheme.primary,
-          //     transitionDuration: const Duration(milliseconds: 1500),
-          //     pageBuilder: (BuildContext context, Animation<double> animation,
-          //         Animation<double> secondaryAnimation) {
-          //       return const HomePage(index: 0);
-          //     },
-          //     transitionsBuilder:
-          //         (context, animation, secondaryAnimation, child) {
-          //       return FadeTransition(
-          //         opacity: TweenSequence<double>(opacityTweenSequence)
-          //             .animate(animation),
-          //         child: child,
-          //       );
-          //     },
-          //   ),
-          // );
           timer.cancel();
         }
       } else {
-        liveRotXList.add(faceDetectionService.rotX ?? 5);
+        liveRotXList.add(faceDetectionService.rotX ?? 0);
         if (liveRotXList.length > 10) {
           liveRotXList.removeAt(0);
         }
@@ -556,19 +545,19 @@ class _DrivingViewState extends State<DrivingView> {
     var rightOffset = 15.0;
     if (neutralY <= 0) {
       if (neutralY > -25) {
-        leftOffset = 20 - (neutralY.abs() / 10);
-        rightOffset = 20 + (neutralY.abs() / 2);
+        leftOffset = 25 - (neutralY.abs() / 10);
+        rightOffset = 25 - (neutralY.abs() / 5);
       } else {
-        leftOffset = 20 + (neutralY.abs() / 5);
-        rightOffset = 20 - (neutralY.abs() / 7);
+        leftOffset = 25 - (neutralY.abs() / 8);
+        rightOffset = 25 - (neutralY.abs() / 4);
       }
     } else if (neutralY > 0) {
       if (neutralY < 25) {
-        leftOffset = 20 + (neutralY.abs() / 2);
-        rightOffset = 20 - (neutralY.abs() / 10);
+        leftOffset = 25 - (neutralY.abs() / 5);
+        rightOffset = 25 - (neutralY.abs() / 10);
       } else {
-        leftOffset = 20 - (neutralY.abs() / 7);
-        rightOffset = 20 + (neutralY.abs() / 5);
+        leftOffset = 25 - (neutralY.abs() / 4);
+        rightOffset = 25 - (neutralY.abs() / 8);
       }
     }
     faceDetectionService.rotYLeftOffset = leftOffset;
@@ -768,10 +757,14 @@ class _DrivingViewState extends State<DrivingView> {
                           children: [
                             DataValueWidget(
                                 text: "rotX",
-                                doubleValue: faceDetectionService.rotX),
+                                doubleValue: widget.calibrationMode
+                                    ? faceDetectionService.rotX
+                                    : faceDetectionService.filteredRotX),
                             DataValueWidget(
                                 text: "rotY",
-                                doubleValue: faceDetectionService.rotY),
+                                doubleValue: widget.calibrationMode
+                                    ? faceDetectionService.rotY
+                                    : faceDetectionService.filteredRotY),
                             DataValueWidget(
                                 text: "neutralRotX",
                                 doubleValue: faceDetectionService.neutralRotX),
@@ -780,28 +773,24 @@ class _DrivingViewState extends State<DrivingView> {
                                 doubleValue: faceDetectionService.neutralRotY),
                             DataValueWidget(
                                 text: "leftEyeOpenProb",
-                                doubleValue:
-                                    faceDetectionService.leftEyeOpenProb),
+                                doubleValue: widget.calibrationMode
+                                    ? faceDetectionService.leftEyeOpenProb
+                                    : faceDetectionService
+                                        .filteredLeftEyeOpenProb),
                             DataValueWidget(
                                 text: "rightEyeOpenProb",
+                                doubleValue: widget.calibrationMode
+                                    ? faceDetectionService.rightEyeOpenProb
+                                    : faceDetectionService
+                                        .filteredRightEyeOpenProb),
+                            DataValueWidget(
+                                text: "rotYLeftOffset",
                                 doubleValue:
-                                    faceDetectionService.rightEyeOpenProb),
+                                    faceDetectionService.rotYLeftOffset),
                             DataValueWidget(
-                                text: "reminderCount",
-                                intValue: faceDetectionService.reminderCount),
-                            DataValueWidget(
-                                text: "hasReminded",
-                                boolValue: faceDetectionService.hasReminded),
-                            DataValueWidget(
-                                text: "drowsyAlertCount",
-                                intValue: currentSession.drowsyAlertCount),
-                            DataValueWidget(
-                                text: "inattentiveAlertCount",
-                                intValue: currentSession.inattentiveAlertCount),
-                            DataValueWidget(
-                              text: "speedingCount",
-                              intValue: currentSession.speedingCount,
-                            ),
+                                text: "rotYRightOffset",
+                                doubleValue:
+                                    faceDetectionService.rotYRightOffset),
                             DataValueWidget(
                                 text: "carMoving", boolValue: carMoving),
                             if (widget.accelerometerOn == true)
@@ -998,6 +987,27 @@ class _DrivingViewState extends State<DrivingView> {
                                 minimumSize: const Size.fromHeight(50),
                               ),
                               onPressed: () {
+                                sendRestReminder();
+                              },
+                              child: Text(
+                                "Send rest reminder (debug)",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                        color: lightColorScheme.onPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                backgroundColor: lightColorScheme.primary,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: () {
                                 geolocationService.debugAddSpeed();
                               },
                               child: Text(
@@ -1145,25 +1155,6 @@ class _DrivingViewState extends State<DrivingView> {
         FadeNavigator.opacityTweenSequence,
         lightColorScheme.primary,
         const Duration(milliseconds: 1500));
-    // Navigator.of(context).pushReplacement(PageRouteBuilder(
-    //   barrierColor: lightColorScheme.primary,
-    //   transitionDuration: const Duration(seconds: 1),
-    //   pageBuilder: (BuildContext context, Animation<double> animation,
-    //       Animation<double> secondaryAnimation) {
-    //     return DriveSessionSummary(
-    //       session: currentSession,
-    //       isValidSession: isValidSession,
-    //       fromHistoryPage: false,
-    //     );
-    //   },
-    //   transitionsBuilder: (context, animation, secondaryAnimation, child) {
-    //     return FadeTransition(
-    //       opacity:
-    //           TweenSequence<double>(opacityTweenSequence).animate(animation),
-    //       child: child,
-    //     );
-    //   },
-    // ));
   }
 
   /// *******************************************************
