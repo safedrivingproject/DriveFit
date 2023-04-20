@@ -20,7 +20,7 @@ class FaceDetectionService {
     rotXOffset = 15;
     rotYLeftOffset = 25;
     rotYRightOffset = 20;
-    eyeProbThreshold = 0.6;
+    eyeProbThreshold = 0.5;
     //
     faces = [];
     //
@@ -52,7 +52,7 @@ class FaceDetectionService {
       rotXOffset = 15,
       rotYLeftOffset = 20,
       rotYRightOffset = 10,
-      eyeProbThreshold = 0.6;
+      eyeProbThreshold = 0.5;
   //
   List<Face> faces = [];
   double? rotX = 0, rotY = -25, leftEyeOpenProb = 1.0, rightEyeOpenProb = 1.0;

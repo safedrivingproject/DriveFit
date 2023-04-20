@@ -47,8 +47,8 @@ class _DrivePageState extends State<DrivePage> {
   void _loadSettings() {
     globals.enableGeolocation =
         SharedPreferencesService.getBool('enableGeolocation', true);
-    globals.globalSpeedReminders =
-        SharedPreferencesService.getBool('globalSpeedReminders', false);
+    globals.globalSpeedingReminders =
+        SharedPreferencesService.getBool('globalSpeedingReminders', false);
     globals.hasCalibrated =
         SharedPreferencesService.getBool('hasCalibrated', false);
     globals.showDebug = SharedPreferencesService.getBool('showDebug', true);
@@ -318,7 +318,9 @@ class _DrivePageState extends State<DrivePage> {
                     DrivingView(
                       calibrationMode: false,
                       enableGeolocation: globals.enableGeolocation,
-                      enableSpeedReminders: globals.globalSpeedReminders ? true : weatherService.enableSpeedReminders,
+                      enableSpeedReminders: globals.globalSpeedingReminders
+                          ? true
+                          : weatherService.enableSpeedReminders,
                     ),
                     FadeNavigator.opacityTweenSequence,
                     lightColorScheme.primary,
@@ -346,7 +348,7 @@ class _DrivePageState extends State<DrivePage> {
   }
 
   Widget getCautionMessage() {
-    if (globals.globalSpeedReminders) {
+    if (globals.globalSpeedingReminders) {
       weatherService.enableSpeedReminders = true;
       return Column(
         children: [

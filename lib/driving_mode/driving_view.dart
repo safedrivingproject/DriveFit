@@ -1365,7 +1365,7 @@ class CalibrateInstructionList extends StatelessWidget {
               SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "4.",
-                instruction: "Press 'Calibrate' and wait 3 seconds",
+                instruction: "Press 'Calibrate' and DON'T MOVE until finished",
               ),
             ],
           ),
