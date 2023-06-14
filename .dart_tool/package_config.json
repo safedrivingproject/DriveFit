@@ -626,6 +626,12 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "localization",
+      "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/localization-2.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.13"
+    },
+    {
       "name": "logging",
       "rootUri": "file:///C:/Users/NUC7i5/AppData/Local/Pub/Cache/hosted/pub.dev/logging-1.1.1",
       "packageUri": "lib/",
@@ -1028,7 +1034,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2023-04-20T16:17:44.357237Z",
+  "generated": "2023-06-14T07:42:16.716797Z",
   "generator": "pub",
   "generatorVersion": "2.19.4"
 }

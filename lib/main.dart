@@ -7,6 +7,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'firebase_options.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:localization/localization.dart';
 
 import 'home/home_page.dart';
 import 'notifications/notification_controller.dart';
@@ -57,7 +59,7 @@ void _initForegroundTask() {
       iosNotificationOptions:
           const IOSNotificationOptions(showNotification: false),
       foregroundTaskOptions:
-          const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: true));
+          const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: false));
 }
 
 class MyApp extends StatefulWidget {
@@ -92,6 +94,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    LocalJsonLocalization.delegate.directories = ['lib/i18n'];
+
     final textTheme = Theme.of(context).textTheme;
 
     return DynamicColorBuilder(
@@ -111,6 +115,12 @@ class _MyAppState extends State<MyApp> {
         }
 
         return MaterialApp(
+            localizationsDelegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              LocalJsonLocalization.delegate,
+            ],
             navigatorKey: MyApp.navigatorKey,
             scaffoldMessengerKey: globals.snackbarKey,
             title: globals.appName,
