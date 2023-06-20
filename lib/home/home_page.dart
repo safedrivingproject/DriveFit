@@ -1,11 +1,13 @@
 import 'dart:math';
 
+import 'package:drive_fit/env.dart';
 import 'package:drive_fit/home/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:weather/weather.dart';
 
 import '../service/navigation.dart';
 import '/service/shared_preferences_service.dart';
@@ -18,7 +20,8 @@ import 'drive_page.dart';
 import 'history_page.dart';
 import 'achievements_page.dart';
 import '/global_variables.dart' as globals;
-import 'tips.dart';
+
+import 'package:localization/localization.dart';
 
 class HomePage extends StatefulWidget {
   final String? title;
@@ -65,6 +68,36 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     vsync: this,
   );
 
+  String language = "zh_HK";
+  bool needUpdateLanguage = false;
+
+  List<String> drowsyTipsList = [
+    "tip-drowsy-1".i18n(),
+    "tip-drowsy-2".i18n(),
+    "tip-drowsy-3".i18n(),
+    "tip-drowsy-4".i18n(),
+    "tip-drowsy-5".i18n(),
+    "tip-drowsy-6".i18n(),
+  ];
+  List<String> inattentiveTipsList = [
+    "tip-inattentive-1".i18n(),
+    "tip-inattentive-2".i18n(),
+    "tip-inattentive-3".i18n(),
+    "tip-inattentive-4".i18n(),
+    "tip-inattentive-5".i18n(),
+    "tip-inattentive-6".i18n(),
+  ];
+  List<String> genericTipsList = [
+    "tip-general-1".i18n(),
+    "tip-general-2".i18n(),
+    "tip-general-3".i18n(),
+    "tip-general-4".i18n(),
+    "tip-general-5".i18n(),
+    "tip-general-6".i18n(),
+    "tip-general-7".i18n(),
+    "tip-general-8".i18n(),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -94,6 +127,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         setState(() {});
       }
     });
+    if (needUpdateLanguage) {
+      needUpdateLanguage = false;
+      SharedPreferencesService.setBool('needUpdateLanguage', false);
+    }
   }
 
   void showRequestPermissionsDialog(String permissionType) {
@@ -139,6 +176,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _loadSettings() {
+    language = SharedPreferencesService.getString('language', "zh_HK");
+    needUpdateLanguage =
+        SharedPreferencesService.getBool('needUpdateLanguage', true);
     tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
     tipType = SharedPreferencesService.getString('tipType', "Generic");
     databaseService.drivingTip = getTip(tipType, tipsIndex);
@@ -166,11 +206,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> getWeather() async {
-    if (weatherService.currentWeatherConditionCode != null &&
-        weatherService.currentWeatherConditionCode != -1) {
-      if (currentDate
-          .isBefore(DateTime.parse(weatherService.weatherExpirationMinutes))) {
-        return;
+    print(needUpdateLanguage);
+    if (needUpdateLanguage) {
+      if (language == "zh_HK") {
+        weatherService.weatherFactory = WeatherFactory(Env.owmApiKey,
+            language: Language.CHINESE_TRADITIONAL);
+      } else {
+        weatherService.weatherFactory =
+            WeatherFactory(Env.owmApiKey, language: Language.ENGLISH);
+      }
+    } else if (!needUpdateLanguage) {
+      if (weatherService.currentWeatherConditionCode != null &&
+          weatherService.currentWeatherConditionCode != -1) {
+        if (currentDate.isBefore(
+            DateTime.parse(weatherService.weatherExpirationMinutes))) {
+          return;
+        }
       }
     }
     weatherService.position = await geolocationService.getCurrentPosition();
@@ -209,17 +260,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void getTipData() {
-    if (!hasNewSession) {
-      if (currentDate.isBefore(DateTime.parse(tipExpirationDay))) {
-        oldTipType = tipType;
-        tipType = getTipType();
-        SharedPreferencesService.setString('tipType', tipType);
-        if (oldTipType != tipType) {
-          generateNewTipIndex();
-          SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+    if (!needUpdateLanguage) {
+      if (!hasNewSession) {
+        if (currentDate.isBefore(DateTime.parse(tipExpirationDay))) {
+          oldTipType = tipType;
+          tipType = getTipType();
+          SharedPreferencesService.setString('tipType', tipType);
+          if (oldTipType != tipType) {
+            generateNewTipIndex();
+            SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+          }
+          databaseService.drivingTip = getTip(tipType, tipsIndex);
+          return;
         }
-        databaseService.drivingTip = getTip(tipType, tipsIndex);
-        return;
       }
     }
     tipType = getTipType();
@@ -323,21 +376,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOutExpo);
         },
-        destinations: const <NavigationDestination>[
+        destinations: <NavigationDestination>[
           NavigationDestination(
-            selectedIcon: Icon(Icons.directions_car_outlined),
-            icon: Icon(Icons.directions_car_outlined),
-            label: 'Drive',
+            selectedIcon: const Icon(Icons.directions_car_outlined),
+            icon: const Icon(Icons.directions_car_outlined),
+            label: "drive".i18n(),
           ),
           NavigationDestination(
-            selectedIcon: Icon(Icons.bookmarks_outlined),
-            icon: Icon(Icons.bookmarks_outlined),
-            label: 'History',
+            selectedIcon: const Icon(Icons.bookmarks_outlined),
+            icon: const Icon(Icons.bookmarks_outlined),
+            label: "history".i18n(),
           ),
           NavigationDestination(
-            selectedIcon: Icon(Icons.star_border_rounded),
-            icon: Icon(Icons.star_border_rounded),
-            label: 'Achievements',
+            selectedIcon: const Icon(Icons.star_border_rounded),
+            icon: const Icon(Icons.star_border_rounded),
+            label: "achievements".i18n(),
           ),
         ],
       ),
@@ -374,7 +427,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   onPressed: () {
                     FadeNavigator.push(
                         context,
-                        const SettingsPage(title: "Settings"),
+                        const SettingsPage(),
                         FadeNavigator.opacityTweenSequence,
                         Colors.transparent,
                         const Duration(milliseconds: 500));
@@ -391,7 +444,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ProfileScreen(
                               appBar: AppBar(
                                 title: Text(
-                                  "Your Profile",
+                                  "your-profile".i18n(),
                                   style: Theme.of(context).textTheme.titleLarge,
                                 ),
                                 centerTitle: true,
@@ -400,7 +453,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 SignedOutAction((context) {
                                   globals.hasSignedIn = false;
                                   databaseService.updateUserProfile();
-                                  showSnackBar("Signed out!");
+                                  showSnackBar("signed-out".i18n());
                                   Navigator.pushReplacement(
                                       context,
                                       MaterialPageRoute(
@@ -496,8 +549,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   String _getAppBarTitle(int index) {
     if (index == 0) return "";
-    if (index == 1) return "Drive Summary";
-    if (index == 2) return "Achievements";
+    if (index == 1) return "drive-summary".i18n();
+    if (index == 2) return "achievements".i18n();
     return "";
   }
 

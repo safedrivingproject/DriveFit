@@ -6,6 +6,8 @@ import '../service/navigation.dart';
 import 'home_page.dart';
 import '/global_variables.dart' as globals;
 
+import 'package:localization/localization.dart';
+
 class LoginPage extends StatelessWidget {
   LoginPage({super.key});
   final DatabaseService databaseService = DatabaseService();
@@ -15,7 +17,7 @@ class LoginPage extends StatelessWidget {
     ProfileScreen profileScreen = ProfileScreen(
       appBar: AppBar(
         title: Text(
-          "Your Profile",
+          "your-profile".i18n(),
           style: Theme.of(context).textTheme.titleLarge,
         ),
         centerTitle: true,
@@ -24,7 +26,7 @@ class LoginPage extends StatelessWidget {
         SignedOutAction((context) {
           globals.hasSignedIn = false;
           databaseService.updateUserProfile();
-          showSnackBar("Signed out!");
+          showSnackBar("signed-out".i18n());
           Navigator.pushReplacement(context,
               MaterialPageRoute(builder: (context) => const HomePage()));
         })
@@ -49,17 +51,17 @@ class LoginPage extends StatelessWidget {
                   color: lightColorScheme.primary,
                 ),
                 Text(
-                  "Register & sign in",
+                  "register-and-sign-in".i18n(),
                   style: Theme.of(context).textTheme.displaySmall,
                   textAlign: TextAlign.center,
                 ),
                 Text(
-                  "to connect to your company",
+                  "to-connect-to-company".i18n(),
                   style: Theme.of(context).textTheme.titleMedium,
                   textAlign: TextAlign.center,
                 ),
                 Text(
-                  "so you can let us know your safe driving progress!",
+                  "so-you-can-let-company-know".i18n(),
                   style: Theme.of(context).textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -87,7 +89,8 @@ class LoginPage extends StatelessWidget {
                                                   (context, state) {
                                                 databaseService
                                                     .updateUserProfile();
-                                                showSnackBar("Signed in!");
+                                                showSnackBar(
+                                                    "signed-in".i18n());
                                                 Navigator.pushReplacement(
                                                     context,
                                                     MaterialPageRoute(
@@ -105,7 +108,7 @@ class LoginPage extends StatelessWidget {
                             }),
                             AuthStateChangeAction<SignedIn>((context, state) {
                               databaseService.updateUserProfile();
-                              showSnackBar("Signed in!");
+                              showSnackBar("signed-in".i18n());
                               Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
@@ -123,7 +126,7 @@ class LoginPage extends StatelessWidget {
                         const Duration(milliseconds: 500));
                   },
                   child: Text(
-                    "Go to Sign in",
+                    "go-to-sign-in".i18n(),
                     style: Theme.of(context)
                         .textTheme
                         .labelLarge

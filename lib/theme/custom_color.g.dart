@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 
 const xanthous = Color(0xFFFFC248);
 
-
-CustomColors lightCustomColors = const CustomColors(
+CustomColors lightCustomColorsOriginal = const CustomColors(
   sourceXanthous: Color(0xFFFFC248),
   xanthous: Color(0xFF7C5800),
   onXanthous: Color(0xFFFFFFFF),
@@ -12,15 +11,13 @@ CustomColors lightCustomColors = const CustomColors(
   onXanthousContainer: Color(0xFF271900),
 );
 
-CustomColors darkCustomColors = const CustomColors(
+CustomColors darkCustomColorsOriginal = const CustomColors(
   sourceXanthous: Color(0xFFFFC248),
   xanthous: Color(0xFFF9BC43),
   onXanthous: Color(0xFF412D00),
   xanthousContainer: Color(0xFF5E4200),
   onXanthousContainer: Color(0xFFFFDEA7),
 );
-
-
 
 /// Defines a set of custom colors, each comprised of 4 complementary tones.
 ///
@@ -68,8 +65,10 @@ class CustomColors extends ThemeExtension<CustomColors> {
       sourceXanthous: Color.lerp(sourceXanthous, other.sourceXanthous, t),
       xanthous: Color.lerp(xanthous, other.xanthous, t),
       onXanthous: Color.lerp(onXanthous, other.onXanthous, t),
-      xanthousContainer: Color.lerp(xanthousContainer, other.xanthousContainer, t),
-      onXanthousContainer: Color.lerp(onXanthousContainer, other.onXanthousContainer, t),
+      xanthousContainer:
+          Color.lerp(xanthousContainer, other.xanthousContainer, t),
+      onXanthousContainer:
+          Color.lerp(onXanthousContainer, other.onXanthousContainer, t),
     );
   }
 

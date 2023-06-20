@@ -8,6 +8,8 @@ import '../service/rank_list.dart';
 import '/service/database_service.dart';
 import '/service/ranking_service.dart';
 
+import 'package:localization/localization.dart';
+
 class AchievementsPage extends StatefulWidget {
   const AchievementsPage({
     super.key,
@@ -294,9 +296,11 @@ class _AchievementsPageState extends State<AchievementsPage>
   }
 
   Widget _getRequiredScoreForNextRank() {
+    final locale = Localizations.localeOf(context);
+
     if (rankIndex == rankList.length - 1) {
       return Text(
-        "Great job! You are at the highest rank!",
+        "at-highest-rank".i18n(),
         style: Theme.of(context).textTheme.bodyMedium,
       );
     }
@@ -313,7 +317,11 @@ class _AchievementsPageState extends State<AchievementsPage>
                 ?.copyWith(height: 1.0, fontSize: 32),
           ),
           TextSpan(
-            text: "more point${requiredScore == 1 ? "" : "s"} to ",
+            text: locale == const Locale('zh', 'HK')
+                ? "more-points-to".i18n([''])
+                : (requiredScore == 1
+                    ? "more-points-to".i18n([''])
+                    : "more-points-to".i18n(['s'])),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           TextSpan(
@@ -362,7 +370,7 @@ class _AchievementsPageState extends State<AchievementsPage>
               Padding(
                 padding: const EdgeInsetsDirectional.fromSTEB(0, 7, 0, 14),
                 child: Text(
-                  'Your rank:',
+                  "your-rank".i18n(),
                   style: Theme.of(context)
                       .textTheme
                       .titleSmall
@@ -466,7 +474,7 @@ class _AchievementsPageState extends State<AchievementsPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Your score streak:',
+                          "your-score-streak".i18n(),
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         Row(
@@ -500,7 +508,7 @@ class _AchievementsPageState extends State<AchievementsPage>
                       padding:
                           const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 0),
                       child: Text(
-                        'FYI: Your score streak is the number of consecutive sessions in which you got max points.',
+                        "score-streak-explanation".i18n(),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -522,7 +530,7 @@ class _AchievementsPageState extends State<AchievementsPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           AutoSizeText(
-            'Achievements',
+            "achievements".i18n(),
             style: Theme.of(context)
                 .textTheme
                 .displayLarge

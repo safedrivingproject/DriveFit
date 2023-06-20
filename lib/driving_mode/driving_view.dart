@@ -26,6 +26,8 @@ import '../service/ranking_service.dart';
 import 'drive_session_summary.dart';
 import '/global_variables.dart' as globals;
 
+import 'package:localization/localization.dart';
+
 class DrivingView extends StatefulWidget {
   const DrivingView({
     Key? key,
@@ -273,8 +275,8 @@ class _DrivingViewState extends State<DrivingView> {
       }
     } else if (widget.calibrationMode == false) {
       FlutterForegroundTask.updateService(
-          notificationTitle: "DriveFit is protecting you :)",
-          notificationText: "Tap to return to app!");
+          notificationTitle: "foreground-notification-title-driving".i18n(),
+          notificationText: "foreground-notification-text-driving".i18n());
       detectionTimer();
     }
     if (widget.accelerometerOn) {
@@ -510,7 +512,7 @@ class _DrivingViewState extends State<DrivingView> {
           setState(() {
             startCalibration = false;
           });
-          showSnackBar("Calibration complete!");
+          showSnackBar("calibration-complete".i18n());
           FadeNavigator.pushReplacement(
               context,
               const HomePage(index: 0),
@@ -571,7 +573,7 @@ class _DrivingViewState extends State<DrivingView> {
       count += 1;
       result += (value - result) / count;
     }
-    if (count == 0) throw StateError('No elements');
+    if (count == 0) throw StateError('No elements to average');
     return result;
   }
 
@@ -713,7 +715,7 @@ class _DrivingViewState extends State<DrivingView> {
         child: Scaffold(
             appBar: AppBar(
               title: Text(
-                widget.calibrationMode ? "Calibrate" : "Driving",
+                widget.calibrationMode ? "calibrate".i18n() : "driving".i18n(),
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
@@ -1053,7 +1055,7 @@ class _DrivingViewState extends State<DrivingView> {
                                 }
                               },
                               child: Text(
-                                "Calibrate",
+                                "calibrate".i18n(),
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelLarge
@@ -1101,7 +1103,7 @@ class _DrivingViewState extends State<DrivingView> {
                                 stopDrivingMode();
                               },
                               child: Text(
-                                "Stop driving",
+                                "stop-driving".i18n(),
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelLarge
@@ -1127,8 +1129,8 @@ class _DrivingViewState extends State<DrivingView> {
     cancelTimer = true;
     periodicDetectionTimer = null;
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Going to drive?',
-      notificationText: 'Tap to start DriveFit!',
+      notificationTitle: "foreground-notification-title-idle".i18n(),
+      notificationText: "foreground-notification-text-idle".i18n(),
     );
     finalizeSessionData();
     isValidSession = _validateSession();
@@ -1295,8 +1297,8 @@ class _PageCenterTextState extends State<PageCenterText> {
                           ? lightColorScheme.onPrimary
                           : lightColorScheme.onPrimaryContainer),
               duration: const Duration(seconds: 1),
-              child: const Text(
-                "You are now protected!",
+              child: Text(
+                "you-are-now-protected".i18n(),
               ),
             ),
           ),
@@ -1313,8 +1315,8 @@ class _PageCenterTextState extends State<PageCenterText> {
                           ? lightColorScheme.onPrimary
                           : lightColorScheme.onPrimaryContainer),
               duration: const Duration(seconds: 1),
-              child: const Text(
-                "Drive Safely!",
+              child: Text(
+                "drive-safely".i18n(),
               ),
             ),
           ),
@@ -1345,27 +1347,25 @@ class CalibrateInstructionList extends StatelessWidget {
           color: Colors.black.withOpacity(0.5),
           padding: const EdgeInsets.all(30),
           child: Column(
-            children: const [
+            children: [
               CalibrateInstruction(
                 bullet: "1.",
-                instruction: "Secure your phone in the phone holder",
+                instruction: "calibrate-instruction-1".i18n(),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "2.",
-                instruction:
-                    "Make sure your head is visible in the camera preview",
+                instruction: "calibrate-instruction-2".i18n(),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "3.",
-                instruction:
-                    "Look forward towards the road (just like when you are driving attentively)",
+                instruction: "calibrate-instruction-3".i18n(),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "4.",
-                instruction: "Press 'Calibrate' and DON'T MOVE until finished",
+                instruction: "calibrate-instruction-4".i18n(),
               ),
             ],
           ),
@@ -1376,7 +1376,7 @@ class CalibrateInstructionList extends StatelessWidget {
             color: Colors.black.withOpacity(0.5),
             padding: const EdgeInsets.all(15),
             child: Text(
-              caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+              caliSeconds < 1 ? "complete".i18n() : "$caliSeconds",
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
                     color: lightColorScheme.onPrimary,
                   ),

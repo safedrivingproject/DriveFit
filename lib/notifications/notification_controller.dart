@@ -3,6 +3,8 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import '/main.dart';
 import '/theme/color_schemes.g.dart';
 
+import 'package:localization/localization.dart';
+
 class NotificationController {
   static ReceivedAction? initialAction;
 
@@ -120,8 +122,8 @@ class NotificationController {
       content: NotificationContent(
         id: -1,
         channelKey: 'drivefit_alerts',
-        title: 'Drive Safely!',
-        body: "If you are tired please park and take a nap!",
+        title: "drive-safely".i18n(),
+        body: "take-a-nap".i18n(),
         notificationLayout: NotificationLayout.Default,
         fullScreenIntent: true,
         criticalAlert: true,
@@ -139,8 +141,8 @@ class NotificationController {
       content: NotificationContent(
         id: -1,
         channelKey: 'drivefit_alerts',
-        title: 'Drive Safely!',
-        body: "Keep your eyes on the road!",
+        title: "drive-safely".i18n(),
+        body: "keep-eyes-on-road".i18n(),
         notificationLayout: NotificationLayout.Default,
         fullScreenIntent: true,
         criticalAlert: true,
@@ -158,8 +160,8 @@ class NotificationController {
       content: NotificationContent(
         id: -1,
         channelKey: 'drivefit_alerts',
-        title: 'Take a break!',
-        body: "You have driven for quite long already!",
+        title: "take-a-break".i18n(),
+        body: "you-have-driven-for-quite-long".i18n(),
         notificationLayout: NotificationLayout.Default,
         fullScreenIntent: true,
         criticalAlert: false,
@@ -177,8 +179,8 @@ class NotificationController {
       content: NotificationContent(
         id: -1,
         channelKey: 'drivefit_alerts',
-        title: 'Please slow down!',
-        body: "You are driving too dangerously!",
+        title: "please-slow-down".i18n(),
+        body: "you-are-driving-too-dangerously".i18n(),
         notificationLayout: NotificationLayout.Default,
         fullScreenIntent: true,
         criticalAlert: true,

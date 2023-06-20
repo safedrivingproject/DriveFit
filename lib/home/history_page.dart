@@ -8,6 +8,8 @@ import '/theme/color_schemes.g.dart';
 import '/theme/custom_color.g.dart';
 import '../service/database_service.dart';
 
+import 'package:localization/localization.dart';
+
 class HistoryPage extends StatefulWidget {
   const HistoryPage({
     super.key,
@@ -86,7 +88,7 @@ class _HistoryPageState extends State<HistoryPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'So far, you\'ve had',
+                  "so-far-you've-had".i18n(),
                   textAlign: TextAlign.center,
                   style: Theme.of(context)
                       .textTheme
@@ -103,7 +105,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       padding:
                           const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
                       child: Text(
-                        'safe trips',
+                        "safe-trips".i18n(),
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
@@ -111,24 +113,22 @@ class _HistoryPageState extends State<HistoryPage> {
                         maxLines: 1,
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const Spacer(),
                     Text(totalAlerts.toString(),
                         style: Theme.of(context).textTheme.displayLarge),
-                    Expanded(
-                      child: Padding(
-                        padding:
-                            const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
-                        child: Text(
-                          'reminders',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                  color: lightColorScheme.inverseSurface),
-                          maxLines: 1,
-                        ),
+                    Padding(
+                      padding:
+                          const EdgeInsetsDirectional.fromSTEB(4, 0, 0, 12),
+                      child: Text(
+                        "reminders".i18n(),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: lightColorScheme.inverseSurface),
+                        maxLines: 1,
                       ),
                     ),
+                    const Spacer(),
                   ],
                 ),
               ],
@@ -167,7 +167,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Avg. Score \n(Overall)',
+                          "avg-score-overall".i18n(),
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         Row(
@@ -206,7 +206,7 @@ class _HistoryPageState extends State<HistoryPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Avg. Score \n(Last 7 sessions)',
+                            "avg-score-last-7-sessions".i18n(),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           Row(
@@ -266,7 +266,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
                     child: Text(
-                      'Trend of drowsy alerts (Last 14 sessions)',
+                      "trend-of-drowsy-alerts".i18n(),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -283,7 +283,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               width: MediaQuery.of(context).size.width,
                               child: Center(
                                 child: Text(
-                                  "No sessions yet :/\nStart driving to begin a session now :)",
+                                  "no-sessions-yet".i18n(),
                                   style: Theme.of(context).textTheme.bodyLarge,
                                   textAlign: TextAlign.center,
                                 ),
@@ -321,7 +321,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 16),
                     child: Text(
-                      'Trend of inattentive alerts (Last 14 sessions)',
+                      "trend-of-inattentive-alerts".i18n(),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -338,7 +338,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               width: MediaQuery.of(context).size.width,
                               child: Center(
                                 child: Text(
-                                  "No sessions yet :/\nStart driving to begin a session now :)",
+                                  "no-sessions-yet".i18n(),
                                   style: Theme.of(context).textTheme.bodyLarge,
                                   textAlign: TextAlign.center,
                                 ),
@@ -367,7 +367,7 @@ class _HistoryPageState extends State<HistoryPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           AutoSizeText(
-            'Drive Summary',
+            "drive-summary".i18n(),
             style: Theme.of(context)
                 .textTheme
                 .displayLarge
@@ -412,7 +412,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         bottomTitles: AxisTitles(
           axisNameWidget: Text(
-            'Past driving sessions',
+            "past-driving-sessions".i18n(),
             style: TextStyle(
               fontSize: 12,
               color: lightColorScheme.onSurfaceVariant,
@@ -429,7 +429,7 @@ class _HistoryPageState extends State<HistoryPage> {
         leftTitles: AxisTitles(
           axisNameSize: 30,
           axisNameWidget: Text(
-            'No. of alerts / session',
+            "no-of-alerts-per-session".i18n(),
             style: TextStyle(
               fontSize: 12,
               color: lightColorScheme.onSurfaceVariant,
@@ -527,7 +527,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
         bottomTitles: AxisTitles(
           axisNameWidget: Text(
-            'Past driving sessions',
+            "past-driving-sessions".i18n(),
             style: TextStyle(
               fontSize: 12,
               color: lightColorScheme.onSurfaceVariant,
@@ -544,7 +544,7 @@ class _HistoryPageState extends State<HistoryPage> {
         leftTitles: AxisTitles(
           axisNameSize: 30,
           axisNameWidget: Text(
-            'No. of alerts / session',
+            "no-of-alerts-per-session".i18n(),
             style: TextStyle(
               fontSize: 12,
               color: lightColorScheme.onSurfaceVariant,
@@ -628,13 +628,13 @@ class _HistoryPageState extends State<HistoryPage> {
     Widget text;
     if (value.toInt() ==
         (driveSessionsList.length > 14 ? 13 : driveSessionsList.length - 1)) {
-      text = const Text('Recent', style: style);
+      text = Text("recent".i18n(), style: style);
       return SideTitleWidget(
         axisSide: meta.axisSide,
         child: text,
       );
     } else if (value.toInt() == 0) {
-      text = const Text('Past', style: style);
+      text = Text("past".i18n(), style: style);
       return SideTitleWidget(
         axisSide: meta.axisSide,
         child: text,
@@ -687,6 +687,7 @@ class SessionsListState extends State<SessionsList> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
 
@@ -714,9 +715,9 @@ class SessionsListState extends State<SessionsList> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Previous Sessions:",
+              Text("previous-sessions".i18n(),
                   style: Theme.of(context).textTheme.titleMedium),
-              Text("(Click for more details!)",
+              Text("click-for-more-details".i18n(),
                   style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
@@ -802,7 +803,7 @@ class SessionsListState extends State<SessionsList> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                'Score: ',
+                                "score".i18n(),
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               Text(
@@ -838,29 +839,44 @@ class SessionsListState extends State<SessionsList> {
                           Row(
                             mainAxisSize: MainAxisSize.max,
                             children: [
-                              SessionDetailsModule(
-                                icon: const Icon(Icons.info_outline_rounded),
-                                label: "Drowsy:",
-                                value: session.drowsyAlertCount,
-                                trailing:
-                                    " time${session.drowsyAlertCount == 1 ? "" : "s"}",
+                              Expanded(
+                                child: SessionDetailsModule(
+                                  icon: const Icon(Icons.info_outline_rounded),
+                                  label: "drowsy".i18n(),
+                                  value: session.drowsyAlertCount,
+                                  trailing: locale == const Locale('zh', 'HK')
+                                      ? "times".i18n([''])
+                                      : (session.drowsyAlertCount == 1
+                                          ? "times".i18n([''])
+                                          : "times".i18n(['s'])),
+                                ),
                               ),
                               const SizedBox(width: 5),
-                              SessionDetailsModule(
-                                icon: const Icon(
-                                    Icons.notifications_paused_outlined),
-                                label: "Inattentive:",
-                                value: session.inattentiveAlertCount,
-                                trailing:
-                                    " time${session.inattentiveAlertCount == 1 ? "" : "s"}",
+                              Expanded(
+                                child: SessionDetailsModule(
+                                  icon: const Icon(
+                                      Icons.notifications_paused_outlined),
+                                  label: "inattentive".i18n(),
+                                  value: session.inattentiveAlertCount,
+                                  trailing: locale == const Locale('zh', 'HK')
+                                      ? "times".i18n()
+                                      : (session.inattentiveAlertCount == 1
+                                          ? "times".i18n([''])
+                                          : "times".i18n(['s'])),
+                                ),
                               ),
                               const SizedBox(width: 5),
-                              SessionDetailsModule(
-                                icon: const Icon(Icons.speed),
-                                label: "Speeding: ",
-                                value: session.speedingCount,
-                                trailing:
-                                    " time${session.speedingCount == 1 ? "" : "s"}",
+                              Expanded(
+                                child: SessionDetailsModule(
+                                  icon: const Icon(Icons.speed),
+                                  label: "speeding".i18n(),
+                                  value: session.speedingCount,
+                                  trailing: locale == const Locale('zh', 'HK')
+                                      ? "times".i18n()
+                                      : (session.speedingCount == 1
+                                          ? "times".i18n([''])
+                                          : "times".i18n(['s'])),
+                                ),
                               ),
                             ],
                           ),
@@ -879,7 +895,7 @@ class SessionsListState extends State<SessionsList> {
               height: 75,
               width: MediaQuery.of(context).size.width,
               child: Text(
-                "No sessions yet :/",
+                "no-sessions-yet".i18n(),
                 style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
@@ -907,6 +923,7 @@ class SessionDetailsModule extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         icon,
         Column(
@@ -926,7 +943,7 @@ class SessionDetailsModule extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium),
                 Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(0, 4, 0, 0),
-                  child: Text(trailing,
+                  child: Text(" $trailing",
                       style: Theme.of(context).textTheme.bodySmall),
                 ),
               ],

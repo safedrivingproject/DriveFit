@@ -12,6 +12,8 @@ import '/service/rank_list.dart';
 
 import '/theme/custom_color.g.dart';
 
+import 'package:localization/localization.dart';
+
 class NewRankScreen extends StatefulWidget {
   const NewRankScreen({
     super.key,
@@ -107,7 +109,7 @@ class _NewRankScreenState extends State<NewRankScreen>
                   child: Align(
                     alignment: const AlignmentDirectional(0, 0),
                     child: Text(
-                      'Congrats!',
+                      "congrats".i18n(),
                       textAlign: TextAlign.center,
                       style: Theme.of(context)
                           .textTheme
@@ -123,7 +125,7 @@ class _NewRankScreenState extends State<NewRankScreen>
                   child: Align(
                     alignment: const AlignmentDirectional(0, 0),
                     child: Text(
-                      'You leveled up!',
+                      "you-leveled-up".i18n(),
                       textAlign: TextAlign.center,
                       style: Theme.of(context)
                           .textTheme
@@ -135,7 +137,7 @@ class _NewRankScreenState extends State<NewRankScreen>
                 Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(0, 7, 0, 14),
                   child: Text(
-                    'Your rank is:',
+                    "your-rank".i18n(),
                     style: Theme.of(context)
                         .textTheme
                         .titleSmall
@@ -198,7 +200,7 @@ class _NewRankScreenState extends State<NewRankScreen>
                           const Duration(milliseconds: 1500));
                     },
                     child: Text(
-                      "Yay!",
+                      "yay".i18n(),
                       style: Theme.of(context)
                           .textTheme
                           .labelLarge

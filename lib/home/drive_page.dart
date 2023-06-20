@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:drive_fit/home/tips.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:drive_fit/theme/custom_color.g.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +15,8 @@ import '/service/shared_preferences_service.dart';
 import '/driving_mode/driving_view.dart';
 import 'weather_codes.dart';
 import '../global_variables.dart' as globals;
+
+import 'package:localization/localization.dart';
 
 class DrivePage extends StatefulWidget {
   const DrivePage({
@@ -43,6 +44,17 @@ class _DrivePageState extends State<DrivePage> {
   bool canPress = false;
   bool hasNewSession = false;
   bool _isInitialized = false;
+
+  List<String> genericTipsList = [
+    "tip-general-1".i18n(),
+    "tip-general-2".i18n(),
+    "tip-general-3".i18n(),
+    "tip-general-4".i18n(),
+    "tip-general-5".i18n(),
+    "tip-general-6".i18n(),
+    "tip-general-7".i18n(),
+    "tip-general-8".i18n(),
+  ];
 
   void _loadSettings() {
     globals.enableGeolocation =
@@ -113,7 +125,7 @@ class _DrivePageState extends State<DrivePage> {
                   Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 8),
                     child: Text(
-                      'Weather Conditions',
+                      "weather-conditions".i18n(),
                       textAlign: TextAlign.start,
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
@@ -144,7 +156,7 @@ class _DrivePageState extends State<DrivePage> {
                                           decoration: BoxDecoration(
                                             borderRadius:
                                                 BorderRadius.circular(25),
-                                            color: lightColorScheme.outline,
+                                            color: lightColorScheme.primary,
                                           ),
                                           child: CachedNetworkImage(
                                             imageUrl: weatherService
@@ -165,25 +177,12 @@ class _DrivePageState extends State<DrivePage> {
                                           width: 50,
                                         )),
                               const SizedBox(width: 10),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    weatherService.currentWeatherMain ??
-                                        "Oops...",
-                                    textAlign: TextAlign.start,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall,
-                                  ),
-                                  Text(
-                                    weatherService.currentWeatherDescription ??
-                                        "No weather information yet :(",
-                                    textAlign: TextAlign.start,
-                                    style:
-                                        Theme.of(context).textTheme.bodyLarge,
-                                  ),
-                                ],
+                              AutoSizeText(
+                                weatherService.currentWeatherDescription ??
+                                    "no-weather-info".i18n(),
+                                textAlign: TextAlign.start,
+                                style:
+                                    Theme.of(context).textTheme.headlineMedium,
                               ),
                             ],
                           ),
@@ -220,7 +219,7 @@ class _DrivePageState extends State<DrivePage> {
                     child: Row(
                       children: [
                         Text(
-                          "Today's tip",
+                          "today's-tip".i18n(),
                           textAlign: TextAlign.start,
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
@@ -281,7 +280,7 @@ class _DrivePageState extends State<DrivePage> {
                     const Duration(milliseconds: 1500));
               },
               label: Text(
-                "Calibrate",
+                "calibrate".i18n(),
                 style: globals.hasCalibrated
                     ? Theme.of(context)
                         .textTheme
@@ -327,7 +326,7 @@ class _DrivePageState extends State<DrivePage> {
                     const Duration(milliseconds: 1500));
               },
               label: Text(
-                "Start Driving",
+                "start-driving".i18n(),
                 style: globals.hasCalibrated
                     ? Theme.of(context)
                         .textTheme
@@ -354,8 +353,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Slow down!",
-            description: "'Always enable speeding reminders' is on.",
+            main: "slow-down".i18n(),
+            description: "speeding-reminders-is-enabled".i18n(),
           ),
         ],
       );
@@ -368,7 +367,7 @@ class _DrivePageState extends State<DrivePage> {
           Padding(
             padding: const EdgeInsets.all(14.0),
             child: Text(
-              "No weather information available :(",
+              "no-weather-info".i18n(),
               style: Theme.of(context).textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),
@@ -383,8 +382,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Slow down!",
-            description: "The roads are quite slippery in light rain!",
+            main: "slow-down".i18n(),
+            description: "slippery-in-light-rain".i18n(),
           ),
         ],
       );
@@ -395,8 +394,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Slow down!!!",
-            description: "The roads are very slippery in heavy rain!",
+            main: "slow-down".i18n(),
+            description: "slippery-in-heavy-rain".i18n(),
           ),
         ],
       );
@@ -407,8 +406,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Be careful!",
-            description: "Beware of road conditions when it is snowing!",
+            main: "be-careful".i18n(),
+            description: "beware-when-snowing".i18n(),
           ),
         ],
       );
@@ -419,8 +418,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Be careful!",
-            description: "Beware of road conditions in a thunderstorm!",
+            main: "be-careful".i18n(),
+            description: "beware-in-storm".i18n(),
           ),
         ],
       );
@@ -431,8 +430,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Be careful!",
-            description: "Slow down when driving in low visilibity!",
+            main: "slow-down".i18n(),
+            description: "slow-down-in-low-visibility".i18n(),
           ),
         ],
       );
@@ -443,8 +442,8 @@ class _DrivePageState extends State<DrivePage> {
         children: [
           CautionMessage(
             context: context,
-            main: "Slow down!",
-            description: "Be careful when driving in strong wind!",
+            main: "be-careful".i18n(),
+            description: "beware-in-strong-wind".i18n(),
           ),
         ],
       );
@@ -458,17 +457,17 @@ class _DrivePageState extends State<DrivePage> {
               padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
               child: Row(
                 mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 4),
+                    padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
                     child: Icon(
                       Icons.check_circle,
                       color: lightColorScheme.primary,
                       size: 28,
                     ),
                   ),
-                  Text("You're good to go!",
+                  Text("good-to-go".i18n(),
                       textAlign: TextAlign.start,
                       style: Theme.of(context).textTheme.headlineSmall),
                 ],
@@ -480,9 +479,9 @@ class _DrivePageState extends State<DrivePage> {
                 children: [
                   Expanded(
                     child: AutoSizeText(
-                      "Drive Safely!",
+                      "drive-safely".i18n(),
                       textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyLarge,
                       maxLines: 2,
                     ),
                   ),
@@ -506,7 +505,7 @@ class _DrivePageState extends State<DrivePage> {
           mainAxisSize: MainAxisSize.max,
           children: [
             AutoSizeText(
-              'DriveFit',
+              'app-title'.i18n(),
               style: Theme.of(context)
                   .textTheme
                   .displayLarge
@@ -543,7 +542,7 @@ class CautionMessage extends StatelessWidget {
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 0, 0),
           child: Text(
-            'Caution',
+            "caution".i18n(),
             textAlign: TextAlign.start,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
@@ -556,19 +555,22 @@ class CautionMessage extends StatelessWidget {
                 padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
                 child: Row(
                   mainAxisSize: MainAxisSize.max,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 4),
+                      padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
                       child: Icon(
                         Icons.warning_outlined,
                         color: lightColorScheme.onBackground,
                         size: 28,
                       ),
                     ),
-                    Text(main,
-                        textAlign: TextAlign.start,
-                        style: Theme.of(context).textTheme.headlineSmall),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                      child: Text(main,
+                          textAlign: TextAlign.start,
+                          style: Theme.of(context).textTheme.headlineSmall),
+                    ),
                   ],
                 ),
               ),
@@ -580,7 +582,7 @@ class CautionMessage extends StatelessWidget {
                       child: AutoSizeText(
                         description,
                         textAlign: TextAlign.start,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyLarge,
                         maxLines: 2,
                       ),
                     ),

@@ -11,6 +11,8 @@ import '/global_variables.dart' as globals;
 
 import '/theme/custom_color.g.dart';
 
+import 'package:localization/localization.dart';
+
 class DriveSessionSummary extends StatefulWidget {
   const DriveSessionSummary(
       {super.key,
@@ -59,6 +61,8 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
 
@@ -92,9 +96,8 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: const Text("Are you sure?"),
-                          content: const Text(
-                              "Data of this session can not be recovered."),
+                          title: Text("are-you-sure".i18n()),
+                          content: Text("delete-session-description".i18n()),
                           actions: [
                             FilledButton(
                               style: FilledButton.styleFrom(
@@ -103,7 +106,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                               onPressed: () {
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             TextButton(
                               style: TextButton.styleFrom(
@@ -119,10 +122,10 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                 rankingService.removeSessionScore(
                                     widget.session.score, widget.sessionIndex);
                                 if (mounted) setState(() {});
-                                showSnackBar("Data Deleted!");
+                                showSnackBar("data-deleted".i18n());
                                 goToHome();
                               },
-                              child: const Text("Delete"),
+                              child: Text("delete".i18n()),
                             ),
                           ],
                         );
@@ -143,7 +146,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                 child: Align(
                   alignment: const AlignmentDirectional(0, 0),
                   child: Text(
-                    'Session Summary',
+                    "session-summary".i18n(),
                     textAlign: TextAlign.center,
                     style: Theme.of(context)
                         .textTheme
@@ -206,7 +209,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                            Text("Your score: ",
+                            Text("your-score".i18n(),
                                 style: Theme.of(context).textTheme.titleSmall),
                             const SizedBox(width: 10),
                             Text(
@@ -246,7 +249,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                Text("You drove for: ",
+                                Text("you-drove-for".i18n(),
                                     style:
                                         Theme.of(context).textTheme.titleSmall),
                                 const SizedBox(width: 10),
@@ -287,7 +290,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                Text("with a distance of: ",
+                                Text("with-a-distance-of".i18n(),
                                     style:
                                         Theme.of(context).textTheme.titleSmall),
                                 const SizedBox(width: 10),
@@ -330,7 +333,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("You were found drowsy for: ",
+                            Text("you-were-found-drowsy-for".i18n(),
                                 style: Theme.of(context).textTheme.titleSmall),
                             RichText(
                               text: TextSpan(
@@ -342,8 +345,11 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                         .displaySmall,
                                   ),
                                   TextSpan(
-                                    text:
-                                        " time${widget.session.drowsyAlertCount == 1 ? "" : "s"}",
+                                    text: locale == const Locale('zh', 'HK')
+                                        ? "times".i18n([''])
+                                        : (widget.session.drowsyAlertCount == 1
+                                            ? "times".i18n([''])
+                                            : "times".i18n(['s'])),
                                     style:
                                         Theme.of(context).textTheme.bodyLarge,
                                   ),
@@ -367,7 +373,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Timestamps:",
+                                          "timestamps".i18n(),
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleSmall,
@@ -382,7 +388,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                   }
                                 },
                               ),
-                            Text("inattentive for: ",
+                            Text("inattentive-for".i18n(),
                                 style: Theme.of(context).textTheme.titleSmall),
                             RichText(
                               text: TextSpan(
@@ -395,8 +401,13 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                         .displaySmall,
                                   ),
                                   TextSpan(
-                                    text:
-                                        " time${widget.session.inattentiveAlertCount == 1 ? "" : "s"}",
+                                    text: locale == const Locale('zh', 'HK')
+                                        ? "times".i18n([''])
+                                        : (widget.session
+                                                    .inattentiveAlertCount ==
+                                                1
+                                            ? "times".i18n([''])
+                                            : "times".i18n(['s'])),
                                     style:
                                         Theme.of(context).textTheme.bodyLarge,
                                   ),
@@ -421,7 +432,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Timestamps:",
+                                          "timestamps".i18n(),
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleSmall,
@@ -436,7 +447,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                   }
                                 },
                               ),
-                            Text("and speeding for: ",
+                            Text("and-speeding-for".i18n(),
                                 style: Theme.of(context).textTheme.titleSmall),
                             RichText(
                               text: TextSpan(
@@ -448,8 +459,11 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                         .displaySmall,
                                   ),
                                   TextSpan(
-                                    text:
-                                        " time${widget.session.speedingCount == 1 ? "" : "s"}",
+                                    text: locale == const Locale('zh', 'HK')
+                                        ? "times".i18n([''])
+                                        : (widget.session.speedingCount == 1
+                                            ? "times".i18n([''])
+                                            : "times".i18n(['s'])),
                                     style:
                                         Theme.of(context).textTheme.bodyLarge,
                                   ),
@@ -473,7 +487,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "Timestamps:",
+                                          "timestamps".i18n(),
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleSmall,
@@ -506,7 +520,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                       Align(
                         alignment: const AlignmentDirectional(0, 0),
                         child: Text(
-                          "Journey is too short, session won't be counted.",
+                          "journey-too-short".i18n(),
                           textAlign: TextAlign.center,
                           style: Theme.of(context)
                               .textTheme
@@ -536,7 +550,7 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                     }
                   },
                   child: Text(
-                    "Ok!",
+                    "ok".i18n(),
                     style: Theme.of(context)
                         .textTheme
                         .labelLarge

@@ -68,10 +68,18 @@ class MyApp extends StatefulWidget {
       GlobalKey<NavigatorState>();
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<MyApp> createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
+  Locale? _locale;
+
+  changeLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+  }
+
   Future<void> _startForegroundTask() async {
     if (await FlutterForegroundTask.isRunningService) {
       FlutterForegroundTask.restartService();
@@ -102,24 +110,41 @@ class _MyAppState extends State<MyApp> {
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         ColorScheme lightScheme;
         ColorScheme darkScheme;
+        CustomColors lightCustomColors = lightCustomColorsOriginal;
+        CustomColors darkCustomColors = darkCustomColorsOriginal;
 
         if (lightDynamic != null && darkDynamic != null) {
           lightScheme = lightColorScheme;
-          lightCustomColors = lightCustomColors.harmonized(lightScheme);
+          lightCustomColors = lightCustomColorsOriginal.harmonized(lightScheme);
 
           darkScheme = darkColorScheme;
-          darkCustomColors = darkCustomColors.harmonized(darkScheme);
+          darkCustomColors = darkCustomColorsOriginal.harmonized(darkScheme);
         } else {
           lightScheme = lightColorScheme;
           darkScheme = darkColorScheme;
         }
 
         return MaterialApp(
+            locale: _locale,
+            localeResolutionCallback: (locale, supportedLocales) {
+              if (supportedLocales.contains(locale)) {
+                return locale;
+              }
+
+              if (locale?.languageCode == 'en') {
+                return const Locale('en', 'US');
+              }
+              return const Locale('zh', 'HK');
+            },
             localizationsDelegates: [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
               LocalJsonLocalization.delegate,
+            ],
+            supportedLocales: const [
+              Locale('zh', 'HK'),
+              Locale('en', 'US'),
             ],
             navigatorKey: MyApp.navigatorKey,
             scaffoldMessengerKey: globals.snackbarKey,
