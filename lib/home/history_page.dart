@@ -111,6 +111,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             .bodySmall
                             ?.copyWith(color: lightColorScheme.inverseSurface),
                         maxLines: 1,
+                        
                       ),
                     ),
                     const Spacer(),
@@ -126,6 +127,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             .bodySmall
                             ?.copyWith(color: lightColorScheme.inverseSurface),
                         maxLines: 1,
+                        
                       ),
                     ),
                     const Spacer(),

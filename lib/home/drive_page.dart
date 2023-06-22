@@ -460,21 +460,24 @@ class _DrivePageState extends State<DrivePage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
+                    padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
                     child: Icon(
                       Icons.check_circle,
                       color: lightColorScheme.primary,
                       size: 28,
                     ),
                   ),
-                  Text("good-to-go".i18n(),
-                      textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.headlineSmall),
+                  Text(
+                    "good-to-go".i18n(),
+                    textAlign: TextAlign.start,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    strutStyle: const StrutStyle(forceStrutHeight: true),
+                  ),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 8, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
               child: Row(
                 children: [
                   Expanded(

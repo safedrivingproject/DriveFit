@@ -1046,6 +1046,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title: Text("language".i18n()),
             tiles: [
               SettingsTile(
+                leading: const Icon(Icons.language_outlined),
                 title: locale == const Locale('zh', 'HK')
                     ? Text("switch-to-english".i18n())
                     : Text("switch-to-chinese".i18n()),
