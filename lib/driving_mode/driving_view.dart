@@ -432,9 +432,6 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.checkHeadLeftRight(faceDetectionService.rotYDelay +
             (!carMoving ? faceDetectionService.additionalDelay : 0));
       }
-      print(
-          "${faceDetectionService.filteredRotX}, ${faceDetectionService.filteredRotY}");
-      print(faceDetectionService.rotYCounter);
 
       if (faceDetectionService.reminderType == "Drowsy") {
         if (faceDetectionService.reminderCount <= 5) {
@@ -643,20 +640,14 @@ class _DrivingViewState extends State<DrivingView> {
     if (!_canProcess) return;
     if (_isBusy) return;
     _isBusy = true;
-    if (mounted) {
-      setState(() {
-        _text = '';
-      });
-    }
 
     faceDetectionService.faces = await _faceDetector.processImage(inputImage);
     if (faceDetectionService.faces.isNotEmpty) {
       final face = faceDetectionService.faces[0];
       faceDetectionService.rotX =
-          face.headEulerAngleX; // up and down rotX degrees
+          face.headEulerAngleX;
       faceDetectionService.rotY =
-          face.headEulerAngleY; // right and left rotY degrees
-      // rotZ = face.headEulerAngleZ; // sideways rotZ degrees
+          face.headEulerAngleY;
       faceDetectionService.leftEyeOpenProb = face.leftEyeOpenProbability;
       faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
@@ -677,13 +668,6 @@ class _DrivingViewState extends State<DrivingView> {
             inputImage.inputImageData!.size,
             inputImage.inputImageData!.imageRotation);
         _customPaint = CustomPaint(painter: painter);
-      } else {
-        String text = 'Faces found: ${faceDetectionService.faces.length}\n\n';
-        for (final face in faceDetectionService.faces) {
-          text += 'face: ${face.boundingBox}\n\n';
-        }
-        _text = text;
-        _customPaint = null;
       }
     }
 

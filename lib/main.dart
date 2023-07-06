@@ -109,19 +109,14 @@ class MyAppState extends State<MyApp> {
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         ColorScheme lightScheme;
-        ColorScheme darkScheme;
         CustomColors lightCustomColors = lightCustomColorsOriginal;
-        CustomColors darkCustomColors = darkCustomColorsOriginal;
 
         if (lightDynamic != null && darkDynamic != null) {
           lightScheme = lightColorScheme;
           lightCustomColors = lightCustomColorsOriginal.harmonized(lightScheme);
 
-          darkScheme = darkColorScheme;
-          darkCustomColors = darkCustomColorsOriginal.harmonized(darkScheme);
         } else {
           lightScheme = lightColorScheme;
-          darkScheme = darkColorScheme;
         }
 
         return MaterialApp(
