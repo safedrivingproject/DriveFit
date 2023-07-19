@@ -171,5 +171,7 @@
     "signed-out": "Signed out!",
     "congrats": "Congrats!",
     "you-leveled-up": "You leveled up!",
-    "yay": "Yay!"
+    "yay": "Yay!",
+    "eye-prob-threshold": "EyeOpenProb Threshold",
+    "rotx-offset": "rotX Offset Threshold"
 }

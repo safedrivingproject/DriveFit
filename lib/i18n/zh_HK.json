@@ -171,5 +171,7 @@
     "signed-out": "已登出！",
     "congrats": "恭喜！",
     "you-leveled-up": "你升級了！",
-    "yay": "好嘢！"
+    "yay": "好嘢！",
+    "eye-prob-threshold": "EyeOpenProb 門檻值",
+    "rotx-offset": "rotX Offset 門檻值"
 }

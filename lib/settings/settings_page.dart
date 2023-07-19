@@ -29,6 +29,8 @@ class _SettingsPageState extends State<SettingsPage> {
   final _additionalDelayController = TextEditingController();
   final _restReminderController = TextEditingController();
   final _speedingVelocityController = TextEditingController();
+  final _eyeProbController = TextEditingController();
+  final _rotXOffsetController = TextEditingController();
   final _statesController = MaterialStatesController();
   bool? enableGeolocation,
       globalSpeedingReminders,
@@ -49,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
   double _doubleValue = 1.0;
   int _intValue = 10;
   double _speedValue = 0.0;
+  double eyeProbThreshold = 0.5, rotXOffset = 18;
 
   void _loadDefaultSettings() {
     if (mounted) {
@@ -86,6 +89,9 @@ class _SettingsPageState extends State<SettingsPage> {
             'speedingVelocityThreshold', 16.6);
         speedingVelocityThresholdKMH =
             (speedingVelocityThresholdMS! * 3.6).roundToDouble();
+        eyeProbThreshold =
+            SharedPreferencesService.getDouble('eyeProbThreshold', 0.5);
+        rotXOffset = SharedPreferencesService.getDouble('rotXOffset', 18);
       });
     }
   }
@@ -115,6 +121,12 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     _speedingVelocityController.addListener(() {
       onFieldChanged(_speedingVelocityController, false, true, false);
+    });
+    _eyeProbController.addListener(() {
+      onFieldChanged(_eyeProbController, false, false, false);
+    });
+    _rotXOffsetController.addListener(() {
+      onFieldChanged(_rotXOffsetController, false, false, false);
     });
   }
 
@@ -153,6 +165,12 @@ class _SettingsPageState extends State<SettingsPage> {
           setState(() {
             _doubleValue = double.tryParse(controller.text) ?? 60.0;
             _intValue = (_doubleValue * 60).round();
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _doubleValue = double.tryParse(controller.text) ?? 0.5;
           });
         }
       }
@@ -993,6 +1011,170 @@ class _SettingsPageState extends State<SettingsPage> {
                   }
                 },
               ),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "eye-prob-threshold".i18n(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("$eyeProbThreshold"),
+                    ],
+                  ),
+                  leading: const Icon(Icons.bug_report_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("edit-value".i18n()),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _eyeProbController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return "invalid-value".i18n();
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "0.0 - 1.0",
+                                hintText: "eg-value".i18n(['0.5'])),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("setting-unchanged".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("cancel".i18n()),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("invalid-value".i18n());
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    eyeProbThreshold = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'eyeProbThreshold', _doubleValue);
+                                  });
+                                }
+                                showSnackBar("setting-updated".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("save".i18n()),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "rotx-offset".i18n(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("$rotXOffset"),
+                    ],
+                  ),
+                  leading: const Icon(Icons.bug_report_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("edit-value".i18n()),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _rotXOffsetController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return "invalid-value".i18n();
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "0 - 90",
+                                hintText: "eg-value".i18n(['18'])),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("setting-unchanged".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("cancel".i18n()),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("invalid-value".i18n());
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    rotXOffset = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'rotXOffset', _doubleValue);
+                                  });
+                                }
+                                showSnackBar("setting-updated".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("save".i18n()),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
             ],
           ),
           SettingsSection(

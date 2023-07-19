@@ -157,6 +157,10 @@ class _DrivingViewState extends State<DrivingView> {
             SharedPreferencesService.getInt('restReminderTime', 3600);
         geolocationService.speedingVelocityThreshold =
             SharedPreferencesService.getDouble('speedVelocityThreshold', 16.6);
+        faceDetectionService.eyeProbThreshold =
+            SharedPreferencesService.getDouble('eyeProbThreshold', 0.5);
+        faceDetectionService.rotXOffset =
+            SharedPreferencesService.getDouble('rotXOffset', 18);
       });
     }
     initAudioPlayers();
@@ -370,7 +374,7 @@ class _DrivingViewState extends State<DrivingView> {
     if (mounted) {
       _statesController.update(MaterialState.disabled, false);
     }
-    await Future.delayed(const Duration(seconds: 4));
+    if (!globals.showDebug) await Future.delayed(const Duration(seconds: 4));
 
     if (periodicDetectionTimer != null) return;
     periodicDetectionTimer =
@@ -437,7 +441,7 @@ class _DrivingViewState extends State<DrivingView> {
         if (faceDetectionService.reminderCount <= 5) {
           sendSleepyReminder();
         }
-        if (faceDetectionService.reminderCount == 10) {
+        if (faceDetectionService.reminderCount == 7) {
           sendPassengerReminder();
         }
         if (faceDetectionService.hasReminded == false) {
@@ -448,10 +452,10 @@ class _DrivingViewState extends State<DrivingView> {
         }
         faceDetectionService.reminderType = "None";
       } else if (faceDetectionService.reminderType == "Inattentive") {
-        if (faceDetectionService.reminderCount <= 5) {
+        if (faceDetectionService.reminderCount <= 3) {
           sendDistractedReminder();
         }
-        if (faceDetectionService.reminderCount == 6) {
+        if (faceDetectionService.reminderCount == 4) {
           sendPassengerReminder();
         }
         if (faceDetectionService.hasReminded == false) {
@@ -509,7 +513,6 @@ class _DrivingViewState extends State<DrivingView> {
           setState(() {
             startCalibration = false;
           });
-          showSnackBar("calibration-complete".i18n());
           FadeNavigator.pushReplacement(
               context,
               const HomePage(index: 0),
@@ -644,10 +647,8 @@ class _DrivingViewState extends State<DrivingView> {
     faceDetectionService.faces = await _faceDetector.processImage(inputImage);
     if (faceDetectionService.faces.isNotEmpty) {
       final face = faceDetectionService.faces[0];
-      faceDetectionService.rotX =
-          face.headEulerAngleX;
-      faceDetectionService.rotY =
-          face.headEulerAngleY;
+      faceDetectionService.rotX = face.headEulerAngleX;
+      faceDetectionService.rotY = face.headEulerAngleY;
       faceDetectionService.leftEyeOpenProb = face.leftEyeOpenProbability;
       faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
