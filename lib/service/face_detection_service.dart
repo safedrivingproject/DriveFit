@@ -38,8 +38,12 @@ class FaceDetectionService {
     //
     reminderCount = 0;
     reminderType = "None";
+    isEyesClosed = false;
+    isDrowsy = false;
+    isInattentive = false;
     hasReminded = false;
     isReminding = false;
+    remindTick = "None";
     //
     hasFace = false;
   }
@@ -74,8 +78,12 @@ class FaceDetectionService {
   //
   int reminderCount = 0;
   String reminderType = "None";
+  bool isEyesClosed = false;
+  bool isDrowsy = false;
+  bool isInattentive = false;
   bool hasReminded = false;
   bool isReminding = false;
+  String remindTick = "None";
   //
   bool hasFace = false;
 
@@ -133,42 +141,58 @@ class FaceDetectionService {
         eyeCounter = 0;
       }
       if (eyeCounter > 10) {
-        reminderType = "Drowsy";
+        isEyesClosed = true;
+        sendRemindTick("Sleeping");
         isReminding = true;
-        reminderCount++;
         eyeCounter = 0;
       }
     }
   }
 
-  void checkNormalPosition() {
-    if (filteredRotX != null &&
-        filteredRotY != null &&
-        filteredLeftEyeOpenProb != null &&
-        filteredRightEyeOpenProb != null) {
-      if (filteredRotX! > (neutralRotX - rotXOffset) &&
-          filteredRotY! > (neutralRotY - rotYRightOffset) &&
-          filteredRotY! < (neutralRotY + rotYLeftOffset) &&
-          filteredLeftEyeOpenProb! > eyeProbThreshold &&
+  void checkNotEyesClosed() {
+    if (filteredLeftEyeOpenProb != null && filteredRightEyeOpenProb != null) {
+      if (filteredLeftEyeOpenProb! > eyeProbThreshold &&
           filteredRightEyeOpenProb! > eyeProbThreshold) {
-        reminderCount = 0;
-        reminderType = "None";
+        isEyesClosed = false;
+        resetReminder();
         hasReminded = false;
-        isReminding = false;
       }
     }
   }
 
-  void checkHeadDown(int delay) {
-    if (filteredRotX! < (neutralRotX - rotXOffset)) {
+  void checkNotDrowsy() {
+    if (filteredRotX != null) {
+      if (filteredRotX! > (neutralRotX - rotXOffset) &&
+          filteredRotX! < (neutralRotX + rotXOffset)) {
+        isDrowsy = false;
+        resetReminder();
+        hasReminded = false;
+      }
+    }
+  }
+
+  void checkNotInattentive() {
+    if (filteredRotY != null) {
+      if (filteredRotY! > (neutralRotY - rotYRightOffset) &&
+          filteredRotY! < (neutralRotY + rotYLeftOffset)) {
+        isInattentive = false;
+        resetReminder();
+        hasReminded = false;
+      }
+    }
+  }
+
+  void checkHeadUpDown(int delay) {
+    if (filteredRotX! < (neutralRotX - rotXOffset) ||
+        filteredRotX! > (neutralRotX + rotXOffset)) {
       rotXCounter++;
     } else {
       rotXCounter = 0;
     }
     if (rotXCounter > delay) {
-      reminderType = "Drowsy";
+      isDrowsy = true;
+      sendRemindTick("Drowsy");
       isReminding = true;
-      reminderCount++;
       rotXCounter = 0;
     }
   }
@@ -181,10 +205,37 @@ class FaceDetectionService {
       rotYCounter = 0;
     }
     if (rotYCounter > delay) {
-      reminderType = "Inattentive";
+      isInattentive = true;
+      sendRemindTick("Inattentive");
       isReminding = true;
-      reminderCount++;
       rotYCounter = 0;
+    }
+  }
+
+  void setReminderType() {
+    if (isEyesClosed) {
+      reminderType = "Sleeping";
+      return;
+    }
+    if (isDrowsy) {
+      reminderType = "Drowsy";
+      return;
+    }
+    if (isInattentive) {
+      reminderType = "Inattentive";
+      return;
+    }
+    reminderType = "None";
+  }
+
+  void sendRemindTick(String type) {
+    remindTick = type;
+  }
+
+  void resetReminder() {
+    if (!isDrowsy && !isInattentive && !isEyesClosed) {
+      isReminding = false;
+      reminderCount = 0;
     }
   }
 }

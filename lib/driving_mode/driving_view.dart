@@ -421,50 +421,75 @@ class _DrivingViewState extends State<DrivingView> {
       faceDetectionService.runLowPassFilter();
       faceDetectionService.updatePreviousFilteredFace();
 
+      faceDetectionService.checkNotEyesClosed();
+      faceDetectionService.checkNotDrowsy();
+      faceDetectionService.checkNotInattentive();
+
       faceDetectionService.checkEyesClosed();
-      faceDetectionService.checkNormalPosition();
 
       if (geolocationService.stationaryAlertsDisabled) {
         if (carMoving) {
-          faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay);
+          faceDetectionService.checkHeadUpDown(faceDetectionService.rotXDelay);
           faceDetectionService
               .checkHeadLeftRight(faceDetectionService.rotYDelay);
         }
       } else {
-        faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay +
+        faceDetectionService.checkHeadUpDown(faceDetectionService.rotXDelay +
             (!carMoving ? faceDetectionService.additionalDelay : 0));
         faceDetectionService.checkHeadLeftRight(faceDetectionService.rotYDelay +
             (!carMoving ? faceDetectionService.additionalDelay : 0));
       }
 
-      if (faceDetectionService.reminderType == "Drowsy") {
-        if (faceDetectionService.reminderCount <= 5) {
-          sendSleepyReminder();
+      faceDetectionService.setReminderType();
+
+      if (faceDetectionService.remindTick != "None") {
+        if (faceDetectionService.reminderType == "Sleeping" &&
+            faceDetectionService.remindTick == "Sleeping") {
+          faceDetectionService.reminderCount++;
+          if (faceDetectionService.reminderCount <= 3) {
+            sendSleepyReminder();
+          }
+          if (faceDetectionService.reminderCount == 4) {
+            sendPassengerReminder();
+          }
+          if (faceDetectionService.hasReminded == false) {
+            currentSession.drowsyAlertCount++;
+            currentSession.drowsyAlertTimestampsList
+                .insert(0, noMillis.format(DateTime.now()));
+            faceDetectionService.hasReminded = true;
+          }
+        } else if (faceDetectionService.reminderType == "Drowsy" &&
+            faceDetectionService.remindTick == "Drowsy") {
+          faceDetectionService.reminderCount++;
+          if (faceDetectionService.reminderCount <= 3) {
+            sendSleepyReminder();
+          }
+          if (faceDetectionService.reminderCount == 4) {
+            sendPassengerReminder();
+          }
+          if (faceDetectionService.hasReminded == false) {
+            currentSession.drowsyAlertCount++;
+            currentSession.drowsyAlertTimestampsList
+                .insert(0, noMillis.format(DateTime.now()));
+            faceDetectionService.hasReminded = true;
+          }
+        } else if (faceDetectionService.reminderType == "Inattentive" &&
+            faceDetectionService.remindTick == "Inattentive") {
+          faceDetectionService.reminderCount++;
+          if (faceDetectionService.reminderCount <= 3) {
+            sendDistractedReminder();
+          }
+          if (faceDetectionService.reminderCount == 4) {
+            sendPassengerReminder();
+          }
+          if (faceDetectionService.hasReminded == false) {
+            currentSession.inattentiveAlertCount++;
+            currentSession.inattentiveAlertTimestampsList
+                .insert(0, noMillis.format(DateTime.now()));
+            faceDetectionService.hasReminded = true;
+          }
         }
-        if (faceDetectionService.reminderCount == 7) {
-          sendPassengerReminder();
-        }
-        if (faceDetectionService.hasReminded == false) {
-          currentSession.drowsyAlertCount++;
-          currentSession.drowsyAlertTimestampsList
-              .insert(0, noMillis.format(DateTime.now()));
-          faceDetectionService.hasReminded = true;
-        }
-        faceDetectionService.reminderType = "None";
-      } else if (faceDetectionService.reminderType == "Inattentive") {
-        if (faceDetectionService.reminderCount <= 3) {
-          sendDistractedReminder();
-        }
-        if (faceDetectionService.reminderCount == 4) {
-          sendPassengerReminder();
-        }
-        if (faceDetectionService.hasReminded == false) {
-          currentSession.inattentiveAlertCount++;
-          currentSession.inattentiveAlertTimestampsList
-              .insert(0, noMillis.format(DateTime.now()));
-          faceDetectionService.hasReminded = true;
-        }
-        faceDetectionService.reminderType = "None";
+        faceDetectionService.remindTick = "None";
       }
 
       isReminding = faceDetectionService.isReminding;
@@ -759,18 +784,6 @@ class _DrivingViewState extends State<DrivingView> {
                                 text: "neutralRotY",
                                 doubleValue: faceDetectionService.neutralRotY),
                             DataValueWidget(
-                                text: "leftEyeOpenProb",
-                                doubleValue: widget.calibrationMode
-                                    ? faceDetectionService.leftEyeOpenProb
-                                    : faceDetectionService
-                                        .filteredLeftEyeOpenProb),
-                            DataValueWidget(
-                                text: "rightEyeOpenProb",
-                                doubleValue: widget.calibrationMode
-                                    ? faceDetectionService.rightEyeOpenProb
-                                    : faceDetectionService
-                                        .filteredRightEyeOpenProb),
-                            DataValueWidget(
                                 text: "rotYLeftOffset",
                                 doubleValue:
                                     faceDetectionService.rotYLeftOffset),
@@ -778,6 +791,12 @@ class _DrivingViewState extends State<DrivingView> {
                                 text: "rotYRightOffset",
                                 doubleValue:
                                     faceDetectionService.rotYRightOffset),
+                            DataValueWidget(
+                                text: "reminderType",
+                                stringValue: faceDetectionService.reminderType),
+                            DataValueWidget(
+                                text: "reminderCount",
+                                intValue: faceDetectionService.reminderCount),
                             DataValueWidget(
                                 text: "carMoving", boolValue: carMoving),
                             if (widget.accelerometerOn == true)
