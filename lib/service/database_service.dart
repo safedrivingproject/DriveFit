@@ -56,8 +56,8 @@ class DatabaseService {
 
   void _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await db
-          .execute("ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL DEFAULT 0.0");
+      await db.execute(
+          "ALTER TABLE sessions ADD COLUMN distance DOUBLE NOT NULL DEFAULT 0.0");
     }
     if (oldVersion < 3) {
       await db.execute(
@@ -115,6 +115,20 @@ class DatabaseService {
       "${session.id}/speeding_timestamps": session.speedingTimestamps,
     });
   }
+
+  // Future<void> readAndSaveSessionDataFromFirebase(
+  //     List<dynamic> newSnapshotList) async {
+  //   DatabaseReference ref = FirebaseDatabase.instance.ref();
+  //   final snapshot =
+  //       await ref.child('users/$uid/sessions').orderByValue().get();
+  //   if (snapshot.exists) {
+  //     if (snapshot.value != null) {
+  //       for (final child in snapshot.children) {
+  //         newSnapshotList.add(child);
+  //       }
+  //     }
+  //   }
+  // }
 
   int getRowCount(List<SessionData> sessions) {
     if (sessions.isEmpty) return 0;

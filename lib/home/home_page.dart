@@ -108,7 +108,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     await checkPermissions();
     globals.hasSignedIn = FirebaseAuth.instance.currentUser != null;
     databaseService.updateUserProfile();
-    if (globals.hasSignedIn) databaseService.saveUserDataToFirebase();
+    if (globals.hasSignedIn) {
+      databaseService.saveUserDataToFirebase();
+    }
     selectedPageIndex = 0;
     _loadSettings();
     getWeather();
@@ -244,7 +246,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> getSessionData() async {
     driveSessionsList = await databaseService.getAllSessions();
-
     totalDrowsyAlertCount =
         databaseService.getDrowsyAlertCount(driveSessionsList);
     totalInattentiveAlertCount =

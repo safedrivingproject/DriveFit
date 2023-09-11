@@ -66,6 +66,10 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
 
+    final starCount =
+        ((widget.session.score / (widget.session.duration / 60).ceil()) * 5)
+            .round();
+
     return WillPopScope(
       onWillPop: () async {
         if (widget.fromHistoryPage) {
@@ -213,13 +217,14 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                 style: Theme.of(context).textTheme.titleSmall),
                             const SizedBox(width: 10),
                             Text(
-                              '${widget.session.score} / 5 ',
+                              '${widget.session.score}',
                               style: Theme.of(context).textTheme.displaySmall,
                             ),
+                            const Spacer(),
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.05,
                               child: ListView.builder(
-                                itemCount: widget.session.score,
+                                itemCount: starCount < 0 ? 0 : starCount,
                                 shrinkWrap: true,
                                 scrollDirection: Axis.horizontal,
                                 physics: const NeverScrollableScrollPhysics(),

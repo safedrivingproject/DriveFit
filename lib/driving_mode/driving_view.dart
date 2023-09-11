@@ -678,9 +678,8 @@ class _DrivingViewState extends State<DrivingView> {
       faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
       Size size = const Size(1.0, 1.0);
-      InputImageRotation? imageRotation =
-          inputImage.inputImageData?.imageRotation;
-      Size? imageSize = inputImage.inputImageData?.size;
+      InputImageRotation? imageRotation = inputImage.metadata?.rotation;
+      Size? imageSize = inputImage.metadata?.size;
       if (imageSize != null && imageRotation != null) {
         globals.faceCenterX = calcFaceCenterX(
             translateX(face.boundingBox.left, imageRotation, size, imageSize),
@@ -689,10 +688,8 @@ class _DrivingViewState extends State<DrivingView> {
             translateY(face.boundingBox.top, imageRotation, size, imageSize),
             translateY(
                 face.boundingBox.bottom, imageRotation, size, imageSize));
-        final painter = FaceDetectorPainter(
-            faceDetectionService.faces,
-            inputImage.inputImageData!.size,
-            inputImage.inputImageData!.imageRotation);
+        final painter = FaceDetectorPainter(faceDetectionService.faces,
+            inputImage.metadata!.size, inputImage.metadata!.rotation);
         _customPaint = CustomPaint(painter: painter);
       }
     }
@@ -1180,33 +1177,13 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   int calcDrivingScore() {
-    var drowsyFreq = currentSession.drowsyAlertCount / currentSession.duration;
-    var inattentiveFreq =
-        currentSession.inattentiveAlertCount / currentSession.duration;
-    var speedingFreq = currentSession.speedingCount / currentSession.duration;
-    if ((drowsyFreq) <= (1 / 600) &&
-        (inattentiveFreq) <= (1 / 600) &&
-        (speedingFreq) <= (1 / 1200)) {
-      return 5;
-    } else if ((drowsyFreq) <= (3 / 600) &&
-        (inattentiveFreq) <= (3 / 600) &&
-        (speedingFreq) <= (3 / 1200)) {
-      return 4;
-    } else if ((drowsyFreq) <= (5 / 600) &&
-        (inattentiveFreq) <= (5 / 600) &&
-        (speedingFreq) <= (5 / 1200)) {
-      return 3;
-    } else if ((drowsyFreq) <= (7 / 600) &&
-        (inattentiveFreq) <= (7 / 600) &&
-        (speedingFreq) <= (7 / 1200)) {
-      return 2;
-    } else if ((drowsyFreq) <= (9 / 600) &&
-        (inattentiveFreq) <= (9 / 600) &&
-        (speedingFreq) <= (9 / 1200)) {
-      return 1;
-    } else {
-      return 0;
-    }
+    var duration = currentSession.duration;
+    var drowsyCount = currentSession.drowsyAlertCount;
+    var inattentiveCount = currentSession.inattentiveAlertCount;
+    var speedingCount = currentSession.speedingCount;
+    var score = (duration / 60).ceil() -
+        2 * (drowsyCount + inattentiveCount + speedingCount);
+    return score < 0 ? 0 : score;
   }
 
   void finalizeSessionData() {
@@ -1243,7 +1220,6 @@ class _DrivingViewState extends State<DrivingView> {
   void updateScores() {
     rankingService.updateDriveScore(currentSession.score);
     rankingService.updateScoreStreak(currentSession.score);
-    rankingService.updateTotalScore();
   }
 }
 

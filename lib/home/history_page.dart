@@ -111,7 +111,6 @@ class _HistoryPageState extends State<HistoryPage> {
                             .bodySmall
                             ?.copyWith(color: lightColorScheme.inverseSurface),
                         maxLines: 1,
-                        
                       ),
                     ),
                     const Spacer(),
@@ -127,7 +126,6 @@ class _HistoryPageState extends State<HistoryPage> {
                             .bodySmall
                             ?.copyWith(color: lightColorScheme.inverseSurface),
                         maxLines: 1,
-                        
                       ),
                     ),
                     const Spacer(),
@@ -179,7 +177,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               padding: const EdgeInsetsDirectional.fromSTEB(
                                   0, 4, 0, 0),
                               child: Text(
-                                '${overallAvgScore.toStringAsFixed(1)}/5',
+                                overallAvgScore.toStringAsFixed(1),
                                 style: Theme.of(context).textTheme.displaySmall,
                               ),
                             ),
@@ -218,7 +216,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                 padding: const EdgeInsetsDirectional.fromSTEB(
                                     0, 4, 0, 0),
                                 child: Text(
-                                  '${recentAvgScore.toStringAsFixed(1)}/5',
+                                  recentAvgScore.toStringAsFixed(1),
                                   style:
                                       Theme.of(context).textTheme.displaySmall,
                                 ),
@@ -735,6 +733,9 @@ class SessionsListState extends State<SessionsList> {
               physics: const BouncingScrollPhysics(),
               itemBuilder: (BuildContext context, int index) {
                 SessionData session = widget.sessionsList[index];
+                final starCount =
+                    ((session.score / (session.duration / 60).ceil()) * 5)
+                        .round();
                 return GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(
@@ -812,6 +813,7 @@ class SessionsListState extends State<SessionsList> {
                                 '${session.score}',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
+                              const Spacer(),
                               Padding(
                                 padding: const EdgeInsetsDirectional.fromSTEB(
                                     4, 0, 0, 0),
@@ -819,7 +821,7 @@ class SessionsListState extends State<SessionsList> {
                                   height:
                                       MediaQuery.of(context).size.height * 0.03,
                                   child: ListView.builder(
-                                    itemCount: session.score,
+                                    itemCount: starCount < 0 ? 0 : starCount,
                                     shrinkWrap: true,
                                     scrollDirection: Axis.horizontal,
                                     physics:

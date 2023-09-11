@@ -7,7 +7,6 @@ class RankingService {
   factory RankingService() => _instance;
 
   int driveScore = 0;
-  int totalScore = 0;
   int scoreStreak = 0;
 
   int previousRankIndex = 0;
@@ -16,7 +15,6 @@ class RankingService {
 
   RankingService._internal() {
     driveScore = 0;
-    totalScore = 0;
     scoreStreak = 0;
     previousRankIndex = 0;
     currentRankIndex = 0;
@@ -49,20 +47,15 @@ class RankingService {
     SharedPreferencesService.setInt('scoreStreak', scoreStreak);
   }
 
-  void updateTotalScore() {
-    totalScore = driveScore + scoreStreak;
-  }
-
   void getScores() {
     driveScore = SharedPreferencesService.getInt('driveScore', 0);
     scoreStreak = SharedPreferencesService.getInt('scoreStreak', 0);
-    totalScore = driveScore + scoreStreak;
   }
 
   void getRank() {
     previousRankIndex = currentRankIndex;
     currentRankIndex = rankList
-        .lastIndexWhere((element) => totalScore >= element["requiredScore"]);
+        .lastIndexWhere((element) => driveScore >= element["requiredScore"]);
     currentRankName = rankList[currentRankIndex]["name"];
   }
 }
