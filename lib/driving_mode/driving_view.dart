@@ -1023,6 +1023,27 @@ class _DrivingViewState extends State<DrivingView> {
                                 textAlign: TextAlign.center,
                               ),
                             ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                backgroundColor: lightColorScheme.primary,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: () async {
+                                stopDrivingMode(true);
+                              },
+                              child: Text(
+                                "Stop driving w/ + duration (debug)",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                        color: lightColorScheme.onPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1101,7 +1122,7 @@ class _DrivingViewState extends State<DrivingView> {
                               ),
                               statesController: _statesController,
                               onPressed: () async {
-                                stopDrivingMode();
+                                stopDrivingMode(false);
                               },
                               child: Text(
                                 "stop-driving".i18n(),
@@ -1125,7 +1146,7 @@ class _DrivingViewState extends State<DrivingView> {
     );
   }
 
-  void stopDrivingMode() {
+  void stopDrivingMode(bool debug) {
     if (!canExit) return;
     cancelTimer = true;
     periodicDetectionTimer = null;
@@ -1133,17 +1154,13 @@ class _DrivingViewState extends State<DrivingView> {
       notificationTitle: "foreground-notification-title-idle".i18n(),
       notificationText: "foreground-notification-text-idle".i18n(),
     );
-    finalizeSessionData();
+    finalizeSessionData(debug);
     isValidSession = _validateSession();
     if (isValidSession) {
       databaseService.saveSessionDataToLocal(currentSession);
       updateScores();
       if (globals.hasSignedIn) {
-        if (currentSession.drowsyAlertCount > 0 ||
-            currentSession.inattentiveAlertCount > 0 ||
-            currentSession.speedingCount > 0) {
-          databaseService.saveSessionDataToFirebase(currentSession);
-        }
+        databaseService.saveSessionDataToFirebase(currentSession);
       }
     }
     if (mounted) setState(() {});
@@ -1186,7 +1203,7 @@ class _DrivingViewState extends State<DrivingView> {
     return score < 0 ? 0 : score;
   }
 
-  void finalizeSessionData() {
+  void finalizeSessionData(bool debug) {
     if (mounted) {
       setState(() {
         currentSession.endTime = saveCurrentTime(noMillis);
@@ -1196,6 +1213,7 @@ class _DrivingViewState extends State<DrivingView> {
         if (currentSession.distance > -1) {
           currentSession.distance += geolocationService.accumulatedDistance;
         }
+        if (debug) currentSession.duration += 1800;
         currentSession.score = calcDrivingScore();
         currentSession.drowsyAlertTimestamps =
             currentSession.drowsyAlertTimestampsList.join(", ");
@@ -1219,7 +1237,8 @@ class _DrivingViewState extends State<DrivingView> {
 
   void updateScores() {
     rankingService.updateDriveScore(currentSession.score);
-    rankingService.updateScoreStreak(currentSession.score);
+    rankingService.updateScoreStreak(
+        currentSession.score, currentSession.duration);
   }
 }
 

@@ -26,10 +26,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -59,5 +56,17 @@ class DefaultFirebaseOptions {
     projectId: 'drivefit-user-sessions',
     databaseURL: 'https://drivefit-user-sessions-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'drivefit-user-sessions.appspot.com',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyA_XcHeMNiK_qGANmWX17tKckWC7_1nXTs',
+    appId: '1:155993529740:ios:d5e588903a5a59ded38aa9',
+    messagingSenderId: '155993529740',
+    projectId: 'drivefit-user-sessions',
+    databaseURL: 'https://drivefit-user-sessions-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'drivefit-user-sessions.appspot.com',
+    androidClientId: '155993529740-6eptno8ft8mbvkirkpuh0cql7ah9071c.apps.googleusercontent.com',
+    iosClientId: '155993529740-c9r0pbhce3f783bqph0hem05bjidchrm.apps.googleusercontent.com',
+    iosBundleId: 'com.example.faceDetection',
   );
 }

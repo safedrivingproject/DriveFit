@@ -26,10 +26,10 @@ class RankingService {
     SharedPreferencesService.setInt('driveScore', driveScore);
   }
 
-  void removeSessionScore(int score, int sessionListIndex) {
+  void removeSessionScore(int score, int sessionListIndex, int duration) {
     driveScore -= score;
     SharedPreferencesService.setInt('driveScore', driveScore);
-    if (score == 5) {
+    if (score == duration) {
       if (sessionListIndex < scoreStreak) {
         scoreStreak -= 1;
       }
@@ -38,10 +38,11 @@ class RankingService {
     SharedPreferencesService.setInt('scoreStreak', scoreStreak);
   }
 
-  void updateScoreStreak(int score) {
-    if (score != 5) {
+  void updateScoreStreak(int score, int duration) {
+    var minutes = (duration / 60).ceil();
+    if (score != minutes) {
       scoreStreak = 0;
-    } else if (score == 5) {
+    } else if (score == minutes) {
       scoreStreak++;
     }
     SharedPreferencesService.setInt('scoreStreak', scoreStreak);

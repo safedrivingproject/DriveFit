@@ -124,7 +124,9 @@ class _DriveSessionSummaryState extends State<DriveSessionSummary> {
                                       .deleteSessionFirebase(widget.session);
                                 }
                                 rankingService.removeSessionScore(
-                                    widget.session.score, widget.sessionIndex);
+                                    widget.session.score,
+                                    widget.sessionIndex,
+                                    widget.session.duration);
                                 if (mounted) setState(() {});
                                 showSnackBar("data-deleted".i18n());
                                 goToHome();
