@@ -496,7 +496,7 @@ class _AchievementsPageState extends State<AchievementsPage>
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,

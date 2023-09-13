@@ -535,7 +535,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   ScrollPhysics _getScrollPhysics(int index) {
     if (index == 0) {
-      return const NeverScrollableScrollPhysics();
+      return const BouncingScrollPhysics(
+          decelerationRate: ScrollDecelerationRate.fast);
     }
     if (index == 1) {
       return const BouncingScrollPhysics(
@@ -549,7 +550,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   String _getAppBarTitle(int index) {
-    if (index == 0) return "";
+    if (index == 0) return "app-title".i18n();
     if (index == 1) return "drive-summary".i18n();
     if (index == 2) return "achievements".i18n();
     return "";

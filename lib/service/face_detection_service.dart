@@ -155,7 +155,6 @@ class FaceDetectionService {
           filteredRightEyeOpenProb! > eyeProbThreshold) {
         isEyesClosed = false;
         resetReminder();
-        hasReminded = false;
       }
     }
   }
@@ -166,7 +165,6 @@ class FaceDetectionService {
           filteredRotX! < (neutralRotX + rotXOffset)) {
         isDrowsy = false;
         resetReminder();
-        hasReminded = false;
       }
     }
   }
@@ -177,7 +175,6 @@ class FaceDetectionService {
           filteredRotY! < (neutralRotY + rotYLeftOffset)) {
         isInattentive = false;
         resetReminder();
-        hasReminded = false;
       }
     }
   }
@@ -235,6 +232,7 @@ class FaceDetectionService {
   void resetReminder() {
     if (!isDrowsy && !isInattentive && !isEyesClosed) {
       isReminding = false;
+      hasReminded = false;
       reminderCount = 0;
     }
   }

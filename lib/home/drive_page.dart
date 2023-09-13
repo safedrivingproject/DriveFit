@@ -96,253 +96,243 @@ class _DrivePageState extends State<DrivePage> {
     final sourceXanthous =
         Theme.of(context).extension<CustomColors>()!.sourceXanthous;
 
-    return SizedBox(
-      height: MediaQuery.of(context).size.height -
-          kToolbarHeight -
-          kBottomNavigationBarHeight * 2,
-      width: MediaQuery.of(context).size.width,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(0, 14, 0, 14),
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              decoration: BoxDecoration(
-                color: lightColorScheme.onPrimary,
-                boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 4,
-                    color: Color(0x33000000),
-                    offset: Offset(0, 2),
-                  )
-                ],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 8),
-                    child: Text(
-                      "weather-conditions".i18n(),
-                      textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
+    return ListView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 14, 0, 14),
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            decoration: BoxDecoration(
+              color: lightColorScheme.onPrimary,
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 4,
+                  color: Color(0x33000000),
+                  offset: Offset(0, 2),
+                )
+              ],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 8),
+                  child: Text(
+                    "weather-conditions".i18n(),
+                    textAlign: TextAlign.start,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
-                  Padding(
-                    padding:
-                        const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-                    child: ListView(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      scrollDirection: Axis.vertical,
-                      physics: const BouncingScrollPhysics(
-                          decelerationRate: ScrollDecelerationRate.fast),
-                      children: [
-                        Padding(
-                          padding:
-                              const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Padding(
-                                  padding: const EdgeInsetsDirectional.fromSTEB(
-                                      0, 0, 8, 0),
-                                  child: (weatherService
-                                          .currentWeatherIconURL.isNotEmpty)
-                                      ? Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(25),
-                                            color: lightColorScheme.primary,
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    scrollDirection: Axis.vertical,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.max,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                    0, 0, 8, 0),
+                                child: (weatherService
+                                        .currentWeatherIconURL.isNotEmpty)
+                                    ? Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(25),
+                                          color: lightColorScheme.primary,
+                                        ),
+                                        child: CachedNetworkImage(
+                                          imageUrl: weatherService
+                                              .currentWeatherIconURL,
+                                          placeholder: (context, url) =>
+                                              const CircularProgressIndicator(),
+                                          errorWidget: (context, url, error) =>
+                                              Icon(
+                                            Icons.error,
+                                            color: lightColorScheme.onSecondary,
                                           ),
-                                          child: CachedNetworkImage(
-                                            imageUrl: weatherService
-                                                .currentWeatherIconURL,
-                                            placeholder: (context, url) =>
-                                                const CircularProgressIndicator(),
-                                            errorWidget:
-                                                (context, url, error) => Icon(
-                                              Icons.error,
-                                              color:
-                                                  lightColorScheme.onSecondary,
-                                            ),
-                                            height: 50,
-                                            width: 50,
-                                          ))
-                                      : const SizedBox(
                                           height: 50,
                                           width: 50,
-                                        )),
-                              const SizedBox(width: 10),
-                              AutoSizeText(
-                                weatherService.currentWeatherDescription ??
-                                    "no-weather-info".i18n(),
-                                textAlign: TextAlign.start,
-                                style:
-                                    Theme.of(context).textTheme.headlineMedium,
-                              ),
-                            ],
-                          ),
+                                        ))
+                                    : const SizedBox(
+                                        height: 50,
+                                        width: 50,
+                                      )),
+                            const SizedBox(width: 10),
+                            AutoSizeText(
+                              weatherService.currentWeatherDescription ??
+                                  "no-weather-info".i18n(),
+                              textAlign: TextAlign.start,
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  getCautionMessage(),
-                ],
-              ),
+                ),
+                getCautionMessage(),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              decoration: BoxDecoration(
-                color: lightColorScheme.onPrimary,
-                boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 4,
-                    color: Color(0x33000000),
-                    offset: Offset(0, 2),
-                  )
-                ],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 0),
-                    child: Row(
-                      children: [
-                        Text(
-                          "today's-tip".i18n(),
-                          textAlign: TextAlign.start,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        Padding(
-                          padding:
-                              const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
-                          child: Icon(
-                            Icons.lightbulb,
-                            color: sourceXanthous,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding:
-                        const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
-                    child: AutoSizeText(
-                        databaseService.drivingTip ??
-                            genericTipsList[
-                                Random().nextInt(genericTipsList.length)],
-                        maxLines: 1,
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 0, 0, 14),
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            decoration: BoxDecoration(
+              color: lightColorScheme.onPrimary,
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 4,
+                  color: Color(0x33000000),
+                  offset: Offset(0, 2),
+                )
+              ],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 0, 0),
+                  child: Row(
+                    children: [
+                      Text(
+                        "today's-tip".i18n(),
                         textAlign: TextAlign.start,
-                        style: Theme.of(context).textTheme.headlineSmall),
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      Padding(
+                        padding:
+                            const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
+                        child: Icon(
+                          Icons.lightbulb,
+                          color: sourceXanthous,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
+                  child: AutoSizeText(
+                      databaseService.drivingTip ??
+                          genericTipsList[
+                              Random().nextInt(genericTipsList.length)],
+                      maxLines: 1,
+                      textAlign: TextAlign.start,
+                      style: Theme.of(context).textTheme.headlineSmall),
+                ),
+              ],
             ),
           ),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 0),
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                  shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                  backgroundColor: globals.hasCalibrated
-                      ? lightColorScheme.surfaceVariant
-                      : lightColorScheme.primary,
-                  minimumSize: const Size.fromHeight(50.0),
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0)),
-              icon: Icon(
-                Icons.architecture,
-                color: globals.hasCalibrated
-                    ? lightColorScheme.primary
-                    : lightColorScheme.background,
-              ),
-              onPressed: () {
-                FadeNavigator.push(
-                    context,
-                    const DrivingView(
-                      calibrationMode: true,
-                      enableGeolocation: false,
-                      enableSpeedReminders: false,
-                    ),
-                    FadeNavigator.opacityTweenSequence,
-                    lightColorScheme.primary,
-                    const Duration(milliseconds: 1500));
-              },
-              label: Text(
-                "calibrate".i18n(),
-                style: globals.hasCalibrated
-                    ? Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(color: lightColorScheme.primary)
-                    : Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(color: lightColorScheme.onPrimary),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 32),
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
+        ),
+        SizedBox(height: MediaQuery.of(context).size.height * 0.05),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 0),
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
                 shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(16.0))),
-                minimumSize: const Size.fromHeight(50.0),
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
                 backgroundColor: globals.hasCalibrated
-                    ? lightColorScheme.primary
-                    : lightColorScheme.surfaceVariant,
-              ),
-              icon: const Icon(
-                Icons.directions_car_outlined,
-              ),
-              statesController: _statesController,
-              onPressed: () {
-                if (!canPress) return;
-                FadeNavigator.push(
-                    context,
-                    DrivingView(
-                      calibrationMode: false,
-                      enableGeolocation: globals.enableGeolocation,
-                      enableSpeedReminders: globals.globalSpeedingReminders
-                          ? true
-                          : weatherService.enableSpeedReminders,
-                    ),
-                    FadeNavigator.opacityTweenSequence,
-                    lightColorScheme.primary,
-                    const Duration(milliseconds: 1500));
-              },
-              label: Text(
-                "start-driving".i18n(),
-                style: globals.hasCalibrated
-                    ? Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(color: lightColorScheme.onPrimary)
-                    : Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(color: lightColorScheme.outline),
-                textAlign: TextAlign.center,
-              ),
+                    ? lightColorScheme.surfaceVariant
+                    : lightColorScheme.primary,
+                minimumSize: const Size.fromHeight(50.0),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0)),
+            icon: Icon(
+              Icons.architecture,
+              color: globals.hasCalibrated
+                  ? lightColorScheme.primary
+                  : lightColorScheme.background,
+            ),
+            onPressed: () {
+              FadeNavigator.push(
+                  context,
+                  const DrivingView(
+                    calibrationMode: true,
+                    enableGeolocation: false,
+                    enableSpeedReminders: false,
+                  ),
+                  FadeNavigator.opacityTweenSequence,
+                  lightColorScheme.primary,
+                  const Duration(milliseconds: 1500));
+            },
+            label: Text(
+              "calibrate".i18n(),
+              style: globals.hasCalibrated
+                  ? Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(color: lightColorScheme.primary)
+                  : Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(color: lightColorScheme.onPrimary),
+              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 70),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(0, 16, 0, 32),
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(
+              shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(16.0))),
+              minimumSize: const Size.fromHeight(50.0),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
+              backgroundColor: globals.hasCalibrated
+                  ? lightColorScheme.primary
+                  : lightColorScheme.surfaceVariant,
+            ),
+            icon: const Icon(
+              Icons.directions_car_outlined,
+            ),
+            statesController: _statesController,
+            onPressed: () {
+              if (!canPress) return;
+              FadeNavigator.push(
+                  context,
+                  DrivingView(
+                    calibrationMode: false,
+                    enableGeolocation: globals.enableGeolocation,
+                    enableSpeedReminders: globals.globalSpeedingReminders
+                        ? true
+                        : weatherService.enableSpeedReminders,
+                  ),
+                  FadeNavigator.opacityTweenSequence,
+                  lightColorScheme.primary,
+                  const Duration(milliseconds: 1500));
+            },
+            label: Text(
+              "start-driving".i18n(),
+              style: globals.hasCalibrated
+                  ? Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(color: lightColorScheme.onPrimary)
+                  : Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(color: lightColorScheme.outline),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -499,27 +489,23 @@ class _DrivePageState extends State<DrivePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(28, 14, 28, 14),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            AutoSizeText(
-              'app-title'.i18n(),
-              style: Theme.of(context)
-                  .textTheme
-                  .displayLarge
-                  ?.copyWith(height: 1, color: lightColorScheme.onPrimary),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-            ),
-            SizedBox(height: MediaQuery.of(context).size.height * 0.01),
-            _body(),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          AutoSizeText(
+            'app-title'.i18n(),
+            style: Theme.of(context)
+                .textTheme
+                .displayLarge
+                ?.copyWith(height: 1, color: lightColorScheme.onPrimary),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+          ),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.01),
+          _body(),
+        ],
       ),
     );
   }
@@ -541,6 +527,7 @@ class CautionMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 0, 0),
