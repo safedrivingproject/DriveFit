@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:wakelock/wakelock.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
+import '../service/navigation.dart';
 import '/theme/color_schemes.g.dart';
 import 'camera_view.dart';
 import '../notifications/notification_controller.dart';
@@ -24,6 +25,8 @@ import '../service/shared_preferences_service.dart';
 import '../service/ranking_service.dart';
 import 'drive_session_summary.dart';
 import '/global_variables.dart' as globals;
+
+import 'package:localization/localization.dart';
 
 class DrivingView extends StatefulWidget {
   const DrivingView({
@@ -66,7 +69,8 @@ class _DrivingViewState extends State<DrivingView> {
 
   int caliSeconds = 3;
   Timer? periodicDetectionTimer, periodicCalibrationTimer;
-  bool carMoving = true;
+  bool cancelTimer = false;
+  bool carMoving = false;
   bool speeding = false;
   bool startCalibration = false;
   bool _canProcess = true, _isBusy = false;
@@ -107,17 +111,6 @@ class _DrivingViewState extends State<DrivingView> {
   String text = "Stop service";
 
   bool isReminding = false;
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 50.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 50.0,
-    ),
-  ];
 
   /// *******************************************************
   /// *******************************************************
@@ -137,13 +130,13 @@ class _DrivingViewState extends State<DrivingView> {
         geolocationService.stationaryAlertsDisabled =
             SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
         faceDetectionService.additionalDelay =
-            SharedPreferencesService.getInt('additionalDelay', 20);
+            SharedPreferencesService.getInt('additionalDelay', 50);
         globals.showDebug =
             SharedPreferencesService.getBool('showDebug', false);
         globals.hasCalibrated =
             SharedPreferencesService.getBool('hasCalibrated', false);
         faceDetectionService.neutralRotX =
-            SharedPreferencesService.getDouble('neutralRotX', 5.0);
+            SharedPreferencesService.getDouble('neutralRotX', 0.0);
         faceDetectionService.neutralRotY =
             SharedPreferencesService.getDouble('neutralRotY', -25.0);
         faceDetectionService.rotYLeftOffset =
@@ -151,11 +144,11 @@ class _DrivingViewState extends State<DrivingView> {
         faceDetectionService.rotYRightOffset =
             SharedPreferencesService.getDouble('rotYRightOffset', 10.0);
         faceDetectionService.rotXDelay =
-            SharedPreferencesService.getInt('rotXDelay', 10);
+            SharedPreferencesService.getInt('rotXDelay', 15);
         faceDetectionService.rotYDelay =
             SharedPreferencesService.getInt('rotYDelay', 25);
         geolocationService.carVelocityThreshold =
-            SharedPreferencesService.getDouble('carVelocityThreshold', 8.3);
+            SharedPreferencesService.getDouble('carVelocityThreshold', 4.16);
         globals.drowsyAlarmValue = SharedPreferencesService.getStringList(
             'drowsyAlarm', ["assets", "audio/car_horn_high.mp3"]);
         globals.inattentiveAlarmValue = SharedPreferencesService.getStringList(
@@ -164,6 +157,10 @@ class _DrivingViewState extends State<DrivingView> {
             SharedPreferencesService.getInt('restReminderTime', 3600);
         geolocationService.speedingVelocityThreshold =
             SharedPreferencesService.getDouble('speedVelocityThreshold', 16.6);
+        faceDetectionService.eyeProbThreshold =
+            SharedPreferencesService.getDouble('eyeProbThreshold', 0.5);
+        faceDetectionService.rotXOffset =
+            SharedPreferencesService.getDouble('rotXOffset', 18);
       });
     }
     initAudioPlayers();
@@ -265,8 +262,12 @@ class _DrivingViewState extends State<DrivingView> {
 
     _loadSettings();
 
+    cancelTimer = true;
     periodicCalibrationTimer?.cancel();
+    periodicCalibrationTimer = null;
     periodicDetectionTimer?.cancel();
+    periodicDetectionTimer = null;
+    cancelTimer = false;
 
     _initSessionData();
 
@@ -278,8 +279,8 @@ class _DrivingViewState extends State<DrivingView> {
       }
     } else if (widget.calibrationMode == false) {
       FlutterForegroundTask.updateService(
-          notificationTitle: "DriveFit is protecting you :)",
-          notificationText: "Tap to return to app!");
+          notificationTitle: "foreground-notification-title-driving".i18n(),
+          notificationText: "foreground-notification-text-driving".i18n());
       detectionTimer();
     }
     if (widget.accelerometerOn) {
@@ -297,10 +298,11 @@ class _DrivingViewState extends State<DrivingView> {
     _disableWakeLock();
 
     _canProcess = false;
-    periodicDetectionTimer?.cancel();
-    periodicDetectionTimer = null;
+    cancelTimer = true;
     periodicCalibrationTimer?.cancel();
     periodicCalibrationTimer = null;
+    periodicDetectionTimer?.cancel();
+    periodicDetectionTimer = null;
 
     geolocationService.stopGeolocationStream();
     globals.inCalibrationMode = false;
@@ -363,6 +365,7 @@ class _DrivingViewState extends State<DrivingView> {
 
   void detectionTimer() async {
     canExit = false;
+    faceDetectionService.clearPreviousFilteredFace();
     WidgetsBinding.instance.scheduleFrameCallback((_) {
       _statesController.update(MaterialState.disabled, true);
     });
@@ -371,11 +374,16 @@ class _DrivingViewState extends State<DrivingView> {
     if (mounted) {
       _statesController.update(MaterialState.disabled, false);
     }
-    await Future.delayed(const Duration(seconds: 4));
+    if (!globals.showDebug) await Future.delayed(const Duration(seconds: 4));
 
     if (periodicDetectionTimer != null) return;
     periodicDetectionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (cancelTimer) {
+        cancelTimer = false;
+        timer.cancel();
+      }
+
       updateDuration();
       if (currentSession.duration > 0 &&
           currentSession.duration % restReminderTime == 0) {
@@ -383,22 +391,10 @@ class _DrivingViewState extends State<DrivingView> {
       }
 
       if (widget.enableGeolocation) {
-        if (mounted) {
-          setState(() {
-            geolocationService.insertLiveSpeedList();
-          });
-        }
-        if (mounted) {
-          setState(() {
-            carMoving = geolocationService.checkCarMoving();
-          });
-        }
+        carMoving = geolocationService.checkCarMoving();
+
         if (widget.enableSpeedReminders) {
-          if (mounted) {
-            setState(() {
-              speeding = geolocationService.checkSpeeding();
-            });
-          }
+          speeding = geolocationService.checkSpeeding();
         } else {
           speeding = false;
         }
@@ -418,90 +414,86 @@ class _DrivingViewState extends State<DrivingView> {
         if (mounted) setState(() {});
       }
 
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkHasFace();
-        });
-      }
+      faceDetectionService.checkHasFace();
 
       if (!faceDetectionService.hasFace) return;
 
-      if (mounted) {
-        setState(() {
-          faceDetectionService.checkEyesClosed();
-          faceDetectionService.checkNormalPosition();
-        });
-      }
+      faceDetectionService.runLowPassFilter();
+      faceDetectionService.updatePreviousFilteredFace();
+
+      faceDetectionService.checkNotEyesClosed();
+      faceDetectionService.checkNotDrowsy();
+      faceDetectionService.checkNotInattentive();
+
+      faceDetectionService.checkEyesClosed();
 
       if (geolocationService.stationaryAlertsDisabled) {
         if (carMoving) {
-          if (mounted) {
-            setState(() {
-              faceDetectionService
-                  .checkHeadDown(faceDetectionService.rotXDelay);
-              faceDetectionService
-                  .checkHeadLeftRight(faceDetectionService.rotYDelay);
-            });
-          }
+          faceDetectionService.checkHeadUpDown(faceDetectionService.rotXDelay);
+          faceDetectionService
+              .checkHeadLeftRight(faceDetectionService.rotYDelay);
         }
       } else {
-        if (mounted) {
-          setState(() {
-            faceDetectionService.checkHeadDown(faceDetectionService.rotXDelay +
-                (!carMoving ? faceDetectionService.additionalDelay : 0));
-            faceDetectionService.checkHeadLeftRight(
-                faceDetectionService.rotYDelay +
-                    (!carMoving ? faceDetectionService.additionalDelay : 0));
-          });
-        }
+        faceDetectionService.checkHeadUpDown(faceDetectionService.rotXDelay +
+            (!carMoving ? faceDetectionService.additionalDelay : 0));
+        faceDetectionService.checkHeadLeftRight(faceDetectionService.rotYDelay +
+            (!carMoving ? faceDetectionService.additionalDelay : 0));
       }
 
-      if (faceDetectionService.reminderType == "Drowsy") {
-        if (faceDetectionService.reminderCount <= 5) {
-          sendSleepyReminder();
+      faceDetectionService.setReminderType();
+
+      if (faceDetectionService.remindTick != "None") {
+        if (faceDetectionService.reminderType == "Sleeping" &&
+            faceDetectionService.remindTick == "Sleeping") {
+          faceDetectionService.reminderCount++;
+          if (faceDetectionService.reminderCount <= 3) {
+            sendSleepyReminder();
+          }
+          if (faceDetectionService.reminderCount == 4) {
+            sendPassengerReminder();
+          }
+          if (faceDetectionService.hasReminded == false) {
+            currentSession.drowsyAlertCount++;
+            currentSession.drowsyAlertTimestampsList
+                .insert(0, noMillis.format(DateTime.now()));
+            faceDetectionService.hasReminded = true;
+          }
+        } else if (faceDetectionService.reminderType == "Drowsy" &&
+            faceDetectionService.remindTick == "Drowsy") {
+          faceDetectionService.reminderCount++;
+          if (faceDetectionService.reminderCount <= 3) {
+            sendSleepyReminder();
+          }
+          if (faceDetectionService.reminderCount == 4) {
+            sendPassengerReminder();
+          }
+          if (faceDetectionService.hasReminded == false) {
+            currentSession.drowsyAlertCount++;
+            currentSession.drowsyAlertTimestampsList
+                .insert(0, noMillis.format(DateTime.now()));
+            faceDetectionService.hasReminded = true;
+          }
+        } else if (faceDetectionService.reminderType == "Inattentive" &&
+            faceDetectionService.remindTick == "Inattentive") {
+          faceDetectionService.reminderCount++;
+          if (faceDetectionService.reminderCount <= 3) {
+            sendDistractedReminder();
+          }
+          if (faceDetectionService.reminderCount == 4) {
+            sendPassengerReminder();
+          }
+          if (faceDetectionService.hasReminded == false) {
+            currentSession.inattentiveAlertCount++;
+            currentSession.inattentiveAlertTimestampsList
+                .insert(0, noMillis.format(DateTime.now()));
+            faceDetectionService.hasReminded = true;
+          }
         }
-        if (faceDetectionService.reminderCount == 10) {
-          sendPassengerReminder();
-        }
-        if (faceDetectionService.hasReminded == false) {
-          currentSession.drowsyAlertCount++;
-          currentSession.drowsyAlertTimestampsList
-              .insert(0, noMillis.format(DateTime.now()));
-          faceDetectionService.hasReminded = true;
-        }
-        faceDetectionService.reminderType = "None";
-        if (mounted) setState(() {});
-      } else if (faceDetectionService.reminderType == "Inattentive") {
-        if (faceDetectionService.reminderCount <= 5) {
-          sendDistractedReminder();
-        }
-        if (faceDetectionService.reminderCount == 6) {
-          sendPassengerReminder();
-        }
-        if (faceDetectionService.hasReminded == false) {
-          currentSession.inattentiveAlertCount++;
-          currentSession.inattentiveAlertTimestampsList
-              .insert(0, noMillis.format(DateTime.now()));
-          faceDetectionService.hasReminded = true;
-        }
-        faceDetectionService.reminderType = "None";
-        if (mounted) setState(() {});
+        faceDetectionService.remindTick = "None";
       }
-      if (speeding) {
-        if (geolocationService.hasReminded == false) {
-          sendSpeedingReminder();
-          currentSession.speedingCount++;
-          currentSession.speedingTimestampsList
-              .insert(0, noMillis.format(DateTime.now()));
-          geolocationService.hasReminded = true;
-        }
-        if (mounted) setState(() {});
-      }
-      if (mounted) {
-        setState(() {
-          isReminding = faceDetectionService.isReminding;
-        });
-      }
+
+      isReminding = faceDetectionService.isReminding;
+      if (mounted) setState(() {});
     });
   }
 
@@ -524,6 +516,10 @@ class _DrivingViewState extends State<DrivingView> {
     }
     periodicCalibrationTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (cancelTimer) {
+        cancelTimer = false;
+        timer.cancel();
+      }
       timeCounter++;
       if (timeCounter % 10 == 0) {
         caliSeconds--;
@@ -542,29 +538,16 @@ class _DrivingViewState extends State<DrivingView> {
           setState(() {
             startCalibration = false;
           });
-          showSnackBar("Calibration complete!");
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              barrierColor: lightColorScheme.primary,
-              transitionDuration: const Duration(milliseconds: 1500),
-              pageBuilder: (BuildContext context, Animation<double> animation,
-                  Animation<double> secondaryAnimation) {
-                return const HomePage(index: 0);
-              },
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: TweenSequence<double>(opacityTweenSequence)
-                      .animate(animation),
-                  child: child,
-                );
-              },
-            ),
-          );
+          FadeNavigator.pushReplacement(
+              context,
+              const HomePage(index: 0),
+              FadeNavigator.opacityTweenSequence,
+              lightColorScheme.primary,
+              const Duration(milliseconds: 1500));
           timer.cancel();
         }
       } else {
-        liveRotXList.add(faceDetectionService.rotX ?? 5);
+        liveRotXList.add(faceDetectionService.rotX ?? 0);
         if (liveRotXList.length > 10) {
           liveRotXList.removeAt(0);
         }
@@ -589,19 +572,19 @@ class _DrivingViewState extends State<DrivingView> {
     var rightOffset = 15.0;
     if (neutralY <= 0) {
       if (neutralY > -25) {
-        leftOffset = 20 - (neutralY.abs() / 10);
-        rightOffset = 20 + (neutralY.abs() / 2);
+        leftOffset = 25 - (neutralY.abs() / 10);
+        rightOffset = 25 - (neutralY.abs() / 5);
       } else {
-        leftOffset = 20 + (neutralY.abs() / 5);
-        rightOffset = 20 - (neutralY.abs() / 7);
+        leftOffset = 25 - (neutralY.abs() / 8);
+        rightOffset = 25 - (neutralY.abs() / 4);
       }
     } else if (neutralY > 0) {
       if (neutralY < 25) {
-        leftOffset = 20 + (neutralY.abs() / 2);
-        rightOffset = 20 - (neutralY.abs() / 10);
+        leftOffset = 25 - (neutralY.abs() / 5);
+        rightOffset = 25 - (neutralY.abs() / 10);
       } else {
-        leftOffset = 20 - (neutralY.abs() / 7);
-        rightOffset = 20 + (neutralY.abs() / 5);
+        leftOffset = 25 - (neutralY.abs() / 4);
+        rightOffset = 25 - (neutralY.abs() / 8);
       }
     }
     faceDetectionService.rotYLeftOffset = leftOffset;
@@ -615,7 +598,7 @@ class _DrivingViewState extends State<DrivingView> {
       count += 1;
       result += (value - result) / count;
     }
-    if (count == 0) throw StateError('No elements');
+    if (count == 0) throw StateError('No elements to average');
     return result;
   }
 
@@ -685,27 +668,18 @@ class _DrivingViewState extends State<DrivingView> {
     if (!_canProcess) return;
     if (_isBusy) return;
     _isBusy = true;
-    if (mounted) {
-      setState(() {
-        _text = '';
-      });
-    }
 
     faceDetectionService.faces = await _faceDetector.processImage(inputImage);
     if (faceDetectionService.faces.isNotEmpty) {
       final face = faceDetectionService.faces[0];
-      faceDetectionService.rotX =
-          face.headEulerAngleX; // up and down rotX degrees
-      faceDetectionService.rotY =
-          face.headEulerAngleY; // right and left rotY degrees
-      // rotZ = face.headEulerAngleZ; // sideways rotZ degrees
+      faceDetectionService.rotX = face.headEulerAngleX;
+      faceDetectionService.rotY = face.headEulerAngleY;
       faceDetectionService.leftEyeOpenProb = face.leftEyeOpenProbability;
       faceDetectionService.rightEyeOpenProb = face.rightEyeOpenProbability;
 
       Size size = const Size(1.0, 1.0);
-      InputImageRotation? imageRotation =
-          inputImage.inputImageData?.imageRotation;
-      Size? imageSize = inputImage.inputImageData?.size;
+      InputImageRotation? imageRotation = inputImage.metadata?.rotation;
+      Size? imageSize = inputImage.metadata?.size;
       if (imageSize != null && imageRotation != null) {
         globals.faceCenterX = calcFaceCenterX(
             translateX(face.boundingBox.left, imageRotation, size, imageSize),
@@ -714,18 +688,9 @@ class _DrivingViewState extends State<DrivingView> {
             translateY(face.boundingBox.top, imageRotation, size, imageSize),
             translateY(
                 face.boundingBox.bottom, imageRotation, size, imageSize));
-        final painter = FaceDetectorPainter(
-            faceDetectionService.faces,
-            inputImage.inputImageData!.size,
-            inputImage.inputImageData!.imageRotation);
+        final painter = FaceDetectorPainter(faceDetectionService.faces,
+            inputImage.metadata!.size, inputImage.metadata!.rotation);
         _customPaint = CustomPaint(painter: painter);
-      } else {
-        String text = 'Faces found: ${faceDetectionService.faces.length}\n\n';
-        for (final face in faceDetectionService.faces) {
-          text += 'face: ${face.boundingBox}\n\n';
-        }
-        _text = text;
-        _customPaint = null;
       }
     }
 
@@ -757,7 +722,7 @@ class _DrivingViewState extends State<DrivingView> {
         child: Scaffold(
             appBar: AppBar(
               title: Text(
-                widget.calibrationMode ? "Calibrate" : "Driving",
+                widget.calibrationMode ? "calibrate".i18n() : "driving".i18n(),
                 style: Theme.of(context)
                     .textTheme
                     .headlineSmall
@@ -801,10 +766,14 @@ class _DrivingViewState extends State<DrivingView> {
                           children: [
                             DataValueWidget(
                                 text: "rotX",
-                                doubleValue: faceDetectionService.rotX),
+                                doubleValue: widget.calibrationMode
+                                    ? faceDetectionService.rotX
+                                    : faceDetectionService.filteredRotX),
                             DataValueWidget(
                                 text: "rotY",
-                                doubleValue: faceDetectionService.rotY),
+                                doubleValue: widget.calibrationMode
+                                    ? faceDetectionService.rotY
+                                    : faceDetectionService.filteredRotY),
                             DataValueWidget(
                                 text: "neutralRotX",
                                 doubleValue: faceDetectionService.neutralRotX),
@@ -812,29 +781,19 @@ class _DrivingViewState extends State<DrivingView> {
                                 text: "neutralRotY",
                                 doubleValue: faceDetectionService.neutralRotY),
                             DataValueWidget(
-                                text: "leftEyeOpenProb",
+                                text: "rotYLeftOffset",
                                 doubleValue:
-                                    faceDetectionService.leftEyeOpenProb),
+                                    faceDetectionService.rotYLeftOffset),
                             DataValueWidget(
-                                text: "rightEyeOpenProb",
+                                text: "rotYRightOffset",
                                 doubleValue:
-                                    faceDetectionService.rightEyeOpenProb),
+                                    faceDetectionService.rotYRightOffset),
+                            DataValueWidget(
+                                text: "reminderType",
+                                stringValue: faceDetectionService.reminderType),
                             DataValueWidget(
                                 text: "reminderCount",
                                 intValue: faceDetectionService.reminderCount),
-                            DataValueWidget(
-                                text: "hasReminded",
-                                boolValue: faceDetectionService.hasReminded),
-                            DataValueWidget(
-                                text: "drowsyAlertCount",
-                                intValue: currentSession.drowsyAlertCount),
-                            DataValueWidget(
-                                text: "inattentiveAlertCount",
-                                intValue: currentSession.inattentiveAlertCount),
-                            DataValueWidget(
-                              text: "speedingCount",
-                              intValue: currentSession.speedingCount,
-                            ),
                             DataValueWidget(
                                 text: "carMoving", boolValue: carMoving),
                             if (widget.accelerometerOn == true)
@@ -920,7 +879,7 @@ class _DrivingViewState extends State<DrivingView> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 20),
+                                  const SizedBox(width: 10),
                                   if (geolocationService.speedList.isNotEmpty)
                                     Expanded(
                                       child: SizedBox(
@@ -931,6 +890,49 @@ class _DrivingViewState extends State<DrivingView> {
                                           itemBuilder: (context, index) {
                                             final speedItem = geolocationService
                                                 .speedList[index];
+                                            return Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 4.0),
+                                              color: lightColorScheme.secondary,
+                                              alignment: Alignment.center,
+                                              child: Center(
+                                                child: SizedBox(
+                                                  child: Wrap(
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        speedItem.toString(),
+                                                        style: const TextStyle(
+                                                            color:
+                                                                Colors.white),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          shrinkWrap: true,
+                                          physics:
+                                              const AlwaysScrollableScrollPhysics(),
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 10),
+                                  if (geolocationService
+                                      .speedDifference.isNotEmpty)
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 150,
+                                        child: ListView.builder(
+                                          itemCount: geolocationService
+                                              .speedDifference.length,
+                                          itemBuilder: (context, index) {
+                                            final speedItem = geolocationService
+                                                .speedDifference[index];
                                             return Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -979,6 +981,69 @@ class _DrivingViewState extends State<DrivingView> {
                                   ),
                                 ),
                               ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                backgroundColor: lightColorScheme.primary,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: () {
+                                sendRestReminder();
+                              },
+                              child: Text(
+                                "Send rest reminder (debug)",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                        color: lightColorScheme.onPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                backgroundColor: lightColorScheme.primary,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: () {
+                                geolocationService.debugAddSpeed();
+                              },
+                              child: Text(
+                                "Add speed (debug)",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                        color: lightColorScheme.onPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                        Radius.circular(16.0))),
+                                backgroundColor: lightColorScheme.primary,
+                                minimumSize: const Size.fromHeight(50),
+                              ),
+                              onPressed: () async {
+                                stopDrivingMode(true);
+                              },
+                              child: Text(
+                                "Stop driving w/ + duration (debug)",
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                        color: lightColorScheme.onPrimary),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1012,7 +1077,7 @@ class _DrivingViewState extends State<DrivingView> {
                                 }
                               },
                               child: Text(
-                                "Calibrate",
+                                "calibrate".i18n(),
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelLarge
@@ -1057,10 +1122,10 @@ class _DrivingViewState extends State<DrivingView> {
                               ),
                               statesController: _statesController,
                               onPressed: () async {
-                                stopDrivingMode();
+                                stopDrivingMode(false);
                               },
                               child: Text(
-                                "Stop driving",
+                                "stop-driving".i18n(),
                                 style: Theme.of(context)
                                     .textTheme
                                     .labelLarge
@@ -1081,46 +1146,35 @@ class _DrivingViewState extends State<DrivingView> {
     );
   }
 
-  void stopDrivingMode() {
+  void stopDrivingMode(bool debug) {
     if (!canExit) return;
-    periodicDetectionTimer?.cancel();
+    cancelTimer = true;
+    periodicDetectionTimer = null;
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Going to drive?',
-      notificationText: 'Tap to start DriveFit!',
+      notificationTitle: "foreground-notification-title-idle".i18n(),
+      notificationText: "foreground-notification-text-idle".i18n(),
     );
-    finalizeSessionData();
+    finalizeSessionData(debug);
     isValidSession = _validateSession();
     if (isValidSession) {
       databaseService.saveSessionDataToLocal(currentSession);
       updateScores();
       if (globals.hasSignedIn) {
-        if (currentSession.drowsyAlertCount > 0 ||
-            currentSession.inattentiveAlertCount > 0 ||
-            currentSession.speedingCount > 0) {
-          databaseService.saveSessionDataToFirebase(currentSession);
-        }
+        databaseService.saveSessionDataToFirebase(currentSession);
       }
     }
     if (mounted) setState(() {});
-    Navigator.of(context).pushReplacement(PageRouteBuilder(
-      barrierColor: lightColorScheme.primary,
-      transitionDuration: const Duration(seconds: 1),
-      pageBuilder: (BuildContext context, Animation<double> animation,
-          Animation<double> secondaryAnimation) {
-        return DriveSessionSummary(
+    FadeNavigator.pushReplacement(
+        context,
+        DriveSessionSummary(
           session: currentSession,
           isValidSession: isValidSession,
           fromHistoryPage: false,
-        );
-      },
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity:
-              TweenSequence<double>(opacityTweenSequence).animate(animation),
-          child: child,
-        );
-      },
-    ));
+          sessionIndex: 0,
+        ),
+        FadeNavigator.opacityTweenSequence,
+        lightColorScheme.primary,
+        const Duration(milliseconds: 1500));
   }
 
   /// *******************************************************
@@ -1140,36 +1194,16 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   int calcDrivingScore() {
-    var drowsyFreq = currentSession.drowsyAlertCount / currentSession.duration;
-    var inattentiveFreq =
-        currentSession.inattentiveAlertCount / currentSession.duration;
-    var speedingFreq = currentSession.speedingCount / currentSession.duration;
-    if ((drowsyFreq) <= (1 / 600) &&
-        (inattentiveFreq) <= (1 / 600) &&
-        (speedingFreq) <= (1 / 1200)) {
-      return 5;
-    } else if ((drowsyFreq) <= (3 / 600) &&
-        (inattentiveFreq) <= (3 / 600) &&
-        (speedingFreq) <= (3 / 1200)) {
-      return 4;
-    } else if ((drowsyFreq) <= (5 / 600) &&
-        (inattentiveFreq) <= (5 / 600) &&
-        (speedingFreq) <= (5 / 1200)) {
-      return 3;
-    } else if ((drowsyFreq) <= (7 / 600) &&
-        (inattentiveFreq) <= (7 / 600) &&
-        (speedingFreq) <= (7 / 1200)) {
-      return 2;
-    } else if ((drowsyFreq) <= (9 / 600) &&
-        (inattentiveFreq) <= (9 / 600) &&
-        (speedingFreq) <= (9 / 1200)) {
-      return 1;
-    } else {
-      return 0;
-    }
+    var duration = currentSession.duration;
+    var drowsyCount = currentSession.drowsyAlertCount;
+    var inattentiveCount = currentSession.inattentiveAlertCount;
+    var speedingCount = currentSession.speedingCount;
+    var score = (duration / 60).ceil() -
+        2 * (drowsyCount + inattentiveCount + speedingCount);
+    return score < 0 ? 0 : score;
   }
 
-  void finalizeSessionData() {
+  void finalizeSessionData(bool debug) {
     if (mounted) {
       setState(() {
         currentSession.endTime = saveCurrentTime(noMillis);
@@ -1179,6 +1213,7 @@ class _DrivingViewState extends State<DrivingView> {
         if (currentSession.distance > -1) {
           currentSession.distance += geolocationService.accumulatedDistance;
         }
+        if (debug) currentSession.duration += 1800;
         currentSession.score = calcDrivingScore();
         currentSession.drowsyAlertTimestamps =
             currentSession.drowsyAlertTimestampsList.join(", ");
@@ -1202,8 +1237,8 @@ class _DrivingViewState extends State<DrivingView> {
 
   void updateScores() {
     rankingService.updateDriveScore(currentSession.score);
-    rankingService.updateScoreStreak(currentSession.score);
-    rankingService.updateTotalScore();
+    rankingService.updateScoreStreak(
+        currentSession.score, currentSession.duration);
   }
 }
 
@@ -1261,8 +1296,8 @@ class _PageCenterTextState extends State<PageCenterText> {
                           ? lightColorScheme.onPrimary
                           : lightColorScheme.onPrimaryContainer),
               duration: const Duration(seconds: 1),
-              child: const Text(
-                "You are now protected!",
+              child: Text(
+                "you-are-now-protected".i18n(),
               ),
             ),
           ),
@@ -1279,8 +1314,8 @@ class _PageCenterTextState extends State<PageCenterText> {
                           ? lightColorScheme.onPrimary
                           : lightColorScheme.onPrimaryContainer),
               duration: const Duration(seconds: 1),
-              child: const Text(
-                "Drive Safely!",
+              child: Text(
+                "drive-safely".i18n(),
               ),
             ),
           ),
@@ -1311,27 +1346,25 @@ class CalibrateInstructionList extends StatelessWidget {
           color: Colors.black.withOpacity(0.5),
           padding: const EdgeInsets.all(30),
           child: Column(
-            children: const [
+            children: [
               CalibrateInstruction(
                 bullet: "1.",
-                instruction: "Secure your phone in the phone holder",
+                instruction: "calibrate-instruction-1".i18n(),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "2.",
-                instruction:
-                    "Make sure your head is visible in the camera preview",
+                instruction: "calibrate-instruction-2".i18n(),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "3.",
-                instruction:
-                    "Look forward towards the road (just like when you are driving attentively)",
+                instruction: "calibrate-instruction-3".i18n(),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               CalibrateInstruction(
                 bullet: "4.",
-                instruction: "Press 'Calibrate' and wait 3 seconds",
+                instruction: "calibrate-instruction-4".i18n(),
               ),
             ],
           ),
@@ -1342,7 +1375,7 @@ class CalibrateInstructionList extends StatelessWidget {
             color: Colors.black.withOpacity(0.5),
             padding: const EdgeInsets.all(15),
             child: Text(
-              caliSeconds < 1 ? "Complete!" : "$caliSeconds",
+              caliSeconds < 1 ? "complete".i18n() : "$caliSeconds",
               style: Theme.of(context).textTheme.displayMedium?.copyWith(
                     color: lightColorScheme.onPrimary,
                   ),

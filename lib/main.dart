@@ -7,6 +7,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'firebase_options.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:localization/localization.dart';
 
 import 'home/home_page.dart';
 import 'notifications/notification_controller.dart';
@@ -57,7 +59,7 @@ void _initForegroundTask() {
       iosNotificationOptions:
           const IOSNotificationOptions(showNotification: false),
       foregroundTaskOptions:
-          const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: true));
+          const ForegroundTaskOptions(interval: 5000, autoRunOnBoot: false));
 }
 
 class MyApp extends StatefulWidget {
@@ -66,10 +68,18 @@ class MyApp extends StatefulWidget {
       GlobalKey<NavigatorState>();
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<MyApp> createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
+  Locale? _locale;
+
+  changeLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+  }
+
   Future<void> _startForegroundTask() async {
     if (await FlutterForegroundTask.isRunningService) {
       FlutterForegroundTask.restartService();
@@ -92,25 +102,45 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    LocalJsonLocalization.delegate.directories = ['lib/i18n'];
+
     final textTheme = Theme.of(context).textTheme;
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
         ColorScheme lightScheme;
-        ColorScheme darkScheme;
+        CustomColors lightCustomColors = lightCustomColorsOriginal;
 
         if (lightDynamic != null && darkDynamic != null) {
           lightScheme = lightColorScheme;
-          lightCustomColors = lightCustomColors.harmonized(lightScheme);
+          lightCustomColors = lightCustomColorsOriginal.harmonized(lightScheme);
 
-          darkScheme = darkColorScheme;
-          darkCustomColors = darkCustomColors.harmonized(darkScheme);
         } else {
           lightScheme = lightColorScheme;
-          darkScheme = darkColorScheme;
         }
 
         return MaterialApp(
+            locale: _locale,
+            localeResolutionCallback: (locale, supportedLocales) {
+              if (supportedLocales.contains(locale)) {
+                return locale;
+              }
+
+              if (locale?.languageCode == 'en') {
+                return const Locale('en', 'US');
+              }
+              return const Locale('zh', 'HK');
+            },
+            localizationsDelegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              LocalJsonLocalization.delegate,
+            ],
+            supportedLocales: const [
+              Locale('zh', 'HK'),
+              Locale('en', 'US'),
+            ],
             navigatorKey: MyApp.navigatorKey,
             scaffoldMessengerKey: globals.snackbarKey,
             title: globals.appName,

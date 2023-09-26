@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "155993529740-6eptno8ft8mbvkirkpuh0cql7ah9071c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.drive_fit",
+            "certificate_hash": "9af93393ba608bfe7d3f143974085424195d23e7"
+          }
+        },
+        {
           "client_id": "155993529740-08upoq2i100o6sbb2pqf95ciu8s34nq8.apps.googleusercontent.com",
           "client_type": 3
         }

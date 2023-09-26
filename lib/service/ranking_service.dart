@@ -7,7 +7,6 @@ class RankingService {
   factory RankingService() => _instance;
 
   int driveScore = 0;
-  int totalScore = 0;
   int scoreStreak = 0;
 
   int previousRankIndex = 0;
@@ -16,7 +15,6 @@ class RankingService {
 
   RankingService._internal() {
     driveScore = 0;
-    totalScore = 0;
     scoreStreak = 0;
     previousRankIndex = 0;
     currentRankIndex = 0;
@@ -28,29 +26,37 @@ class RankingService {
     SharedPreferencesService.setInt('driveScore', driveScore);
   }
 
-  void updateScoreStreak(int score) {
-    if (score != 5) {
+  void removeSessionScore(int score, int sessionListIndex, int duration) {
+    driveScore -= score;
+    SharedPreferencesService.setInt('driveScore', driveScore);
+    if (score == duration) {
+      if (sessionListIndex < scoreStreak) {
+        scoreStreak -= 1;
+      }
+    }
+    if (scoreStreak < 0) scoreStreak = 0;
+    SharedPreferencesService.setInt('scoreStreak', scoreStreak);
+  }
+
+  void updateScoreStreak(int score, int duration) {
+    var minutes = (duration / 60).ceil();
+    if (score != minutes) {
       scoreStreak = 0;
-    } else if (score == 5) {
+    } else if (score == minutes) {
       scoreStreak++;
     }
     SharedPreferencesService.setInt('scoreStreak', scoreStreak);
   }
 
-  void updateTotalScore() {
-    totalScore = driveScore + scoreStreak;
-  }
-
   void getScores() {
     driveScore = SharedPreferencesService.getInt('driveScore', 0);
     scoreStreak = SharedPreferencesService.getInt('scoreStreak', 0);
-    totalScore = driveScore + scoreStreak;
   }
 
   void getRank() {
     previousRankIndex = currentRankIndex;
     currentRankIndex = rankList
-        .lastIndexWhere((element) => totalScore >= element["requiredScore"]);
+        .lastIndexWhere((element) => driveScore >= element["requiredScore"]);
     currentRankName = rankList[currentRankIndex]["name"];
   }
 }

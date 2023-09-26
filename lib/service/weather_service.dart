@@ -1,9 +1,12 @@
+import '/env.dart';
 import 'package:flutter/material.dart';
 
 import '/global_variables.dart' as globals;
 import 'shared_preferences_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:weather/weather.dart';
+
+import 'package:localization/localization.dart';
 
 class WeatherService {
   static final WeatherService _instance = WeatherService._internal();
@@ -12,7 +15,7 @@ class WeatherService {
 
   Position? position;
   DateTime currentDate = DateTime.now();
-  String weatherExpirationHour = DateTime(DateTime.now().year,
+  String weatherExpirationMinutes = DateTime(DateTime.now().year,
           DateTime.now().month, DateTime.now().day, DateTime.now().hour)
       .toString();
   Weather? currentWeather;
@@ -26,7 +29,7 @@ class WeatherService {
   bool enableSpeedReminders = false;
 
   WeatherFactory weatherFactory =
-      WeatherFactory("***REMOVED***");
+      WeatherFactory(Env.owmApiKey, language: Language.CHINESE_TRADITIONAL);
 
   WeatherService._internal();
 
@@ -61,7 +64,7 @@ class WeatherService {
   void extractWeatherDescription() {
     if (currentWeather == null) {
       currentWeatherMain = "Oops...";
-      currentWeatherDescription = "No weather information yet :(";
+      currentWeatherDescription = "no-weather-info".i18n();
       currentWeatherIcon = null;
       currentWeatherIconURL = "";
       return;
@@ -74,7 +77,7 @@ class WeatherService {
     SharedPreferencesService.setString(
         'currentWeatherMain', currentWeatherMain ?? "Oops...");
     SharedPreferencesService.setString('currentWeatherDescription',
-        currentWeatherDescription ?? "No weather information yet :(");
+        currentWeatherDescription ?? "no-weather-info".i18n());
     SharedPreferencesService.setString(
         'currentWeatherIconURL', currentWeatherIconURL);
   }

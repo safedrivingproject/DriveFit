@@ -1,16 +1,20 @@
+import 'package:drive_fit/service/weather_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:settings_ui/settings_ui.dart';
 import 'package:file_picker/file_picker.dart';
 
+import '../service/navigation.dart';
 import '/home/home_page.dart';
 import '../service/database_service.dart';
 import '../service/shared_preferences_service.dart';
 import '../global_variables.dart' as globals;
+import '/main.dart';
+
+import 'package:localization/localization.dart';
 
 class SettingsPage extends StatefulWidget {
-  final String title;
-  const SettingsPage({super.key, required this.title});
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -18,14 +22,18 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final DatabaseService databaseService = DatabaseService();
+  final WeatherService weatherService = WeatherService();
   final _rotXController = TextEditingController();
   final _rotYController = TextEditingController();
   final _carVelocityController = TextEditingController();
   final _additionalDelayController = TextEditingController();
   final _restReminderController = TextEditingController();
   final _speedingVelocityController = TextEditingController();
+  final _eyeProbController = TextEditingController();
+  final _rotXOffsetController = TextEditingController();
   final _statesController = MaterialStatesController();
   bool? enableGeolocation,
+      globalSpeedingReminders,
       stationaryAlertsDisabled,
       showCameraPreview,
       useHighCameraResolution,
@@ -33,8 +41,8 @@ class _SettingsPageState extends State<SettingsPage> {
       hasCalibrated;
   bool isInvalid = false;
   double? neutralRotX = 5, neutralRotY = -25;
-  int? rotXDelay = 10, rotYDelay = 25, additionalDelay = 20;
-  double? carVelocityThresholdMS = 8.33, carVelocityThresholdKMH = 30.0;
+  int? rotXDelay = 15, rotYDelay = 25, additionalDelay = 50;
+  double? carVelocityThresholdMS = 4.16, carVelocityThresholdKMH = 15.0;
   double? speedingVelocityThresholdMS = 16.6,
       speedingVelocityThresholdKMH = 60.0;
   int? restReminderTime = 3600;
@@ -43,16 +51,19 @@ class _SettingsPageState extends State<SettingsPage> {
   double _doubleValue = 1.0;
   int _intValue = 10;
   double _speedValue = 0.0;
+  double eyeProbThreshold = 0.5, rotXOffset = 18;
 
   void _loadDefaultSettings() {
     if (mounted) {
       setState(() {
         enableGeolocation =
             SharedPreferencesService.getBool('enableGeolocation', true);
+        globalSpeedingReminders =
+            SharedPreferencesService.getBool('globalSpeedingReminders', false);
         stationaryAlertsDisabled =
             SharedPreferencesService.getBool('stationaryAlertsDisabled', false);
         additionalDelay =
-            SharedPreferencesService.getInt('additionalDelay', 20);
+            SharedPreferencesService.getInt('additionalDelay', 50);
         showCameraPreview =
             SharedPreferencesService.getBool('showCameraPreview', false);
         useHighCameraResolution =
@@ -62,10 +73,10 @@ class _SettingsPageState extends State<SettingsPage> {
             SharedPreferencesService.getBool('hasCalibrated', false);
         neutralRotX = SharedPreferencesService.getDouble('neutralRotX', 5.0);
         neutralRotY = SharedPreferencesService.getDouble('neutralRotY', -25.0);
-        rotXDelay = SharedPreferencesService.getInt('rotXDelay', 10);
+        rotXDelay = SharedPreferencesService.getInt('rotXDelay', 15);
         rotYDelay = SharedPreferencesService.getInt('rotYDelay', 25);
         carVelocityThresholdMS =
-            SharedPreferencesService.getDouble('carVelocityThreshold', 8.33);
+            SharedPreferencesService.getDouble('carVelocityThreshold', 4.16);
         carVelocityThresholdKMH =
             (carVelocityThresholdMS! * 3.6).roundToDouble();
         drowsyAlarmValue = SharedPreferencesService.getStringList(
@@ -78,6 +89,9 @@ class _SettingsPageState extends State<SettingsPage> {
             'speedingVelocityThreshold', 16.6);
         speedingVelocityThresholdKMH =
             (speedingVelocityThresholdMS! * 3.6).roundToDouble();
+        eyeProbThreshold =
+            SharedPreferencesService.getDouble('eyeProbThreshold', 0.5);
+        rotXOffset = SharedPreferencesService.getDouble('rotXOffset', 18);
       });
     }
   }
@@ -107,6 +121,12 @@ class _SettingsPageState extends State<SettingsPage> {
     });
     _speedingVelocityController.addListener(() {
       onFieldChanged(_speedingVelocityController, false, true, false);
+    });
+    _eyeProbController.addListener(() {
+      onFieldChanged(_eyeProbController, false, false, false);
+    });
+    _rotXOffsetController.addListener(() {
+      onFieldChanged(_rotXOffsetController, false, false, false);
     });
   }
 
@@ -147,6 +167,12 @@ class _SettingsPageState extends State<SettingsPage> {
             _intValue = (_doubleValue * 60).round();
           });
         }
+      } else {
+        if (mounted) {
+          setState(() {
+            _doubleValue = double.tryParse(controller.text) ?? 0.5;
+          });
+        }
       }
     }
   }
@@ -165,44 +191,34 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+
     return Scaffold(
         appBar: AppBar(
             title: Text(
-              widget.title,
+              "settings".i18n(),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             centerTitle: true,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                Navigator.of(context).pushReplacement(PageRouteBuilder(
-                    pageBuilder: (BuildContext context,
-                            Animation<double> animation,
-                            Animation<double> secondaryAnimation) =>
-                        const HomePage(title: globals.appName, index: 0),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(
-                        opacity: Tween<double>(begin: 0.0, end: 1.0)
-                            .chain(CurveTween(curve: Curves.easeInOutExpo))
-                            .animate(animation),
-                        child: child,
-                      );
-                    },
-                    transitionDuration: const Duration(milliseconds: 500),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 500)));
+                FadeNavigator.pushReplacement(
+                    context,
+                    const HomePage(index: 0),
+                    FadeNavigator.opacityTweenSequence,
+                    Colors.transparent,
+                    const Duration(milliseconds: 500));
               },
             )),
         body: SettingsList(sections: [
           SettingsSection(
             margin: const EdgeInsetsDirectional.all(20),
-            title: const Text("Geolocation"),
+            title: Text("geolocation".i18n()),
             tiles: [
               SettingsTile.switchTile(
-                title: const Text("Enable Geolocation"),
-                description:
-                    const Text("Enables DriveFit to detect if car is moving."),
+                title: Text("enable-geolocation".i18n()),
+                description: Text("enable-geolocation-description".i18n()),
                 leading: const Icon(Icons.place_outlined),
                 initialValue: enableGeolocation,
                 onToggle: (value) {
@@ -217,9 +233,9 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               SettingsTile.switchTile(
                 enabled: enableGeolocation == true,
-                title: const Text("Disable alerts when car is not moving"),
-                description:
-                    const Text("Note: Alerts for closed eyes persist."),
+                title: Text("disable-alerts-when-car-not-moving".i18n()),
+                description: Text(
+                    "disable-alerts-when-car-not-moving-description".i18n()),
                 leading: const Icon(Icons.notifications_off_outlined),
                 initialValue: stationaryAlertsDisabled,
                 onToggle: (value) {
@@ -240,24 +256,23 @@ class _SettingsPageState extends State<SettingsPage> {
                       : false,
                   title: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          "Choose Additional Delay when car is stationary",
+                          "additional-delay".i18n(),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Text("${(additionalDelay! * 0.1).toStringAsFixed(1)} s"),
                     ],
                   ),
-                  description: const Text(
-                      "The additional delay before alerts are issued when car is stationary."),
+                  description: Text("additional-delay-description".i18n()),
                   leading: const Icon(Icons.timer_outlined),
                   onPressed: (context) async {
                     showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Edit value'),
+                          title: Text("edit-value".i18n()),
                           content: TextFormField(
                             autofocus: true,
                             autovalidateMode: AutovalidateMode.always,
@@ -272,15 +287,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                return 'Invalid value.';
+                                return "invalid-value".i18n();
                               } else {
                                 return null;
                               }
                             },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Delay (in seconds)',
-                                hintText: 'e.g. 1.0'),
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "delay-in-seconds".i18n(),
+                                hintText: "eg-value".i18n(['1.0'])),
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -288,10 +303,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar("Setting unchanged.");
+                                showSnackBar("setting-unchanged".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             FilledButton(
                               style: TextButton.styleFrom(
@@ -300,7 +315,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar("Invalid value.");
+                                  showSnackBar("invalid-value".i18n());
                                   Navigator.of(context).pop();
                                   return;
                                 }
@@ -311,10 +326,115 @@ class _SettingsPageState extends State<SettingsPage> {
                                         'additionalDelay', _intValue);
                                   });
                                 }
-                                showSnackBar("Setting updated.");
+                                showSnackBar("setting-updated".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Save"),
+                              child: Text("save".i18n()),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
+              SettingsTile.switchTile(
+                enabled: enableGeolocation == true,
+                title: Text("always-enable-speeding-alerts".i18n()),
+                description:
+                    Text("always-enable-speeding-alerts-description".i18n()),
+                leading: const Icon(Icons.notification_important_outlined),
+                initialValue: globalSpeedingReminders,
+                onToggle: (value) {
+                  if (mounted) {
+                    setState(() {
+                      globalSpeedingReminders = value;
+                      SharedPreferencesService.setBool(
+                          'globalSpeedingReminders', value);
+                    });
+                  }
+                },
+              ),
+              SettingsTile.navigation(
+                  enabled: enableGeolocation == true,
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "speeding-velocity-threshold".i18n(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                          "${(speedingVelocityThresholdKMH!).toStringAsFixed(1)} km/h"),
+                    ],
+                  ),
+                  description:
+                      Text("speeding-velocity-threshold-description".i18n()),
+                  leading: const Icon(Icons.speed_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("edit-value".i18n()),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _speedingVelocityController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return "invalid-value".i18n();
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "threshold-in-kmh".i18n(),
+                                hintText: "eg-value".i18n(['65.0'])),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("setting-unchanged".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("cancel".i18n()),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("invalid-value".i18n());
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    speedingVelocityThresholdMS = _speedValue;
+                                    speedingVelocityThresholdKMH = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'speedingVelocityThreshold',
+                                        _speedValue);
+                                  });
+                                }
+                                showSnackBar("setting-updated".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("save".i18n()),
                             ),
                           ],
                         );
@@ -324,12 +444,11 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
           SettingsSection(
-            title: const Text("Driving"),
+            title: Text("driving".i18n()),
             tiles: [
               SettingsTile.switchTile(
-                title: const Text("Show camera preview when driving"),
-                description: const Text(
-                    "Whether you can see yourself in the driving page."),
+                title: Text("show-camera-preview".i18n()),
+                description: Text("show-camera-preview-description".i18n()),
                 leading: const Icon(Icons.visibility_outlined),
                 initialValue: showCameraPreview,
                 onToggle: (value) {
@@ -343,9 +462,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               SettingsTile.switchTile(
-                title: const Text("Use High Camera Resolution"),
-                description:
-                    const Text("Not required, only impacts performance."),
+                title: Text("use-high-resolution".i18n()),
+                description: Text("use-high-resolution-description".i18n()),
                 leading: const Icon(Icons.camera_enhance_outlined),
                 initialValue: useHighCameraResolution,
                 onToggle: (value) {
@@ -361,24 +479,24 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.navigation(
                   title: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          "Choose Vertical Head Movement Alert Sensitivity",
+                          "drowsy-alert-sensitivity".i18n(),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Text("${(rotXDelay! * 0.1).toStringAsFixed(1)} s"),
                     ],
                   ),
-                  description: const Text(
-                      "The delay between head tilted up/down and issuing alert."),
+                  description:
+                      Text("drowsy-alert-sensitivity-description".i18n()),
                   leading: const Icon(Icons.timer_outlined),
                   onPressed: (context) async {
                     showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Edit value'),
+                          title: Text("edit-value".i18n()),
                           content: TextFormField(
                             autofocus: true,
                             autovalidateMode: AutovalidateMode.always,
@@ -393,15 +511,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                return 'Invalid value.';
+                                return "invalid-value".i18n();
                               } else {
                                 return null;
                               }
                             },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Delay (in seconds)',
-                                hintText: 'e.g. 1.0'),
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "delay-in-seconds".i18n(),
+                                hintText: "eg-value".i18n(['1.0'])),
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -409,10 +527,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar("Setting unchanged.");
+                                showSnackBar("setting-unchanged".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             FilledButton(
                               style: TextButton.styleFrom(
@@ -421,7 +539,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar("Invalid value.");
+                                  showSnackBar("invalid-value".i18n());
                                   Navigator.of(context).pop();
                                   return;
                                 }
@@ -432,10 +550,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                         'rotXDelay', _intValue);
                                   });
                                 }
-                                showSnackBar("Setting updated.");
+                                showSnackBar("setting-updated".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Save"),
+                              child: Text("save".i18n()),
                             ),
                           ],
                         );
@@ -445,23 +563,22 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.navigation(
                   title: Row(
                     children: [
-                      const Expanded(
-                        child: Text(
-                            "Choose Horizontal Head Movement Alert Sensitivity"),
+                      Expanded(
+                        child: Text("inattentive-alert-sensitivity".i18n()),
                       ),
                       const SizedBox(width: 10),
                       Text("${(rotYDelay! * 0.1).toStringAsFixed(1)} s")
                     ],
                   ),
-                  description: const Text(
-                      "The delay between head rotated left/right and issuing alert."),
+                  description:
+                      Text("inattentive-alert-sensitivity-description".i18n()),
                   leading: const Icon(Icons.timer_outlined),
                   onPressed: (context) async {
                     showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Edit value'),
+                          title: Text("edit-value".i18n()),
                           content: TextFormField(
                             autofocus: true,
                             autovalidateMode: AutovalidateMode.always,
@@ -476,15 +593,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                return 'Invalid value.';
+                                return "invalid-value".i18n();
                               } else {
                                 return null;
                               }
                             },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Delay (in seconds)',
-                                hintText: 'e.g. 2.5'),
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "delay-in-seconds".i18n(),
+                                hintText: "eg-value".i18n(['2.5'])),
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -492,10 +609,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar("Setting unchanged.");
+                                showSnackBar("setting-unchanged".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             FilledButton(
                               style: TextButton.styleFrom(
@@ -504,7 +621,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar("Invalid value.");
+                                  showSnackBar("invalid-value".i18n());
                                   Navigator.of(context).pop();
                                   return;
                                 }
@@ -515,10 +632,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                         'rotYDelay', _intValue);
                                   });
                                 }
-                                showSnackBar("Setting updated.");
+                                showSnackBar("setting-updated".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Save"),
+                              child: Text("save".i18n()),
                             ),
                           ],
                         );
@@ -528,9 +645,9 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.navigation(
                   title: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          "Choose Car Velocity Threshold",
+                          "required-speed-for-alerts".i18n(),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -539,14 +656,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                   description:
-                      const Text("The required speed for normal alerts."),
+                      Text("required-speed-for-alerts-description".i18n()),
                   leading: const Icon(Icons.speed_outlined),
                   onPressed: (context) async {
                     showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Edit value'),
+                          title: Text("edit-value".i18n()),
                           content: TextFormField(
                             autofocus: true,
                             autovalidateMode: AutovalidateMode.always,
@@ -561,15 +678,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                return 'Invalid value.';
+                                return "invalid-value".i18n();
                               } else {
                                 return null;
                               }
                             },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Threshold (in km/h)',
-                                hintText: 'e.g. 30.0'),
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "threshold-in-kmh".i18n(),
+                                hintText: "eg-value".i18n(['30.0'])),
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -577,10 +694,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar("Setting unchanged.");
+                                showSnackBar("setting-unchanged".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             FilledButton(
                               style: TextButton.styleFrom(
@@ -589,7 +706,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar("Invalid value.");
+                                  showSnackBar("invalid-value".i18n());
                                   Navigator.of(context).pop();
                                   return;
                                 }
@@ -601,10 +718,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                         'carVelocityThreshold', _speedValue);
                                   });
                                 }
-                                showSnackBar("Setting updated.");
+                                showSnackBar("setting-updated".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Save"),
+                              child: Text("save".i18n()),
                             ),
                           ],
                         );
@@ -612,21 +729,20 @@ class _SettingsPageState extends State<SettingsPage> {
                     );
                   }),
               SettingsTile.navigation(
-                title: const Text(
-                  "Select Drowsy Alert Alarm",
+                title: Text(
+                  "drowsy-alert-sound".i18n(),
                 ),
                 leading: const Icon(Icons.edit_notifications_outlined),
-                description:
-                    const Text("Pick the desired sound for drowsy alarm."),
+                description: Text("drowsy-alert-sound-description".i18n()),
                 onPressed: (context) {
                   showDialog(
                       context: context,
                       builder: (context) {
                         return SimpleDialog(
-                          title: const Text("Select Alarm"),
+                          title: Text("select-alarm".i18n()),
                           children: [
                             SimpleDialogOption(
-                              child: const Text("High-pitched car horn"),
+                              child: Text("high-car-horn".i18n()),
                               onPressed: () {
                                 drowsyAlarmValue = [
                                   "asset",
@@ -635,11 +751,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Low-pitched car horn"),
+                              child: Text("low-car-horn".i18n()),
                               onPressed: () {
                                 drowsyAlarmValue = [
                                   "asset",
@@ -648,11 +764,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Double Beep"),
+                              child: Text("double-beep".i18n()),
                               onPressed: () {
                                 drowsyAlarmValue = [
                                   "asset",
@@ -661,11 +777,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Soft Beep"),
+                              child: Text("soft-beep".i18n()),
                               onPressed: () {
                                 drowsyAlarmValue = [
                                   "asset",
@@ -674,11 +790,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'drowsyAlarm', drowsyAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Choose sound from files"),
+                              child: Text("choose-from-files".i18n()),
                               onPressed: () async {
                                 FilePickerResult? result = await FilePicker
                                     .platform
@@ -690,9 +806,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ];
                                   SharedPreferencesService.setStringList(
                                       'drowsyAlarm', drowsyAlarmValue);
-                                  showSnackBar("Alarm updated.");
+                                  showSnackBar("alarm-updated".i18n());
                                 } else {
-                                  showSnackBar("Alarm unchanged.");
+                                  showSnackBar("alarm-unchanged".i18n());
                                 }
                               },
                             ),
@@ -702,21 +818,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               SettingsTile.navigation(
-                title: const Text(
-                  "Select Inattentive Alert Alarm",
+                title: Text(
+                  "inattentive-alert-sound".i18n(),
                 ),
                 leading: const Icon(Icons.edit_notifications_outlined),
-                description:
-                    const Text("Pick the desired sound for inattentive alarm."),
+                description: Text("inattentive-alert-sound-description".i18n()),
                 onPressed: (context) {
                   showDialog(
                       context: context,
                       builder: (context) {
                         return SimpleDialog(
-                          title: const Text("Select Alarm"),
+                          title: Text("select-alarm".i18n()),
                           children: [
                             SimpleDialogOption(
-                              child: const Text("High-pitched car horn"),
+                              child: Text("high-car-horn".i18n()),
                               onPressed: () {
                                 inattentiveAlarmValue = [
                                   "asset",
@@ -725,11 +840,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Low-pitched car horn"),
+                              child: Text("low-car-horn".i18n()),
                               onPressed: () {
                                 inattentiveAlarmValue = [
                                   "asset",
@@ -738,11 +853,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Double Beep"),
+                              child: Text("double-beep".i18n()),
                               onPressed: () {
                                 inattentiveAlarmValue = [
                                   "asset",
@@ -751,11 +866,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Soft Beep"),
+                              child: Text("soft-beep".i18n()),
                               onPressed: () {
                                 inattentiveAlarmValue = [
                                   "asset",
@@ -764,11 +879,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                 SharedPreferencesService.setStringList(
                                     'inattentiveAlarm', inattentiveAlarmValue);
                                 Navigator.of(context).pop();
-                                showSnackBar("Alarm updated.");
+                                showSnackBar("alarm-updated".i18n());
                               },
                             ),
                             SimpleDialogOption(
-                              child: const Text("Choose from files"),
+                              child: Text("choose-from-files".i18n()),
                               onPressed: () async {
                                 FilePickerResult? result = await FilePicker
                                     .platform
@@ -781,9 +896,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                   SharedPreferencesService.setStringList(
                                       'inattentiveAlarm',
                                       inattentiveAlarmValue);
-                                  showSnackBar("Alarm updated.");
+                                  showSnackBar("alarm-updated".i18n());
                                 } else {
-                                  showSnackBar("Alarm unchanged.");
+                                  showSnackBar("alarm-unchanged".i18n());
                                 }
                               },
                             ),
@@ -795,9 +910,9 @@ class _SettingsPageState extends State<SettingsPage> {
               SettingsTile.navigation(
                   title: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          "Long-duration Drive Resting Reminder Frequency",
+                          "resting-reminder-frequency".i18n(),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -805,15 +920,15 @@ class _SettingsPageState extends State<SettingsPage> {
                           "${(restReminderTime! / 60).toStringAsFixed(1)} min${restReminderTime == 1 ? "" : "s"}"),
                     ],
                   ),
-                  description: const Text(
-                      "The frequency of reminders to take a break from driving."),
+                  description:
+                      Text("resting-reminder-frequency-description".i18n()),
                   leading: const Icon(Icons.timer_outlined),
                   onPressed: (context) async {
                     showDialog(
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: const Text('Edit value'),
+                          title: Text("edit-value".i18n()),
                           content: TextFormField(
                             autofocus: true,
                             autovalidateMode: AutovalidateMode.always,
@@ -828,15 +943,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               if (value == null ||
                                   RegExp(r'^\d*(?:\.\d*){2,}$')
                                       .hasMatch(value)) {
-                                return 'Invalid value.';
+                                return "invalid-value".i18n();
                               } else {
                                 return null;
                               }
                             },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Frequency (in minutes)',
-                                hintText: 'e.g. 60'),
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "frequency-in-mins".i18n(),
+                                hintText: "eg-value".i18n(['60'])),
                           ),
                           actions: <Widget>[
                             TextButton(
@@ -844,10 +959,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   textStyle:
                                       Theme.of(context).textTheme.labelLarge),
                               onPressed: () {
-                                showSnackBar("Setting unchanged.");
+                                showSnackBar("setting-unchanged".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             FilledButton(
                               style: TextButton.styleFrom(
@@ -856,7 +971,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               statesController: _statesController,
                               onPressed: () {
                                 if (isInvalid) {
-                                  showSnackBar("Invalid value.");
+                                  showSnackBar("invalid-value".i18n());
                                   Navigator.of(context).pop();
                                   return;
                                 }
@@ -867,97 +982,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                         'restReminderTime', _intValue);
                                   });
                                 }
-                                showSnackBar("Setting updated.");
+                                showSnackBar("setting-updated".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Save"),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  }),
-              SettingsTile.navigation(
-                  title: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          "Choose Speeding Velocity Threshold",
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                          "${(speedingVelocityThresholdKMH!).toStringAsFixed(1)} km/h"),
-                    ],
-                  ),
-                  description: const Text(
-                      "The required speed to trigger speeding reminders in bad weather."),
-                  leading: const Icon(Icons.speed_outlined),
-                  onPressed: (context) async {
-                    showDialog(
-                      context: context,
-                      builder: (context) {
-                        return AlertDialog(
-                          title: const Text('Edit value'),
-                          content: TextFormField(
-                            autofocus: true,
-                            autovalidateMode: AutovalidateMode.always,
-                            controller: _speedingVelocityController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                signed: false, decimal: true),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                  RegExp(r"[0-9.]"))
-                            ],
-                            validator: (String? value) {
-                              if (value == null ||
-                                  RegExp(r'^\d*(?:\.\d*){2,}$')
-                                      .hasMatch(value)) {
-                                return 'Invalid value.';
-                              } else {
-                                return null;
-                              }
-                            },
-                            decoration: const InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: 'Threshold (in km/h)',
-                                hintText: 'e.g. 65.0'),
-                          ),
-                          actions: <Widget>[
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                  textStyle:
-                                      Theme.of(context).textTheme.labelLarge),
-                              onPressed: () {
-                                showSnackBar("Setting unchanged.");
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text("Cancel"),
-                            ),
-                            FilledButton(
-                              style: TextButton.styleFrom(
-                                  textStyle:
-                                      Theme.of(context).textTheme.labelLarge),
-                              statesController: _statesController,
-                              onPressed: () {
-                                if (isInvalid) {
-                                  showSnackBar("Invalid value.");
-                                  Navigator.of(context).pop();
-                                  return;
-                                }
-                                if (mounted) {
-                                  setState(() {
-                                    speedingVelocityThresholdMS = _speedValue;
-                                    speedingVelocityThresholdKMH = _doubleValue;
-                                    SharedPreferencesService.setDouble(
-                                        'speedingVelocityThreshold',
-                                        _speedValue);
-                                  });
-                                }
-                                showSnackBar("Setting updated.");
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text("Save"),
+                              child: Text("save".i18n()),
                             ),
                           ],
                         );
@@ -968,10 +996,10 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           SettingsSection(
             margin: const EdgeInsetsDirectional.all(20),
-            title: const Text("Developer"),
+            title: Text("developer".i18n()),
             tiles: [
               SettingsTile.switchTile(
-                title: const Text("Enable Debug"),
+                title: Text("enable-debug".i18n()),
                 leading: const Icon(Icons.bug_report_outlined),
                 initialValue: showDebug,
                 onToggle: (value) {
@@ -983,22 +1011,185 @@ class _SettingsPageState extends State<SettingsPage> {
                   }
                 },
               ),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "eye-prob-threshold".i18n(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("$eyeProbThreshold"),
+                    ],
+                  ),
+                  leading: const Icon(Icons.bug_report_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("edit-value".i18n()),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _eyeProbController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return "invalid-value".i18n();
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "0.0 - 1.0",
+                                hintText: "eg-value".i18n(['0.5'])),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("setting-unchanged".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("cancel".i18n()),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("invalid-value".i18n());
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    eyeProbThreshold = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'eyeProbThreshold', _doubleValue);
+                                  });
+                                }
+                                showSnackBar("setting-updated".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("save".i18n()),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
+              SettingsTile.navigation(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "rotx-offset".i18n(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text("$rotXOffset"),
+                    ],
+                  ),
+                  leading: const Icon(Icons.bug_report_outlined),
+                  onPressed: (context) async {
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text("edit-value".i18n()),
+                          content: TextFormField(
+                            autofocus: true,
+                            autovalidateMode: AutovalidateMode.always,
+                            controller: _rotXOffsetController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                signed: false, decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r"[0-9.]"))
+                            ],
+                            validator: (String? value) {
+                              if (value == null ||
+                                  RegExp(r'^\d*(?:\.\d*){2,}$')
+                                      .hasMatch(value)) {
+                                return "invalid-value".i18n();
+                              } else {
+                                return null;
+                              }
+                            },
+                            decoration: InputDecoration(
+                                border: const OutlineInputBorder(),
+                                labelText: "0 - 90",
+                                hintText: "eg-value".i18n(['18'])),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              onPressed: () {
+                                showSnackBar("setting-unchanged".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("cancel".i18n()),
+                            ),
+                            FilledButton(
+                              style: TextButton.styleFrom(
+                                  textStyle:
+                                      Theme.of(context).textTheme.labelLarge),
+                              statesController: _statesController,
+                              onPressed: () {
+                                if (isInvalid) {
+                                  showSnackBar("invalid-value".i18n());
+                                  Navigator.of(context).pop();
+                                  return;
+                                }
+                                if (mounted) {
+                                  setState(() {
+                                    rotXOffset = _doubleValue;
+                                    SharedPreferencesService.setDouble(
+                                        'rotXOffset', _doubleValue);
+                                  });
+                                }
+                                showSnackBar("setting-updated".i18n());
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("save".i18n()),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }),
             ],
           ),
           SettingsSection(
-            title: const Text("Data"),
+            title: Text("data".i18n()),
             tiles: [
               SettingsTile.navigation(
-                title: const Text("Clear Data"),
+                title: Text("clear-data".i18n()),
                 leading: const Icon(Icons.info_outline_rounded),
                 onPressed: (context) {
                   showDialog(
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: const Text("Are you sure?"),
-                          content: const Text(
-                              "All user preferences and drive data will be reset. Calibration would be required again."),
+                          title: Text("are-you-sure".i18n()),
+                          content: Text("delete-data-description".i18n()),
                           actions: [
                             FilledButton(
                               style: FilledButton.styleFrom(
@@ -1007,7 +1198,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               onPressed: () {
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Cancel"),
+                              child: Text("cancel".i18n()),
                             ),
                             TextButton(
                               style: TextButton.styleFrom(
@@ -1021,10 +1212,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                   databaseService.deleteAllDataFirebase();
                                 }
                                 if (mounted) setState(() {});
-                                showSnackBar("Data Cleared!");
+                                showSnackBar("data-deleted".i18n());
                                 Navigator.of(context).pop();
                               },
-                              child: const Text("Clear"),
+                              child: Text("delete".i18n()),
                             ),
                           ],
                         );
@@ -1033,6 +1224,28 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
+          SettingsSection(
+            title: Text("language".i18n()),
+            tiles: [
+              SettingsTile(
+                leading: const Icon(Icons.language_outlined),
+                title: locale == const Locale('zh', 'HK')
+                    ? Text("switch-to-english".i18n())
+                    : Text("switch-to-chinese".i18n()),
+                onPressed: (context) {
+                  final myApp = context.findAncestorStateOfType<MyAppState>()!;
+                  if (locale == const Locale('zh', 'HK')) {
+                    myApp.changeLocale(const Locale('en', 'US'));
+                    SharedPreferencesService.setString('language', "en_US");
+                  } else {
+                    myApp.changeLocale(const Locale('zh', 'HK'));
+                    SharedPreferencesService.setString('language', "zh_HK");
+                  }
+                  SharedPreferencesService.setBool('needUpdateLanguage', true);
+                },
+              )
+            ],
+          )
         ]));
   }
 
@@ -1058,18 +1271,4 @@ class AudioValue {
     required this.type,
     required this.path,
   });
-}
-
-class SelectAlarmPage extends StatefulWidget {
-  const SelectAlarmPage({super.key});
-
-  @override
-  State<SelectAlarmPage> createState() => _SelectAlarmPageState();
-}
-
-class _SelectAlarmPageState extends State<SelectAlarmPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
 }

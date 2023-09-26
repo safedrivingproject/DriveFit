@@ -1,12 +1,15 @@
 import 'dart:math';
 
+import 'package:drive_fit/env.dart';
 import 'package:drive_fit/home/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:weather/weather.dart';
 
+import '../service/navigation.dart';
 import '/service/shared_preferences_service.dart';
 import '/service/geolocation_service.dart';
 import '/service/database_service.dart';
@@ -17,7 +20,8 @@ import 'drive_page.dart';
 import 'history_page.dart';
 import 'achievements_page.dart';
 import '/global_variables.dart' as globals;
-import 'tips.dart';
+
+import 'package:localization/localization.dart';
 
 class HomePage extends StatefulWidget {
   final String? title;
@@ -64,16 +68,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     vsync: this,
   );
 
-  var opacityTweenSequence = <TweenSequenceItem<double>>[
-    TweenSequenceItem<double>(
-      tween: ConstantTween<double>(0.0),
-      weight: 80.0,
-    ),
-    TweenSequenceItem<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutExpo)),
-      weight: 20.0,
-    ),
+  String language = "zh_HK";
+  bool needUpdateLanguage = false;
+
+  List<String> drowsyTipsList = [
+    "tip-drowsy-1".i18n(),
+    "tip-drowsy-2".i18n(),
+    "tip-drowsy-3".i18n(),
+    "tip-drowsy-4".i18n(),
+    "tip-drowsy-5".i18n(),
+    "tip-drowsy-6".i18n(),
+  ];
+  List<String> inattentiveTipsList = [
+    "tip-inattentive-1".i18n(),
+    "tip-inattentive-2".i18n(),
+    "tip-inattentive-3".i18n(),
+    "tip-inattentive-4".i18n(),
+    "tip-inattentive-5".i18n(),
+    "tip-inattentive-6".i18n(),
+  ];
+  List<String> genericTipsList = [
+    "tip-general-1".i18n(),
+    "tip-general-2".i18n(),
+    "tip-general-3".i18n(),
+    "tip-general-4".i18n(),
+    "tip-general-5".i18n(),
+    "tip-general-6".i18n(),
+    "tip-general-7".i18n(),
+    "tip-general-8".i18n(),
   ];
 
   @override
@@ -86,7 +108,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     await checkPermissions();
     globals.hasSignedIn = FirebaseAuth.instance.currentUser != null;
     databaseService.updateUserProfile();
-    if (globals.hasSignedIn) databaseService.saveUserDataToFirebase();
+    if (globals.hasSignedIn) {
+      databaseService.saveUserDataToFirebase();
+    }
     selectedPageIndex = 0;
     _loadSettings();
     getWeather();
@@ -105,6 +129,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         setState(() {});
       }
     });
+    if (needUpdateLanguage) {
+      needUpdateLanguage = false;
+      SharedPreferencesService.setBool('needUpdateLanguage', false);
+    }
   }
 
   void showRequestPermissionsDialog(String permissionType) {
@@ -150,6 +178,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _loadSettings() {
+    language = SharedPreferencesService.getString('language', "zh_HK");
+    needUpdateLanguage =
+        SharedPreferencesService.getBool('needUpdateLanguage', true);
     tipsIndex = SharedPreferencesService.getInt('tipsIndex', 0);
     tipType = SharedPreferencesService.getString('tipType', "Generic");
     databaseService.drivingTip = getTip(tipType, tipsIndex);
@@ -159,11 +190,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'tipExpirationDay',
         DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)
             .toString());
-    weatherService.weatherExpirationHour = SharedPreferencesService.getString(
-        'weatherExpirationHour',
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day,
-                DateTime.now().hour)
-            .toString());
+    weatherService.weatherExpirationMinutes =
+        SharedPreferencesService.getString(
+            'weatherExpirationMinutes',
+            DateTime(DateTime.now().year, DateTime.now().month,
+                    DateTime.now().day, DateTime.now().hour)
+                .toString());
     weatherService.currentWeatherConditionCode =
         SharedPreferencesService.getInt('currentWeatherConditionCode', -1);
     weatherService.currentWeatherMain =
@@ -176,11 +208,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> getWeather() async {
-    if (weatherService.currentWeatherConditionCode != null &&
-        weatherService.currentWeatherConditionCode != -1) {
-      if (currentDate
-          .isBefore(DateTime.parse(weatherService.weatherExpirationHour))) {
-        return;
+    print(needUpdateLanguage);
+    if (needUpdateLanguage) {
+      if (language == "zh_HK") {
+        weatherService.weatherFactory = WeatherFactory(Env.owmApiKey,
+            language: Language.CHINESE_TRADITIONAL);
+      } else {
+        weatherService.weatherFactory =
+            WeatherFactory(Env.owmApiKey, language: Language.ENGLISH);
+      }
+    } else if (!needUpdateLanguage) {
+      if (weatherService.currentWeatherConditionCode != null &&
+          weatherService.currentWeatherConditionCode != -1) {
+        if (currentDate.isBefore(
+            DateTime.parse(weatherService.weatherExpirationMinutes))) {
+          return;
+        }
       }
     }
     weatherService.position = await geolocationService.getCurrentPosition();
@@ -188,22 +231,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     weatherService.extractWeatherConditionCode();
     weatherService.extractWeatherDescription();
     if (currentDate
-            .isAfter(DateTime.parse(weatherService.weatherExpirationHour)) ||
+            .isAfter(DateTime.parse(weatherService.weatherExpirationMinutes)) ||
         currentDate.isAtSameMomentAs(
-            DateTime.parse(weatherService.weatherExpirationHour))) {
-      weatherService.weatherExpirationHour =
-          DateTime.parse(weatherService.weatherExpirationHour)
-              .add(const Duration(hours: 1))
+            DateTime.parse(weatherService.weatherExpirationMinutes))) {
+      weatherService.weatherExpirationMinutes =
+          DateTime.parse(weatherService.weatherExpirationMinutes)
+              .add(const Duration(minutes: 30))
               .toString();
       SharedPreferencesService.setString(
-          'weatherExpirationHour', weatherService.weatherExpirationHour);
+          'weatherExpirationMinutes', weatherService.weatherExpirationMinutes);
     }
     if (mounted) setState(() {});
   }
 
   Future<void> getSessionData() async {
     driveSessionsList = await databaseService.getAllSessions();
-
     totalDrowsyAlertCount =
         databaseService.getDrowsyAlertCount(driveSessionsList);
     totalInattentiveAlertCount =
@@ -219,17 +261,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void getTipData() {
-    if (!hasNewSession) {
-      if (currentDate.isBefore(DateTime.parse(tipExpirationDay))) {
-        oldTipType = tipType;
-        tipType = getTipType();
-        SharedPreferencesService.setString('tipType', tipType);
-        if (oldTipType != tipType) {
-          generateNewTipIndex();
-          SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+    if (!needUpdateLanguage) {
+      if (!hasNewSession) {
+        if (currentDate.isBefore(DateTime.parse(tipExpirationDay))) {
+          oldTipType = tipType;
+          tipType = getTipType();
+          SharedPreferencesService.setString('tipType', tipType);
+          if (oldTipType != tipType) {
+            generateNewTipIndex();
+            SharedPreferencesService.setInt('tipsIndex', tipsIndex);
+          }
+          databaseService.drivingTip = getTip(tipType, tipsIndex);
+          return;
         }
-        databaseService.drivingTip = getTip(tipType, tipsIndex);
-        return;
       }
     }
     tipType = getTipType();
@@ -333,21 +377,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOutExpo);
         },
-        destinations: const <NavigationDestination>[
+        destinations: <NavigationDestination>[
           NavigationDestination(
-            selectedIcon: Icon(Icons.directions_car_outlined),
-            icon: Icon(Icons.directions_car_outlined),
-            label: 'Drive',
+            selectedIcon: const Icon(Icons.directions_car_outlined),
+            icon: const Icon(Icons.directions_car_outlined),
+            label: "drive".i18n(),
           ),
           NavigationDestination(
-            selectedIcon: Icon(Icons.bookmarks_outlined),
-            icon: Icon(Icons.bookmarks_outlined),
-            label: 'History',
+            selectedIcon: const Icon(Icons.bookmarks_outlined),
+            icon: const Icon(Icons.bookmarks_outlined),
+            label: "history".i18n(),
           ),
           NavigationDestination(
-            selectedIcon: Icon(Icons.star_border_rounded),
-            icon: Icon(Icons.star_border_rounded),
-            label: 'Achievements',
+            selectedIcon: const Icon(Icons.star_border_rounded),
+            icon: const Icon(Icons.star_border_rounded),
+            label: "achievements".i18n(),
           ),
         ],
       ),
@@ -382,23 +426,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   icon: const Icon(Icons.settings),
                   color: lightColorScheme.background,
                   onPressed: () {
-                    Navigator.of(context).push(PageRouteBuilder(
-                        pageBuilder: (BuildContext context,
-                                Animation<double> animation,
-                                Animation<double> secondaryAnimation) =>
-                            const SettingsPage(title: "Settings"),
-                        transitionsBuilder:
-                            (context, animation, secondaryAnimation, child) {
-                          return FadeTransition(
-                            opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                .chain(CurveTween(curve: Curves.easeInOutExpo))
-                                .animate(animation),
-                            child: child,
-                          );
-                        },
-                        transitionDuration: const Duration(milliseconds: 500),
-                        reverseTransitionDuration:
-                            const Duration(milliseconds: 500)));
+                    FadeNavigator.push(
+                        context,
+                        const SettingsPage(),
+                        FadeNavigator.opacityTweenSequence,
+                        Colors.transparent,
+                        const Duration(milliseconds: 500));
                   },
                 ),
                 actions: [
@@ -407,70 +440,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     color: lightColorScheme.background,
                     onPressed: () {
                       if (globals.hasSignedIn) {
-                        Navigator.of(context).push(PageRouteBuilder(
-                            pageBuilder: (BuildContext context,
-                                    Animation<double> animation,
-                                    Animation<double> secondaryAnimation) =>
-                                ProfileScreen(
-                                  appBar: AppBar(
-                                    title: Text(
-                                      "Your Profile",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge,
-                                    ),
-                                    centerTitle: true,
-                                  ),
-                                  actions: [
-                                    SignedOutAction((context) {
-                                      globals.hasSignedIn = false;
-                                      databaseService.updateUserProfile();
-                                      showSnackBar("Signed out!");
-                                      Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const HomePage()));
-                                    })
-                                  ],
-                                  actionCodeSettings: ActionCodeSettings(
-                                      url:
-                                          "https://drivefituser.page.link/home"),
+                        FadeNavigator.push(
+                            context,
+                            ProfileScreen(
+                              appBar: AppBar(
+                                title: Text(
+                                  "your-profile".i18n(),
+                                  style: Theme.of(context).textTheme.titleLarge,
                                 ),
-                            transitionsBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                    .chain(
-                                        CurveTween(curve: Curves.easeInOutExpo))
-                                    .animate(animation),
-                                child: child,
-                              );
-                            },
-                            transitionDuration:
-                                const Duration(milliseconds: 500),
-                            reverseTransitionDuration:
-                                const Duration(milliseconds: 500)));
+                                centerTitle: true,
+                              ),
+                              actions: [
+                                SignedOutAction((context) {
+                                  globals.hasSignedIn = false;
+                                  databaseService.updateUserProfile();
+                                  showSnackBar("signed-out".i18n());
+                                  Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const HomePage()));
+                                })
+                              ],
+                              actionCodeSettings: ActionCodeSettings(
+                                  url: "https://drivefituser.page.link/home"),
+                            ),
+                            FadeNavigator.opacityTweenSequence,
+                            Colors.transparent,
+                            const Duration(milliseconds: 500));
                       } else {
-                        Navigator.of(context).push(PageRouteBuilder(
-                            pageBuilder: (BuildContext context,
-                                    Animation<double> animation,
-                                    Animation<double> secondaryAnimation) =>
-                                LoginPage(),
-                            transitionsBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              return FadeTransition(
-                                opacity: Tween<double>(begin: 0.0, end: 1.0)
-                                    .chain(
-                                        CurveTween(curve: Curves.easeInOutExpo))
-                                    .animate(animation),
-                                child: child,
-                              );
-                            },
-                            transitionDuration:
-                                const Duration(milliseconds: 500),
-                            reverseTransitionDuration:
-                                const Duration(milliseconds: 500)));
+                        FadeNavigator.push(
+                            context,
+                            LoginPage(),
+                            FadeNavigator.opacityTweenSequence,
+                            Colors.transparent,
+                            const Duration(milliseconds: 500));
                       }
                     },
                   ),
@@ -531,7 +535,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   ScrollPhysics _getScrollPhysics(int index) {
     if (index == 0) {
-      return const NeverScrollableScrollPhysics();
+      return const BouncingScrollPhysics(
+          decelerationRate: ScrollDecelerationRate.fast);
     }
     if (index == 1) {
       return const BouncingScrollPhysics(
@@ -545,9 +550,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   String _getAppBarTitle(int index) {
-    if (index == 0) return "";
-    if (index == 1) return "Drive Summary";
-    if (index == 2) return "Achievements";
+    if (index == 0) return "app-title".i18n();
+    if (index == 1) return "drive-summary".i18n();
+    if (index == 2) return "achievements".i18n();
     return "";
   }
 

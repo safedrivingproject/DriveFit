@@ -1,14 +1,12 @@
-const List<String> drowsyTipsList = [
+const List<String> drowsyTipsListOld = [
   "Get a good night's sleep 💤",
   "Try to get 8 hours of sleep 💤",
   "Get some fresh air 😎",
   "Let's do some stretching 🙆‍♂️",
   "Get comfortable before you drive 🙆‍♂️",
   "Let's listen to the radio 📻",
-  "",
-  "",
 ];
-const List<String> inattentiveTipsList = [
+const List<String> inattentiveTipsListOld = [
   "Hands always on steering wheel, right? 😉",
   "Let the road be your new phone 😉",
   "Meerkats 🐱 are always alert, you can too!",
@@ -16,7 +14,7 @@ const List<String> inattentiveTipsList = [
   "Don't multitask, just drive safely 🚗",
   "Better watch out on the road! 👀",
 ];
-const List<String> genericTipsList = [
+const List<String> genericTipsListOld = [
   "Remember the 2 second rule ⏱",
   "Keep your distance ↔",
   "Take your time, better safe than sorry 🙏",
