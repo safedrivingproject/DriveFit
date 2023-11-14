@@ -404,10 +404,10 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       titlesData: FlTitlesData(
         show: true,
-        rightTitles: AxisTitles(
+        rightTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
-        topTitles: AxisTitles(
+        topTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
         bottomTitles: AxisTitles(
@@ -463,7 +463,7 @@ class _HistoryPageState extends State<HistoryPage> {
           color: lightColorScheme.primary,
           barWidth: 5,
           isStrokeCapRound: true,
-          dotData: FlDotData(
+          dotData: const FlDotData(
             show: true,
           ),
         ),
@@ -519,10 +519,10 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       titlesData: FlTitlesData(
         show: true,
-        rightTitles: AxisTitles(
+        rightTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
-        topTitles: AxisTitles(
+        topTitles: const AxisTitles(
           sideTitles: SideTitles(showTitles: false),
         ),
         bottomTitles: AxisTitles(
@@ -578,7 +578,7 @@ class _HistoryPageState extends State<HistoryPage> {
           color: lightColorScheme.primary,
           barWidth: 5,
           isStrokeCapRound: true,
-          dotData: FlDotData(
+          dotData: const FlDotData(
             show: true,
           ),
         ),

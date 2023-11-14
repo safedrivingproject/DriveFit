@@ -68,9 +68,9 @@ class NotificationController {
           return AlertDialog(
             title: Text('Get Notified!',
                 style: Theme.of(context).textTheme.titleLarge),
-            content: Column(
+            content: const Column(
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 SizedBox(height: 20),
                 Text(
                     'Allow Awesome Notifications to send you beautiful notifications!'),

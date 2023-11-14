@@ -278,9 +278,7 @@ class _DrivingViewState extends State<DrivingView> {
         });
       }
     } else if (widget.calibrationMode == false) {
-      FlutterForegroundTask.updateService(
-          notificationTitle: "foreground-notification-title-driving".i18n(),
-          notificationText: "foreground-notification-text-driving".i18n());
+      _startForegroundTask();
       detectionTimer();
     }
     if (widget.accelerometerOn) {
@@ -290,6 +288,21 @@ class _DrivingViewState extends State<DrivingView> {
       geolocationService.startGeolocationStream();
     } else {
       carMoving = true;
+    }
+  }
+
+  Future<void> _startForegroundTask() async {
+    if (!await FlutterForegroundTask.isRunningService) {
+      FlutterForegroundTask.startService(
+        notificationTitle: "foreground-notification-title-driving".i18n(),
+        notificationText: "foreground-notification-text-driving".i18n(),
+      );
+    }
+  }
+
+  Future<void> _stopForegroundTask() async {
+    if (await FlutterForegroundTask.isRunningService) {
+      FlutterForegroundTask.stopService();
     }
   }
 
@@ -1150,10 +1163,7 @@ class _DrivingViewState extends State<DrivingView> {
     if (!canExit) return;
     cancelTimer = true;
     periodicDetectionTimer = null;
-    FlutterForegroundTask.updateService(
-      notificationTitle: "foreground-notification-title-idle".i18n(),
-      notificationText: "foreground-notification-text-idle".i18n(),
-    );
+    _stopForegroundTask();
     finalizeSessionData(debug);
     isValidSession = _validateSession();
     if (isValidSession) {

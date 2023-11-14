@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:drive_fit/service/face_detection_service.dart';
 import 'package:drive_fit/theme/color_schemes.g.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';

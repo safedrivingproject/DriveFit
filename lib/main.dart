@@ -80,22 +80,10 @@ class MyAppState extends State<MyApp> {
     });
   }
 
-  Future<void> _startForegroundTask() async {
-    if (await FlutterForegroundTask.isRunningService) {
-      FlutterForegroundTask.restartService();
-    } else {
-      FlutterForegroundTask.startService(
-        notificationTitle: 'Going to drive?',
-        notificationText: 'Tap to start DriveFit!',
-      );
-    }
-  }
-
   @override
   void initState() {
     NotificationController.startListeningNotificationEvents();
     _initForegroundTask();
-    _startForegroundTask();
     FlutterForegroundTask.setOnLockScreenVisibility(true);
     super.initState();
   }
@@ -114,7 +102,6 @@ class MyAppState extends State<MyApp> {
         if (lightDynamic != null && darkDynamic != null) {
           lightScheme = lightColorScheme;
           lightCustomColors = lightCustomColorsOriginal.harmonized(lightScheme);
-
         } else {
           lightScheme = lightColorScheme;
         }
