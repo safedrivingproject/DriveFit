@@ -154,17 +154,17 @@ class MyAppState extends State<MyApp> {
                     fontWeight: FontWeight.w700,
                     fontSize: 35,
                     color: lightColorScheme.onBackground),
-                headlineLarge: GoogleFonts.interTight(
+                headlineLarge: GoogleFonts.outfit(
                     textStyle: textTheme.headlineLarge,
                     fontWeight: FontWeight.w600,
                     fontSize: 32,
                     color: lightColorScheme.onBackground),
-                headlineMedium: GoogleFonts.interTight(
+                headlineMedium: GoogleFonts.outfit(
                     textStyle: textTheme.headlineMedium,
                     fontWeight: FontWeight.w600,
                     fontSize: 28,
                     color: lightColorScheme.onBackground),
-                headlineSmall: GoogleFonts.interTight(
+                headlineSmall: GoogleFonts.outfit(
                     textStyle: textTheme.headlineSmall,
                     fontWeight: FontWeight.w600,
                     fontSize: 24,
@@ -184,32 +184,32 @@ class MyAppState extends State<MyApp> {
                     fontWeight: FontWeight.w500,
                     fontSize: 16,
                     color: lightColorScheme.onBackground),
-                bodyLarge: GoogleFonts.interTight(
+                bodyLarge: GoogleFonts.outfit(
                     textStyle: textTheme.bodyLarge,
                     fontWeight: FontWeight.w400,
                     fontSize: 16,
                     color: lightColorScheme.onBackground),
-                bodyMedium: GoogleFonts.interTight(
+                bodyMedium: GoogleFonts.outfit(
                     textStyle: textTheme.bodyMedium,
                     fontWeight: FontWeight.w400,
                     fontSize: 14,
                     color: lightColorScheme.onBackground),
-                bodySmall: GoogleFonts.interTight(
+                bodySmall: GoogleFonts.outfit(
                     textStyle: textTheme.bodySmall,
                     fontWeight: FontWeight.w400,
                     fontSize: 12,
                     color: lightColorScheme.onBackground),
-                labelLarge: GoogleFonts.inter(
+                labelLarge: GoogleFonts.outfit(
                     textStyle: textTheme.labelLarge,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                     color: lightColorScheme.onBackground),
-                labelMedium: GoogleFonts.inter(
+                labelMedium: GoogleFonts.outfit(
                     textStyle: textTheme.labelMedium,
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                     color: lightColorScheme.onBackground),
-                labelSmall: GoogleFonts.inter(
+                labelSmall: GoogleFonts.outfit(
                     textStyle: textTheme.labelSmall,
                     fontWeight: FontWeight.w600,
                     fontSize: 11,

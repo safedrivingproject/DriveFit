@@ -208,7 +208,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> getWeather() async {
-    print(needUpdateLanguage);
     if (needUpdateLanguage) {
       if (language == "zh_HK") {
         weatherService.weatherFactory = WeatherFactory(Env.owmApiKey,

@@ -228,14 +228,16 @@ class _DrivePageState extends State<DrivePage> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 16),
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 16),
                   child: AutoSizeText(
-                      databaseService.drivingTip ??
-                          genericTipsList[
-                              Random().nextInt(genericTipsList.length)],
-                      maxLines: 1,
-                      textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.headlineSmall),
+                    databaseService.drivingTip ??
+                        genericTipsList[
+                            Random().nextInt(genericTipsList.length)],
+                    maxLines: 1,
+                    textAlign: TextAlign.start,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textScaleFactor: 0.9,
+                  ),
                 ),
               ],
             ),
@@ -441,47 +443,10 @@ class _DrivePageState extends State<DrivePage> {
       weatherService.enableSpeedReminders = false;
       return Padding(
         padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 16),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
-                    child: Icon(
-                      Icons.check_circle,
-                      color: lightColorScheme.primary,
-                      size: 28,
-                    ),
-                  ),
-                  Text(
-                    "good-to-go".i18n(),
-                    textAlign: TextAlign.start,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    strutStyle: const StrutStyle(forceStrutHeight: true),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AutoSizeText(
-                      "drive-safely".i18n(),
-                      textAlign: TextAlign.start,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      maxLines: 2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        child: Text(
+          "drive-safely".i18n(),
+          textAlign: TextAlign.start,
+          style: Theme.of(context).textTheme.titleSmall,
         ),
       );
     }

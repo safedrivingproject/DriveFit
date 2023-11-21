@@ -433,61 +433,53 @@ class _AchievementsPageState extends State<AchievementsPage>
               width: 1,
             ),
           ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(12, 0, 0, 0),
-                    child: Column(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 12, 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "your-score-streak".i18n(),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Row(
                       mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "your-score-streak".i18n(),
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(0, 4, 0, 0),
+                          child: Text(
+                            '$scoreStreak ',
+                            style: Theme.of(context).textTheme.displaySmall,
+                          ),
                         ),
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 4, 0, 0),
-                              child: Text(
-                                '$scoreStreak ',
-                                style: Theme.of(context).textTheme.displaySmall,
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                  0, 8, 0, 0),
-                              child: Icon(
-                                Icons.local_fire_department,
-                                color: sourceXanthous,
-                                size: 24,
-                              ),
-                            ),
-                          ],
+                        Padding(
+                          padding:
+                              const EdgeInsetsDirectional.fromSTEB(0, 8, 0, 0),
+                          child: Icon(
+                            Icons.local_fire_department,
+                            color: sourceXanthous,
+                            size: 24,
+                          ),
                         ),
                       ],
                     ),
+                  ],
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    "score-streak-explanation".i18n(),
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Padding(
-                      padding:
-                          const EdgeInsetsDirectional.fromSTEB(12, 0, 12, 0),
-                      child: Text(
-                        "score-streak-explanation".i18n(),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         )
       ],

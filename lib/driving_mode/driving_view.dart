@@ -191,6 +191,7 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void initAudioPlayers() {
+    final locale = Localizations.localeOf(context);
     drowsyAudioPlayer.setSource(globals.drowsyAlarmValue[0] == "asset"
         ? AssetSource(globals.drowsyAlarmValue[1])
         : globals.drowsyAlarmValue[0] == "file"
@@ -205,15 +206,43 @@ class _DrivingViewState extends State<DrivingView> {
             : AssetSource("audio/double_beep.mp3"));
     inattentiveAudioPlayer.setVolume(1.0);
     inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
-    passengerAudioPlayer.setSource(AssetSource("audio/passenger_alert.mp3"));
-    passengerAudioPlayer.setVolume(1.0);
-    passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
-    speedingAudioPlayer.setSource(AssetSource("audio/speeding_reminder.mp3"));
-    speedingAudioPlayer.setVolume(1.0);
-    speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
-    restAudioPlayer.setSource(AssetSource("audio/rest_reminder.mp3"));
-    restAudioPlayer.setVolume(1.0);
-    restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    if (locale == const Locale('zh', 'HK')) {
+      passengerAudioPlayer
+          .setSource(AssetSource("audio/passenger_alert_chi.mp3"));
+      passengerAudioPlayer.setVolume(1.0);
+      passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      speedingAudioPlayer
+          .setSource(AssetSource("audio/speeding_reminder_chi.mp3"));
+      speedingAudioPlayer.setVolume(1.0);
+      speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      restAudioPlayer.setSource(AssetSource("audio/rest_reminder_chi.mp3"));
+      restAudioPlayer.setVolume(1.0);
+      restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    } else if (locale == const Locale('en', 'US')) {
+      passengerAudioPlayer
+          .setSource(AssetSource("audio/passenger_alert_eng.mp3"));
+      passengerAudioPlayer.setVolume(1.0);
+      passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      speedingAudioPlayer
+          .setSource(AssetSource("audio/speeding_reminder_eng.mp3"));
+      speedingAudioPlayer.setVolume(1.0);
+      speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      restAudioPlayer.setSource(AssetSource("audio/rest_reminder_eng.mp3"));
+      restAudioPlayer.setVolume(1.0);
+      restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    } else {
+      passengerAudioPlayer
+          .setSource(AssetSource("audio/passenger_alert_eng.mp3"));
+      passengerAudioPlayer.setVolume(1.0);
+      passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      speedingAudioPlayer
+          .setSource(AssetSource("audio/speeding_reminder_eng.mp3"));
+      speedingAudioPlayer.setVolume(1.0);
+      speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      restAudioPlayer.setSource(AssetSource("audio/rest_reminder_eng.mp3"));
+      restAudioPlayer.setVolume(1.0);
+      restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    }
   }
 
   Future<void> saveCurrentPosition(Position? position) async {
