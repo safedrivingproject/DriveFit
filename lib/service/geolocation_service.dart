@@ -90,7 +90,7 @@ class GeolocationService {
     currentLatitude = position.latitude;
     currentLongitude = position.longitude;
     currentSpeed = position.speed;
-    currentTimeStamp = position.timestamp ?? DateTime.now();
+    currentTimeStamp = position.timestamp;
     accumulatedDistance += calcDistanceDifference();
     positionList.insert(
         0,

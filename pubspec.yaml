@@ -37,22 +37,22 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.5
   camera: ^0.10.3+2
-  google_mlkit_face_detection: ^0.8.0
-  google_mlkit_commons: ^0.5.0
-  awesome_notifications: ^0.7.4+1
-  audioplayers: ^5.1.0
+  google_mlkit_face_detection: ^0.9.0
+  google_mlkit_commons: ^0.6.1
+  awesome_notifications: ^0.8.2
+  audioplayers: ^5.2.1
   flutter_sensors: ^1.0.1
   geolocator: ^10.0.1
   geolocator_android: ^4.1.7
   geolocator_apple: ^2.2.5
-  fl_chart: ^0.63.0
+  fl_chart: ^0.64.0
   sqflite: ^2.2.6
   wakelock: ^0.6.2
   flutter_foreground_task: ^6.1.1
   shared_preferences: ^2.0.18
   settings_ui: ^2.0.2
   dynamic_color: ^1.6.2
-  google_fonts: ^5.1.0
+  google_fonts: ^6.1.0
   file_picker: ^5.2.6
   path_provider: ^2.0.14
   intl: ^0.18.1
@@ -68,7 +68,7 @@ dependencies:
   firebase_dynamic_links: ^5.1.0
   weather: ^3.1.1
   cached_network_image: ^3.2.3
-  envied: ^0.3.0
+  envied: ^0.5.2
   flutter_localizations:
     sdk: flutter
   localization: ^2.1.0
@@ -83,9 +83,9 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^3.0.1
   flutter_launcher_icons: ^0.13.1
-  envied_generator: ^0.3.0
+  envied_generator: ^0.5.2
   build_runner: ^2.3.3
 
 flutter_icons:

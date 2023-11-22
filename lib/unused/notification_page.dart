@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 
 class NotificationPage extends StatelessWidget {
-  const NotificationPage({Key? key, required this.receivedAction})
-      : super(key: key);
+  const NotificationPage({super.key, required this.receivedAction});
 
   final ReceivedAction receivedAction;
 

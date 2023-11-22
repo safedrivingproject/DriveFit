@@ -30,12 +30,12 @@ import 'package:localization/localization.dart';
 
 class DrivingView extends StatefulWidget {
   const DrivingView({
-    Key? key,
+    super.key,
     required this.calibrationMode,
     this.accelerometerOn = false,
     required this.enableGeolocation,
     required this.enableSpeedReminders,
-  }) : super(key: key);
+  });
 
   final bool calibrationMode;
   final bool accelerometerOn;
@@ -191,57 +191,55 @@ class _DrivingViewState extends State<DrivingView> {
   }
 
   void initAudioPlayers() {
-    final locale = Localizations.localeOf(context);
-    drowsyAudioPlayer.setSource(globals.drowsyAlarmValue[0] == "asset"
+    drowsyAudioPlayer.setPlayerMode(PlayerMode.lowLatency);
+    drowsyAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    inattentiveAudioPlayer.setPlayerMode(PlayerMode.lowLatency);
+    inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
+    restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+  }
+
+  Source getDrowsyAudioSource() {
+    return globals.drowsyAlarmValue[0] == "asset"
         ? AssetSource(globals.drowsyAlarmValue[1])
         : globals.drowsyAlarmValue[0] == "file"
             ? DeviceFileSource(globals.drowsyAlarmValue[1])
-            : AssetSource("audio/car_horn_high.mp3"));
-    drowsyAudioPlayer.setVolume(1.0);
-    drowsyAudioPlayer.setReleaseMode(ReleaseMode.stop);
-    inattentiveAudioPlayer.setSource(globals.inattentiveAlarmValue[0] == "asset"
+            : AssetSource("audio/car_horn_high.mp3");
+  }
+
+  Source getInattentiveAudioSource() {
+    return globals.inattentiveAlarmValue[0] == "asset"
         ? AssetSource(globals.inattentiveAlarmValue[1])
         : globals.inattentiveAlarmValue[0] == "file"
             ? DeviceFileSource(globals.inattentiveAlarmValue[1])
-            : AssetSource("audio/double_beep.mp3"));
-    inattentiveAudioPlayer.setVolume(1.0);
-    inattentiveAudioPlayer.setReleaseMode(ReleaseMode.stop);
+            : AssetSource("audio/double_beep.mp3");
+  }
+
+  Source getPassengerAudioSource() {
+    final locale = Localizations.localeOf(context);
     if (locale == const Locale('zh', 'HK')) {
-      passengerAudioPlayer
-          .setSource(AssetSource("audio/passenger_alert_chi.mp3"));
-      passengerAudioPlayer.setVolume(1.0);
-      passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
-      speedingAudioPlayer
-          .setSource(AssetSource("audio/speeding_reminder_chi.mp3"));
-      speedingAudioPlayer.setVolume(1.0);
-      speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
-      restAudioPlayer.setSource(AssetSource("audio/rest_reminder_chi.mp3"));
-      restAudioPlayer.setVolume(1.0);
-      restAudioPlayer.setReleaseMode(ReleaseMode.stop);
-    } else if (locale == const Locale('en', 'US')) {
-      passengerAudioPlayer
-          .setSource(AssetSource("audio/passenger_alert_eng.mp3"));
-      passengerAudioPlayer.setVolume(1.0);
-      passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
-      speedingAudioPlayer
-          .setSource(AssetSource("audio/speeding_reminder_eng.mp3"));
-      speedingAudioPlayer.setVolume(1.0);
-      speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
-      restAudioPlayer.setSource(AssetSource("audio/rest_reminder_eng.mp3"));
-      restAudioPlayer.setVolume(1.0);
-      restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      return AssetSource("audio/passenger_alert_chi.mp3");
     } else {
-      passengerAudioPlayer
-          .setSource(AssetSource("audio/passenger_alert_eng.mp3"));
-      passengerAudioPlayer.setVolume(1.0);
-      passengerAudioPlayer.setReleaseMode(ReleaseMode.stop);
-      speedingAudioPlayer
-          .setSource(AssetSource("audio/speeding_reminder_eng.mp3"));
-      speedingAudioPlayer.setVolume(1.0);
-      speedingAudioPlayer.setReleaseMode(ReleaseMode.stop);
-      restAudioPlayer.setSource(AssetSource("audio/rest_reminder_eng.mp3"));
-      restAudioPlayer.setVolume(1.0);
-      restAudioPlayer.setReleaseMode(ReleaseMode.stop);
+      return AssetSource("audio/passenger_alert_eng.mp3");
+    }
+  }
+
+  Source getSpeedingAudioSource() {
+    final locale = Localizations.localeOf(context);
+    if (locale == const Locale('zh', 'HK')) {
+      return AssetSource("audio/speeding_reminder_chi.mp3");
+    } else {
+      return AssetSource("audio/speeding_reminder_eng.mp3");
+    }
+  }
+
+  Source getRestAudioSource() {
+    final locale = Localizations.localeOf(context);
+    if (locale == const Locale('zh', 'HK')) {
+      return AssetSource("audio/rest_reminder_chi.mp3");
+    } else {
+      return AssetSource("audio/rest_reminder_eng.mp3");
     }
   }
 
@@ -372,37 +370,45 @@ class _DrivingViewState extends State<DrivingView> {
   /// *******************************************************
   /// *******************************************************
   void sendSleepyReminder() {
-    drowsyAudioPlayer.resume();
+    drowsyAudioPlayer.stop();
+    drowsyAudioPlayer.play(getDrowsyAudioSource());
+    print("drowsy audio played");
     NotificationController.dismissAlertNotifications();
     NotificationController.createSleepyNotification();
   }
 
   void sendDistractedReminder() {
-    inattentiveAudioPlayer.resume();
+    inattentiveAudioPlayer.stop();
+    inattentiveAudioPlayer.play(getInattentiveAudioSource());
+    print("inattentive audio played");
     NotificationController.dismissAlertNotifications();
     NotificationController.createDistractedNotification();
   }
 
   void sendPassengerReminder() {
-    passengerAudioPlayer.resume();
+    passengerAudioPlayer.stop();
+    passengerAudioPlayer.play(getPassengerAudioSource());
+    print("passenger reminder played");
+  }
+
+  void sendRestReminder() {
+    restAudioPlayer.stop();
+    restAudioPlayer.play(getRestAudioSource());
+    NotificationController.dismissAlertNotifications();
+    NotificationController.createRestNotification();
+  }
+
+  void sendSpeedingReminder() {
+    speedingAudioPlayer.stop();
+    speedingAudioPlayer.play(getSpeedingAudioSource());
+    NotificationController.dismissAlertNotifications();
+    NotificationController.createSpeedingNotification();
   }
 
   void updateDuration() {
     currentSession.duration = DateTime.now()
         .difference(DateTime.parse(currentSession.startTime))
         .inSeconds;
-  }
-
-  void sendRestReminder() {
-    restAudioPlayer.resume();
-    NotificationController.dismissAlertNotifications();
-    NotificationController.createRestNotification();
-  }
-
-  void sendSpeedingReminder() {
-    speedingAudioPlayer.resume();
-    NotificationController.dismissAlertNotifications();
-    NotificationController.createSpeedingNotification();
   }
 
   void detectionTimer() async {
@@ -1470,13 +1476,13 @@ class CalibrateInstruction extends StatelessWidget {
 
 class DataValueWidget extends StatelessWidget {
   const DataValueWidget({
-    Key? key,
+    super.key,
     required this.text,
     this.doubleValue,
     this.intValue,
     this.boolValue,
     this.stringValue,
-  }) : super(key: key);
+  });
 
   final String text;
   final double? doubleValue;
@@ -1488,7 +1494,7 @@ class DataValueWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: SizedBox(
-        height: 40,
+        height: 41,
         width: 200,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

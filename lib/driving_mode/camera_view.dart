@@ -15,13 +15,13 @@ import '/global_variables.dart' as globals;
 
 class CameraView extends StatefulWidget {
   const CameraView({
-    Key? key,
+    super.key,
     required this.customPaint,
     this.text,
     required this.onImage,
     this.initialDirection = CameraLensDirection.back,
     required this.isReminding,
-  }) : super(key: key);
+  });
 
   final CustomPaint? customPaint;
   final String? text;
