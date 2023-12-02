@@ -24,3 +24,7 @@ bool hasSignedIn = false;
 
 GlobalKey<ScaffoldMessengerState> snackbarKey =
     GlobalKey<ScaffoldMessengerState>();
+
+int debugWeatherCode = 503;
+String debugWeatherDescription = "very heavy rain";
+String debugWeatherIconURL = "https://openweathermap.org/img/wn/10d@2x.png";

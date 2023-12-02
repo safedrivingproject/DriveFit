@@ -143,37 +143,59 @@ class _DrivePageState extends State<DrivePage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                    0, 0, 8, 0),
-                                child: (weatherService
-                                        .currentWeatherIconURL.isNotEmpty)
-                                    ? Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(25),
-                                          color: lightColorScheme.primary,
-                                        ),
-                                        child: CachedNetworkImage(
-                                          imageUrl: weatherService
-                                              .currentWeatherIconURL,
-                                          placeholder: (context, url) =>
-                                              const CircularProgressIndicator(),
-                                          errorWidget: (context, url, error) =>
-                                              Icon(
-                                            Icons.error,
-                                            color: lightColorScheme.onSecondary,
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                  0, 0, 8, 0),
+                              child: !globals.showDebug
+                                  ? (weatherService
+                                          .currentWeatherIconURL.isNotEmpty)
+                                      ? Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(25),
+                                            color: lightColorScheme.primary,
                                           ),
+                                          child: CachedNetworkImage(
+                                            imageUrl: weatherService
+                                                .currentWeatherIconURL,
+                                            placeholder: (context, url) =>
+                                                const CircularProgressIndicator(),
+                                            errorWidget:
+                                                (context, url, error) => Icon(
+                                              Icons.error,
+                                              color:
+                                                  lightColorScheme.onSecondary,
+                                            ),
+                                            height: 50,
+                                            width: 50,
+                                          ))
+                                      : const SizedBox(
                                           height: 50,
                                           width: 50,
-                                        ))
-                                    : const SizedBox(
+                                        )
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(25),
+                                        color: lightColorScheme.primary,
+                                      ),
+                                      child: CachedNetworkImage(
+                                        imageUrl: globals.debugWeatherIconURL,
+                                        placeholder: (context, url) =>
+                                            const CircularProgressIndicator(),
+                                        errorWidget: (context, url, error) =>
+                                            Icon(
+                                          Icons.error,
+                                          color: lightColorScheme.onSecondary,
+                                        ),
                                         height: 50,
                                         width: 50,
                                       )),
+                            ),
                             const SizedBox(width: 10),
                             AutoSizeText(
-                              weatherService.currentWeatherDescription ??
-                                  "no-weather-info".i18n(),
+                              globals.showDebug
+                                  ? globals.debugWeatherDescription
+                                  : weatherService.currentWeatherDescription ??
+                                      "no-weather-info".i18n(),
                               textAlign: TextAlign.start,
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
@@ -339,6 +361,18 @@ class _DrivePageState extends State<DrivePage> {
   }
 
   Widget getCautionMessage() {
+    if (globals.showDebug) {
+      weatherService.enableSpeedReminders = false;
+      return Column(
+        children: [
+          CautionMessage(
+            context: context,
+            main: "slow-down".i18n(),
+            description: "slippery-in-heavy-rain".i18n(),
+          ),
+        ],
+      );
+    }
     if (globals.globalSpeedingReminders) {
       weatherService.enableSpeedReminders = true;
       return Column(

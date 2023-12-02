@@ -235,7 +235,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             DateTime.parse(weatherService.weatherExpirationMinutes))) {
       weatherService.weatherExpirationMinutes =
           DateTime.parse(weatherService.weatherExpirationMinutes)
-              .add(const Duration(minutes: 30))
+              .add(const Duration(minutes: 1))
               .toString();
       SharedPreferencesService.setString(
           'weatherExpirationMinutes', weatherService.weatherExpirationMinutes);
