@@ -422,7 +422,7 @@ class _DrivingViewState extends State<DrivingView> {
     if (mounted) {
       _statesController.update(MaterialState.disabled, false);
     }
-    if (!globals.showDebug) await Future.delayed(const Duration(seconds: 4));
+    if (!globals.showDebug) await Future.delayed(const Duration(seconds: 1));
 
     if (periodicDetectionTimer != null) return;
     periodicDetectionTimer =
